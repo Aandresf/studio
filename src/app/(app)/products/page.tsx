@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 
 const products = [
   { id: 1, name: "Laptop Pro 15", sku: "LP15-2024", stock: 15, price: 1200.00, status: "active", image: "https://placehold.co/64x64.png", hint: "laptop" },
@@ -24,6 +25,14 @@ const products = [
 
 export default function ProductsPage() {
     const [open, setOpen] = useState(false);
+    const [isProductActive, setIsProductActive] = useState(true);
+
+    const handleOpenChange = (isOpen: boolean) => {
+        setOpen(isOpen);
+        if (isOpen) {
+            setIsProductActive(true);
+        }
+    };
 
     return (
         <div className="flex flex-col gap-6">
@@ -99,7 +108,7 @@ export default function ProductsPage() {
                 </CardContent>
             </Card>
 
-            <Dialog open={open} onOpenChange={setOpen}>
+            <Dialog open={open} onOpenChange={handleOpenChange}>
                 <DialogContent className="sm:max-w-[425px]">
                     <DialogHeader>
                         <DialogTitle>Añadir Nuevo Producto</DialogTitle>
@@ -137,6 +146,19 @@ export default function ProductsPage() {
                                 Stock
                             </Label>
                             <Input id="stock" type="number" placeholder="0" className="col-span-3" />
+                        </div>
+                         <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="status" className="text-right">
+                                Estado
+                            </Label>
+                            <div className="flex items-center space-x-2 col-span-3">
+                                <Switch
+                                    id="status"
+                                    checked={isProductActive}
+                                    onCheckedChange={setIsProductActive}
+                                />
+                                <Label htmlFor="status" className="font-normal">{isProductActive ? 'Activo' : 'Inactivo'}</Label>
+                            </div>
                         </div>
                     </div>
                     <DialogFooter>
