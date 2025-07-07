@@ -50,6 +50,7 @@ export default function SalesPage() {
                                             </SelectContent>
                                         </Select>
                                         <Input type="number" placeholder="Cantidad" className="w-24" />
+                                        <Input type="text" readOnly value="$1200.00" className="w-28 text-right" />
                                         <Button variant="outline" size="icon" className="text-muted-foreground">
                                             <Trash2 className="h-4 w-4"/>
                                         </Button>
