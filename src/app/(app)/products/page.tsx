@@ -127,6 +127,12 @@ export default function ProductsPage() {
                             <Input id="price" type="number" placeholder="0.00" className="col-span-3" />
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="profit-margin" className="text-right">
+                                % Ganancia
+                            </Label>
+                            <Input id="profit-margin" type="number" placeholder="0" className="col-span-3" />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="stock" className="text-right">
                                 Stock
                             </Label>
