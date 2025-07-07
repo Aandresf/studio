@@ -21,9 +21,19 @@ export default function SalesPage() {
                     <CardContent>
                         <div className="grid gap-4 md:grid-cols-[1fr_250px] lg:grid-cols-3 lg:gap-8">
                             <div className="grid auto-rows-max items-start gap-4 lg:col-span-2 lg:gap-8">
-                                <div className="grid gap-3">
-                                    <Label htmlFor="customer">Cliente</Label>
-                                    <Input id="customer" type="text" placeholder="Nombre del cliente" />
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="grid gap-3 md:col-span-2">
+                                        <Label htmlFor="invoice-number">Nº de Factura</Label>
+                                        <Input id="invoice-number" type="text" placeholder="Ingrese el número de factura" />
+                                    </div>
+                                    <div className="grid gap-3">
+                                        <Label htmlFor="customer">Cliente</Label>
+                                        <Input id="customer" type="text" placeholder="Nombre del cliente" />
+                                    </div>
+                                    <div className="grid gap-3">
+                                        <Label htmlFor="customer-dni">DNI</Label>
+                                        <Input id="customer-dni" type="text" placeholder="DNI del cliente" />
+                                    </div>
                                 </div>
                                 <div className="grid gap-3">
                                 <Label>Productos</Label>
