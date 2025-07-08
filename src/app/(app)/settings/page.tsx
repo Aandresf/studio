@@ -1,11 +1,26 @@
+'use client';
+
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useTheme } from "@/components/theme-provider";
 
 export default function SettingsPage() {
+  const { setTheme } = useTheme();
+
+  const themes = [
+    { value: 'light', label: 'Claro' },
+    { value: 'dark', label: 'Gris Oscuro' },
+    { value: 'sepia', label: 'Sepia' },
+    { value: 'light-gray', label: 'Gris Claro' },
+    { value: 'black', label: 'Negro' },
+    { value: 'mint', label: 'Menta' },
+    { value: 'blue', label: 'Azul' },
+  ];
+
   return (
     <div className="flex flex-col gap-6">
        <div className="flex-1">
@@ -65,11 +80,22 @@ export default function SettingsPage() {
             <CardHeader>
               <CardTitle>Apariencia</CardTitle>
               <CardDescription>
-                Personaliza la apariencia de la aplicación.
+                Personaliza la apariencia de la aplicación. Selecciona un tema para cambiar el esquema de color.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <p>Opciones de tema (Claro/Oscuro) estarán disponibles aquí.</p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                 {themes.map((theme) => (
+                    <Button
+                      key={theme.value}
+                      variant="outline"
+                      onClick={() => setTheme(theme.value as any)}
+                      className="justify-center"
+                    >
+                      {theme.label}
+                    </Button>
+                  ))}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

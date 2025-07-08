@@ -7,7 +7,8 @@ body {
 }
 
 @layer base {
-  :root {
+  :root,
+  .light {
     --background: 200 17% 94%;
     --foreground: 224 71.4% 4.1%;
     --card: 0 0% 100%;
@@ -59,6 +60,79 @@ body {
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
+  }
+  .sepia {
+    --background: 45 35% 90%;
+    --foreground: 45 15% 20%;
+    --card: 45 35% 95%;
+    --card-foreground: 45 15% 20%;
+    --popover: 45 35% 95%;
+    --popover-foreground: 45 15% 20%;
+    --primary: 35 40% 50%;
+    --primary-foreground: 45 20% 98%;
+    --secondary: 45 25% 85%;
+    --secondary-foreground: 45 15% 20%;
+    --muted: 45 25% 85%;
+    --muted-foreground: 45 10% 45%;
+    --accent: 45 60% 60%;
+    --accent-foreground: 45 15% 10%;
+    --destructive: 0 60% 50%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 45 20% 80%;
+    --input: 45 20% 80%;
+    --ring: 35 40% 50%;
+  }
+  .light-gray {
+    --background: 220 15% 96%;
+    --foreground: 220 10% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 220 10% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 10% 10%;
+    --primary: 220 30% 45%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 220 14% 91%;
+    --secondary-foreground: 220 10% 10%;
+    --muted: 220 14% 91%;
+    --muted-foreground: 220 9% 46%;
+    --accent: 220 40% 55%;
+    --accent-foreground: 0 0% 98%;
+    --border: 220 13% 89%;
+    --input: 220 13% 89%;
+    --ring: 220 30% 45%;
+  }
+  .black {
+    --background: 0 0% 8%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 12%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 12%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 80%;
+    --primary-foreground: 0 0% 10%;
+    --secondary: 0 0% 20%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 20%;
+    --muted-foreground: 0 0% 60%;
+    --accent: 0 0% 30%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 70% 40%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 25%;
+    --input: 0 0% 25%;
+    --ring: 0 0% 80%;
+  }
+  .mint {
+    --primary: 160 60% 40%;
+    --primary-foreground: 0 0% 98%;
+    --accent: 160 70% 50%;
+    --ring: 160 60% 40%;
+  }
+  .blue {
+    --primary: 210 70% 55%;
+    --primary-foreground: 0 0% 98%;
+    --accent: 210 80% 65%;
+    --ring: 210 70% 55%;
   }
 }
 
