@@ -58,4 +58,14 @@ A continuación se detallan los endpoints necesarios para dar vida al frontend.
 *   **`POST /api/database/backup`**: Iniciar respaldo de la base de datos.
 *   **`POST /api/database/restore`**: Iniciar restauración de la base de datos.
 
+---
+
+## Estado Actual del Proyecto
+
+La estructura inicial del proyecto ya ha sido creada, siguiendo la arquitectura definida en este documento. Existen los archivos base para el backend de Node.js (`src-backend`), el frontend de Next.js (`src`) y el lanzador de Tauri (`src-tauri`).
+
+El proyecto se encuentra en la **fase de desarrollo e implementación activa**. El trabajo futuro debe centrarse en desarrollar los endpoints de la API y conectar los componentes del frontend, en lugar de volver a generar el código base.
+
+**Última acción:** Se intentó ejecutar `npm run tauri dev`. El proceso falló por una dependencia de compilación ausente en el sistema (MSVC C++ build tools), no por un error en el código.
+
 
