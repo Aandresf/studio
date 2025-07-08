@@ -4,9 +4,11 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useTheme } from "@/components/theme-provider";
+import { Download, Upload } from "lucide-react";
 
 export default function SettingsPage() {
   const { setTheme } = useTheme();
@@ -30,52 +32,78 @@ export default function SettingsPage() {
       <Tabs defaultValue="store" className="grid w-full gap-4">
         <TabsList>
           <TabsTrigger value="store">Tienda</TabsTrigger>
-          <TabsTrigger value="profile">Perfil</TabsTrigger>
           <TabsTrigger value="appearance">Apariencia</TabsTrigger>
         </TabsList>
         <TabsContent value="store">
-          <Card>
-            <CardHeader>
-              <CardTitle>Detalles de la Tienda</CardTitle>
-              <CardDescription>
-                Actualiza la información de tu tienda.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-1">
-                <Label htmlFor="store-name">Nombre de la Tienda</Label>
-                <Input id="store-name" defaultValue="InventarioSimple Store" />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="store-address">Dirección</Label>
-                <Textarea id="store-address" defaultValue="123 Calle Principal, Ciudad, País" />
-              </div>
-              <Button>Guardar Cambios</Button>
-            </CardContent>
-          </Card>
+           <div className="grid gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Detalles de la Tienda</CardTitle>
+                  <CardDescription>
+                    Actualiza la información de tu tienda.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-1">
+                    <Label htmlFor="store-name">Nombre de la Tienda</Label>
+                    <Input id="store-name" defaultValue="InventarioSimple Store" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="store-rif">RIF</Label>
+                    <Input id="store-rif" placeholder="J-12345678-9" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="store-address">Dirección</Label>
+                    <Textarea id="store-address" defaultValue="123 Calle Principal, Ciudad, País" />
+                  </div>
+                  <Button>Guardar Cambios</Button>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Cambiar de Tienda</CardTitle>
+                  <CardDescription>
+                    Selecciona otra de tus tiendas registradas para gestionarla.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-1">
+                      <Label htmlFor="store-selector">Tienda Activa</Label>
+                      <Select defaultValue="store1">
+                        <SelectTrigger id="store-selector">
+                          <SelectValue placeholder="Selecciona una tienda" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="store1">InventarioSimple Store (Actual)</SelectItem>
+                          <SelectItem value="store2">Mi Sucursal Principal</SelectItem>
+                          <SelectItem value="store3">Depósito Central</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button>Cambiar Tienda</Button>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Base de Datos</CardTitle>
+                  <CardDescription>
+                    Realiza respaldos y restauraciones de tu base de datos.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="flex flex-col sm:flex-row gap-4">
+                  <Button>
+                    <Upload />
+                    Respaldar Base de Datos
+                  </Button>
+                  <Button variant="outline">
+                    <Download />
+                    Restaurar Base de Datos
+                  </Button>
+                </CardContent>
+              </Card>
+           </div>
         </TabsContent>
-         <TabsContent value="profile">
-          <Card>
-            <CardHeader>
-              <CardTitle>Perfil de Usuario</CardTitle>
-              <CardDescription>
-                Actualiza los detalles de tu cuenta.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-1">
-                <Label htmlFor="profile-name">Nombre</Label>
-                <Input id="profile-name" defaultValue="Admin" />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="profile-email">Email</Label>
-                <Input id="profile-email" type="email" defaultValue="admin@example.com" />
-              </div>
-              <Button>Actualizar Perfil</Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-         <TabsContent value="appearance">
+        <TabsContent value="appearance">
           <Card>
             <CardHeader>
               <CardTitle>Apariencia</CardTitle>
