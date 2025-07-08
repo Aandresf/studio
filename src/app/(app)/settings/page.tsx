@@ -1,6 +1,5 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -9,18 +8,9 @@ import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useTheme } from "@/components/theme-provider";
 import { Download, Upload } from "lucide-react";
-import { useToast } from '@/hooks/use-toast';
-
-import { StoreSettings } from '@/lib/types';
-import { getStoreSettings, updateStoreSettings, backupDatabase } from '@/lib/api';
 
 export default function SettingsPage() {
   const { setTheme } = useTheme();
-  const { toast } = useToast();
-
-  const [settings, setSettings] = useState<StoreSettings>({});
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const themes = [
     { value: 'light', label: 'Claro' },
@@ -31,48 +21,6 @@ export default function SettingsPage() {
     { value: 'mint', label: 'Menta' },
     { value: 'blue', label: 'Azul' },
   ];
-
-  const fetchSettings = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      const data = await getStoreSettings();
-      setSettings(data);
-    } catch (err: any) {
-      toast({ title: "Error", description: "No se pudo cargar la configuración.", variant: "destructive" });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [toast]);
-
-  useEffect(() => {
-    fetchSettings();
-  }, [fetchSettings]);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { id, value } = e.target;
-    setSettings(prev => ({ ...prev, [id]: value }));
-  };
-
-  const handleSaveChanges = async () => {
-    setIsSubmitting(true);
-    try {
-      await updateStoreSettings(settings);
-      toast({ title: "Éxito", description: "La configuración ha sido guardada." });
-    } catch (err: any) {
-      toast({ title: "Error", description: "No se pudo guardar la configuración.", variant: "destructive" });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleBackup = async () => {
-    try {
-      const result = await backupDatabase();
-      toast({ title: "Respaldo Creado", description: result.message });
-    } catch (err: any) {
-      toast({ title: "Error", description: "No se pudo crear el respaldo.", variant: "destructive" });
-    }
-  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -96,33 +44,19 @@ export default function SettingsPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {isLoading ? <p>Cargando...</p> : (
-                    <>
-                      <div className="space-y-1">
-                        <Label htmlFor="name">Nombre de la Tienda</Label>
-                        <Input id="name" value={settings.name || ''} onChange={handleInputChange} />
-                      </div>
-                      <div className="space-y-1">
-                        <Label htmlFor="address">Dirección</Label>
-                        <Textarea id="address" value={settings.address || ''} onChange={handleInputChange} />
-                      </div>
-                      <div className="space-y-1">
-                        <Label htmlFor="phone">Teléfono</Label>
-                        <Input id="phone" value={settings.phone || ''} onChange={handleInputChange} />
-                      </div>
-                       <div className="space-y-1">
-                        <Label htmlFor="email">Email</Label>
-                        <Input id="email" type="email" value={settings.email || ''} onChange={handleInputChange} />
-                      </div>
-                       <div className="space-y-1">
-                        <Label htmlFor="website">Sitio Web</Label>
-                        <Input id="website" type="url" value={settings.website || ''} onChange={handleInputChange} />
-                      </div>
-                    </>
-                  )}
-                  <Button onClick={handleSaveChanges} disabled={isSubmitting || isLoading}>
-                    {isSubmitting ? 'Guardando...' : 'Guardar Cambios'}
-                  </Button>
+                  <div className="space-y-1">
+                    <Label htmlFor="store-name">Nombre de la Tienda</Label>
+                    <Input id="store-name" defaultValue="InventarioSimple Store" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="store-rif">RIF</Label>
+                    <Input id="store-rif" placeholder="J-12345678-9" />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="store-address">Dirección</Label>
+                    <Textarea id="store-address" defaultValue="123 Calle Principal, Ciudad, País" />
+                  </div>
+                  <Button>Guardar Cambios</Button>
                 </CardContent>
               </Card>
            </div>
@@ -161,13 +95,13 @@ export default function SettingsPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex flex-col sm:flex-row gap-4">
-                <Button onClick={handleBackup}>
-                  <Upload className="mr-2 h-4 w-4" />
+                <Button>
+                  <Upload />
                   Respaldar Base de Datos
                 </Button>
-                <Button variant="outline" disabled>
-                  <Download className="mr-2 h-4 w-4" />
-                  Restaurar (Próximamente)
+                <Button variant="outline">
+                  <Download />
+                  Restaurar Base de Datos
                 </Button>
               </CardContent>
             </Card>
