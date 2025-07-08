@@ -1,9 +1,9 @@
-
 const express = require('express');
 const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
 const sqlite3 = require('sqlite3').verbose();
+const util = require('util');
 
 const isTestEnv = process.env.NODE_ENV === 'test';
 
@@ -24,55 +24,79 @@ const db = new sqlite3.Database(DB_FILE, (err) => {
   }
 });
 
+// Promisified DB methods
+const run = (sql, params = []) => {
+    return new Promise((resolve, reject) => {
+        db.run(sql, params, function (err) {
+            if (err) {
+                console.error('DB run error:', err.message);
+                reject(err);
+            } else {
+                resolve({ lastID: this.lastID, changes: this.changes });
+            }
+        });
+    });
+};
+const get = util.promisify(db.get.bind(db));
+const all = util.promisify(db.all.bind(db));
+
+
 // --- API Endpoints ---
 
 // PRODUCTS
-app.get('/api/products', (req, res) => {
-  db.all('SELECT * FROM products ORDER BY name', [], (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
+app.get('/api/products', async (req, res) => {
+  try {
+    const rows = await all('SELECT * FROM products ORDER BY name');
     res.json(rows);
-  });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-app.post('/api/products', (req, res) => {
+app.post('/api/products', async (req, res) => {
   const { name, sku, current_stock = 0, average_cost = 0 } = req.body;
   if (!name) return res.status(400).json({ error: 'Product name is required.' });
   const sql = `INSERT INTO products (name, sku, current_stock, average_cost) VALUES (?, ?, ?, ?)`;
-  db.run(sql, [name, sku, current_stock, average_cost], function (err) {
-    if (err) return res.status(500).json({ error: err.message });
-    res.status(201).json({ id: this.lastID, ...req.body });
-  });
+  try {
+    const result = await run(sql, [name, sku, current_stock, average_cost]);
+    res.status(201).json({ id: result.lastID, ...req.body });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-app.get('/api/products/:id', (req, res) => {
-    db.get('SELECT * FROM products WHERE id = ?', [req.params.id], (err, row) => {
-        if (err) return res.status(500).json({ error: err.message });
+app.get('/api/products/:id', async (req, res) => {
+    try {
+        const row = await get('SELECT * FROM products WHERE id = ?', [req.params.id]);
         if (!row) return res.status(404).json({ error: 'Product not found' });
         res.json(row);
-    });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
-app.put('/api/products/:id', (req, res) => {
+app.put('/api/products/:id', async (req, res) => {
   const { name, sku, current_stock, average_cost } = req.body;
   if (!name) return res.status(400).json({ error: 'Product name is required.' });
   const sql = `UPDATE products SET name = ?, sku = ?, current_stock = ?, average_cost = ?, updated_at = strftime('%Y-%m-%d %H:%M:%S', 'now') WHERE id = ?`;
-  db.run(sql, [name, sku, current_stock, average_cost, req.params.id], function (err) {
-    if (err) return res.status(500).json({ error: err.message });
-    if (this.changes === 0) return res.status(404).json({ error: 'Product not found' });
+  try {
+    const result = await run(sql, [name, sku, current_stock, average_cost, req.params.id]);
+    if (result.changes === 0) return res.status(404).json({ error: 'Product not found' });
     res.json({ message: 'Product updated successfully' });
-  });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-app.delete('/api/products/:id', (req, res) => {
-  db.run('DELETE FROM products WHERE id = ?', [req.params.id], function (err) {
-    if (err) return res.status(500).json({ error: err.message });
-    if (this.changes === 0) return res.status(404).json({ error: 'Product not found' });
+app.delete('/api/products/:id', async (req, res) => {
+  try {
+    const result = await run('DELETE FROM products WHERE id = ?', [req.params.id]);
+    if (result.changes === 0) return res.status(404).json({ error: 'Product not found' });
     res.status(204).send();
-  });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
-
-// Helper to promisify db.run, db.get, db.all
-const util = require('util');
 
 // INVENTORY MOVEMENTS
 app.post('/api/inventory/movements', async (req, res) => {
@@ -84,9 +108,6 @@ app.post('/api/inventory/movements', async (req, res) => {
     if (type === 'ENTRADA' && (unit_cost === undefined || unit_cost === null)) {
         return res.status(400).json({ error: 'unit_cost is required for ENTRADA movements' });
     }
-
-    const run = util.promisify(db.run.bind(db));
-    const get = util.promisify(db.get.bind(db));
 
     try {
         await run('BEGIN TRANSACTION');
@@ -136,71 +157,164 @@ app.post('/api/inventory/movements', async (req, res) => {
 
 
 // REPORTS
-app.post('/api/reports/:type', (req, res) => {
+
+async function generateInventoryReport(startDate, endDate) {
+    // This query calculates the stock for each product at the beginning of the startDate
+    // by summing all movements that occurred before that date.
+    const openingStockQuery = `
+        SELECT
+            p.id AS product_id,
+            p.name,
+            p.sku,
+            IFNULL(SUM(
+                CASE
+                    WHEN im.type = 'ENTRADA' THEN im.quantity
+                    ELSE -im.quantity
+                END
+            ), 0) AS opening_stock
+        FROM
+            products p
+        LEFT JOIN
+            inventory_movements im ON p.id = im.product_id AND date(im.date) < ?
+        GROUP BY
+            p.id, p.name, p.sku
+        ORDER BY
+            p.name;
+    `;
+
+    // This query gets all movements within the specified date range.
+    const movementsQuery = `
+        SELECT
+            product_id,
+            type,
+            quantity
+        FROM
+            inventory_movements
+        WHERE
+            date(date) BETWEEN ? AND ?;
+    `;
+
+    const [openingStocks, movements] = await Promise.all([
+        all(openingStockQuery, [startDate]),
+        all(movementsQuery, [startDate, endDate])
+    ]);
+
+    const movementsByProduct = new Map();
+    movements.forEach(m => {
+        if (!movementsByProduct.has(m.product_id)) {
+            movementsByProduct.set(m.product_id, { entradas: 0, salidas: 0 });
+        }
+        const productMovements = movementsByProduct.get(m.product_id);
+        if (m.type === 'ENTRADA') {
+            productMovements.entradas += m.quantity;
+        } else {
+            productMovements.salidas += m.quantity;
+        }
+    });
+
+    const report = openingStocks.map(product => {
+        const productMovements = movementsByProduct.get(product.product_id) || { entradas: 0, salidas: 0 };
+        const { entradas, salidas } = productMovements;
+        const closing_stock = product.opening_stock + entradas - salidas;
+
+        return {
+            product_id: product.product_id,
+            name: product.name,
+            sku: product.sku,
+            opening_stock: product.opening_stock,
+            entradas,
+            salidas,
+            closing_stock
+        };
+    });
+
+    return report;
+}
+
+
+app.post('/api/reports/:type', async (req, res) => {
     const { type } = req.params;
     const { startDate, endDate } = req.body;
     if (!startDate || !endDate) {
         return res.status(400).json({ error: 'startDate and endDate are required' });
     }
 
-    let query;
     const reportType = type.toUpperCase();
 
-    if (reportType === 'SALES' || reportType === 'PURCHASES') {
-        const movementType = reportType === 'SALES' ? 'SALIDA' : 'ENTRADA';
-        query = `
-            SELECT p.name, p.sku, im.*
-            FROM inventory_movements im
-            JOIN products p ON im.product_id = p.id
-            WHERE im.type = ? AND date(im.date) BETWEEN ? AND ?
-            ORDER BY im.date
-        `;
-        db.all(query, [movementType, startDate, endDate], (err, rows) => {
-            if (err) return res.status(500).json({ error: err.message });
-            res.json(rows);
-        });
-    } else if (reportType === 'INVENTORY') {
-        // This is a complex report, for now we just return all movements in the range
-        query = `
-            SELECT p.name, p.sku, im.*
-            FROM inventory_movements im
-            JOIN products p ON im.product_id = p.id
-            WHERE im.date BETWEEN ? AND ?
-            ORDER BY p.name, im.date
-        `;
-         db.all(query, [startDate, endDate], (err, rows) => {
-            if (err) return res.status(500).json({ error: err.message });
-            res.json(rows);
-        });
-    } else {
-        res.status(400).json({ error: 'Invalid report type' });
+    try {
+        let reportData;
+        let query;
+
+        if (reportType === 'SALES' || reportType === 'PURCHASES') {
+            const movementType = reportType === 'SALES' ? 'SALIDA' : 'ENTRADA';
+            query = `
+                SELECT p.name, p.sku, im.*
+                FROM inventory_movements im
+                JOIN products p ON im.product_id = p.id
+                WHERE im.type = ? AND date(im.date) BETWEEN ? AND ?
+                ORDER BY im.date
+            `;
+            reportData = await all(query, [movementType, startDate, endDate]);
+        } else if (reportType === 'INVENTORY') {
+            reportData = await generateInventoryReport(startDate, endDate);
+        } else {
+            return res.status(400).json({ error: 'Invalid report type' });
+        }
+
+        const reportJson = JSON.stringify(reportData);
+        const insertSql = `INSERT INTO inventory_reports (start_date, end_date, report_data) VALUES (?, ?, ?)`;
+        
+        const result = await run(insertSql, [startDate, endDate, reportJson]);
+        const reportId = result.lastID;
+
+        const newReport = await get('SELECT * FROM inventory_reports WHERE id = ?', [reportId]);
+
+        res.status(201).json(newReport);
+
+    } catch (err) {
+        console.error('Error generating report:', err);
+        res.status(500).json({ error: 'Failed to generate report' });
     }
 });
 
-app.get('/api/reports', (req, res) => {
-    db.all('SELECT * FROM inventory_reports ORDER BY generated_at DESC', [], (err, rows) => {
-        if (err) return res.status(500).json({ error: err.message });
+app.get('/api/reports', async (req, res) => {
+    try {
+        const rows = await all('SELECT id, start_date, end_date, generated_at FROM inventory_reports ORDER BY generated_at DESC');
         res.json(rows);
-    });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get('/api/reports/:id', async (req, res) => {
+    try {
+        const report = await get('SELECT * FROM inventory_reports WHERE id = ?', [req.params.id]);
+        if (!report) {
+            return res.status(404).json({ error: 'Report not found' });
+        }
+        res.json(report);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 
 // DASHBOARD
-app.get('/api/dashboard/summary', (req, res) => {
-    const queries = {
-        totalRevenue: `SELECT SUM(quantity * unit_cost) as total FROM inventory_movements WHERE type = 'SALIDA'`, // This is conceptually wrong, needs a sales table
-        totalSales: `SELECT COUNT(*) as total FROM inventory_movements WHERE type = 'SALIDA'`,
-        productCount: `SELECT COUNT(*) as total FROM products`,
-        // newCustomers: `SELECT COUNT(*) as total FROM customers WHERE created_at >= date('now', '-30 days')` // Needs customers table
-    };
-    // This is a simplified version. A real dashboard would need more complex queries and tables.
-    db.get("SELECT (SELECT SUM(current_stock * average_cost) FROM products) as totalValue, (SELECT COUNT(*) FROM products) as productCount", (err, row) => {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json(row);
-    });
+app.get('/api/dashboard/summary', async (req, res) => {
+    try {
+        const summary = await get(`
+            SELECT
+                (SELECT COUNT(*) FROM products) as productCount,
+                (SELECT SUM(current_stock * average_cost) FROM products) as totalInventoryValue,
+                (SELECT COUNT(*) FROM inventory_movements WHERE type = 'SALIDA' AND date(date) >= date('now', '-30 days')) as salesCount30d
+        `);
+        res.json(summary);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
-app.get('/api/dashboard/recent-sales', (req, res) => {
+app.get('/api/dashboard/recent-sales', async (req, res) => {
     const sql = `
         SELECT p.name as productName, im.quantity, im.date
         FROM inventory_movements im
@@ -209,10 +323,12 @@ app.get('/api/dashboard/recent-sales', (req, res) => {
         ORDER BY im.date DESC
         LIMIT 5
     `;
-    db.all(sql, [], (err, rows) => {
-        if (err) return res.status(500).json({ error: err.message });
+    try {
+        const rows = await all(sql);
         res.json(rows);
-    });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 // SETTINGS - Simplified: using a JSON file for settings for now.

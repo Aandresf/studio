@@ -1,130 +1,163 @@
 'use client';
 
-import * as React from 'react';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
-import { Calendar as CalendarIcon, PlusCircle, Trash2 } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { PlusCircle, Trash2 } from 'lucide-react';
 
-import { cn } from '@/lib/utils';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from '@/hooks/use-toast';
+
+import { Product } from '@/lib/types';
+import { getProducts, createInventoryMovement } from '@/lib/api';
+
+interface SaleItem {
+    id: number; // Temporary client-side ID
+    productId: string;
+    quantity: number;
+}
+
+let nextId = 0;
 
 export default function SalesPage() {
-    const [date, setDate] = React.useState<Date>();
+    const [products, setProducts] = useState<Product[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [saleItems, setSaleItems] = useState<SaleItem[]>([]);
+    const { toast } = useToast();
+
+    const fetchProducts = useCallback(async () => {
+        try {
+            setIsLoading(true);
+            const data = await getProducts();
+            setProducts(data);
+            setError(null);
+        } catch (err: any) {
+            setError(err.message);
+            toast({ title: "Error", description: "No se pudieron cargar los productos.", variant: "destructive" });
+        } finally {
+            setIsLoading(false);
+        }
+    }, [toast]);
+
+    useEffect(() => {
+        fetchProducts();
+    }, [fetchProducts]);
+
+    const handleAddItem = () => {
+        setSaleItems([...saleItems, { id: nextId++, productId: '', quantity: 1 }]);
+    };
+
+    const handleRemoveItem = (id: number) => {
+        setSaleItems(saleItems.filter(item => item.id !== id));
+    };
+
+    const handleItemChange = (id: number, field: keyof Omit<SaleItem, 'id'>, value: string | number) => {
+        setSaleItems(saleItems.map(item =>
+            item.id === id ? { ...item, [field]: value } : item
+        ));
+    };
+
+    const handleRegisterSale = async () => {
+        if (saleItems.some(item => !item.productId || item.quantity <= 0)) {
+            toast({ title: "Error de Validación", description: "Por favor, complete todos los campos de los productos.", variant: "destructive" });
+            return;
+        }
+
+        setIsSubmitting(true);
+        try {
+            const movementPromises = saleItems.map(item => {
+                const product = products.find(p => p.id === parseInt(item.productId, 10));
+                if (product && item.quantity > product.current_stock) {
+                    throw new Error(`Stock insuficiente para el producto "${product.name}".`);
+                }
+                return createInventoryMovement({
+                    product_id: parseInt(item.productId, 10),
+                    type: 'SALIDA',
+                    quantity: Number(item.quantity),
+                    description: 'Venta de inventario'
+                });
+            });
+            await Promise.all(movementPromises);
+            toast({ title: "Éxito", description: "La venta ha sido registrada correctamente." });
+            setSaleItems([]); // Reset form
+            fetchProducts(); // Refetch products to update stock info
+        } catch (err: any) {
+            setError(err.message);
+            toast({ title: "Error", description: err.message, variant: "destructive" });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+    
+    useEffect(() => {
+        handleAddItem();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
 
     return (
         <div className="flex flex-col gap-6">
             <div className="flex-1">
                 <h1 className="font-semibold text-lg md:text-2xl">Ventas</h1>
-                <p className="text-sm text-muted-foreground">Crea y gestiona facturas de venta.</p>
+                <p className="text-sm text-muted-foreground">Registra salidas de inventario por ventas.</p>
             </div>
-            <div className="grid auto-rows-max items-start gap-4 lg:col-span-2 lg:gap-8">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Nueva Factura de Venta</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="grid gap-4 md:grid-cols-[1fr_250px] lg:grid-cols-3 lg:gap-8">
-                            <div className="grid auto-rows-max items-start gap-4 lg:col-span-2 lg:gap-8">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="grid gap-3">
-                                        <Label htmlFor="invoice-number">Nº de Factura</Label>
-                                        <Input id="invoice-number" type="text" placeholder="Ingrese el número de factura" />
-                                    </div>
-                                    <div className="grid gap-3">
-                                        <Label>Fecha de Factura</Label>
-                                        <Popover>
-                                            <PopoverTrigger asChild>
-                                                <Button
-                                                    variant={"outline"}
-                                                    className={cn(
-                                                        "w-full justify-start text-left font-normal",
-                                                        !date && "text-muted-foreground"
-                                                    )}
-                                                >
-                                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                                    {date ? format(date, "PPP", { locale: es }) : <span>Seleccione una fecha</span>}
-                                                </Button>
-                                            </PopoverTrigger>
-                                            <PopoverContent className="w-auto p-0">
-                                                <Calendar
-                                                    mode="single"
-                                                    selected={date}
-                                                    onSelect={setDate}
-                                                    initialFocus
-                                                />
-                                            </PopoverContent>
-                                        </Popover>
-                                    </div>
-                                    <div className="grid gap-3">
-                                        <Label htmlFor="customer">Cliente</Label>
-                                        <Input id="customer" type="text" placeholder="Nombre del cliente" />
-                                    </div>
-                                    <div className="grid gap-3">
-                                        <Label htmlFor="customer-dni">DNI</Label>
-                                        <Input id="customer-dni" type="text" placeholder="DNI del cliente" />
-                                    </div>
-                                </div>
-                                <div className="grid gap-3">
-                                <Label>Productos</Label>
-                                <div className="grid gap-4 border rounded-lg p-4">
-                                    <div className="flex items-center gap-4">
-                                        <Select>
-                                            <SelectTrigger>
+            <Card>
+                <CardHeader>
+                    <CardTitle>Nueva Venta</CardTitle>
+                    <CardDescription>
+                      Registra los productos que salen de tu inventario.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="grid gap-4">
+                        <Label>Productos</Label>
+                        {saleItems.map((item, index) => {
+                            const selectedProduct = products.find(p => p.id === parseInt(item.productId));
+                            return (
+                                <div key={item.id} className="grid grid-cols-1 md:grid-cols-[1fr_100px_auto] items-end gap-4 border p-4 rounded-md relative">
+                                    <div className="grid gap-2">
+                                        <Label htmlFor={`product-${item.id}`}>Producto (Stock: {selectedProduct?.current_stock ?? 'N/A'})</Label>
+                                        <Select
+                                            value={item.productId}
+                                            onValueChange={(value) => handleItemChange(item.id, 'productId', value)}
+                                            disabled={isLoading}
+                                        >
+                                            <SelectTrigger id={`product-${item.id}`}>
                                                 <SelectValue placeholder="Seleccionar producto" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="laptop">Laptop Pro 15</SelectItem>
-                                                <SelectItem value="phone">Smartphone X</SelectItem>
-                                                <SelectItem value="mouse">Wireless Mouse</SelectItem>
+                                                {products.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
                                             </SelectContent>
                                         </Select>
-                                        <Input type="number" placeholder="Cantidad" className="w-24" />
-                                        <Input type="text" readOnly value="$1200.00" className="w-28 text-right" />
-                                        <Button variant="outline" size="icon" className="text-muted-foreground">
+                                    </div>
+                                    <div className="grid gap-2">
+                                        <Label htmlFor={`quantity-${item.id}`}>Cantidad</Label>
+                                        <Input id={`quantity-${item.id}`} type="number" placeholder="0" value={item.quantity} onChange={e => handleItemChange(item.id, 'quantity', e.target.value)} />
+                                    </div>
+                                    {saleItems.length > 1 && (
+                                        <Button variant="outline" size="icon" className="text-muted-foreground" onClick={() => handleRemoveItem(item.id)}>
                                             <Trash2 className="h-4 w-4"/>
                                         </Button>
-                                    </div>
-                                    <Button variant="outline" size="sm" className="gap-1 justify-self-start">
-                                        <PlusCircle className="h-3.5 w-3.5" />
-                                        Añadir Producto
-                                    </Button>
+                                    )}
                                 </div>
-                                </div>
-                            </div>
-                            <div className="grid auto-rows-max items-start gap-4 lg:gap-8">
-                                <Card className="bg-muted/50">
-                                    <CardHeader>
-                                        <CardTitle>Resumen</CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="grid gap-4">
-                                        <div className="flex justify-between">
-                                            <span>Subtotal</span>
-                                            <span>$1200.00</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span>IVA (16%)</span>
-                                            <span>$192.00</span>
-                                        </div>
-                                        <Separator />
-                                        <div className="flex justify-between font-semibold text-lg">
-                                            <span>Total</span>
-                                            <span>$1392.00</span>
-                                        </div>
-                                        <Button className="w-full">Crear Factura</Button>
-                                    </CardContent>
-                                </Card>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
+                            );
+                        })}
+                    </div>
+                    <Button variant="outline" size="sm" className="gap-1 mt-4" onClick={handleAddItem}>
+                        <PlusCircle className="h-3.5 w-3.5" />
+                        Añadir Otro Producto
+                    </Button>
+                    <div className="mt-6 flex justify-end">
+                        <Button onClick={handleRegisterSale} disabled={isSubmitting || saleItems.length === 0}>
+                            {isSubmitting ? 'Registrando...' : 'Registrar Venta'}
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
         </div>
     )
 }
