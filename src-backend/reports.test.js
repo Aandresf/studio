@@ -23,9 +23,12 @@ describe('Reports API', () => {
             .send({ startDate: '2025-01-01', endDate: '2025-01-31' });
 
         expect(res.statusCode).toBe(201);
-        expect(Array.isArray(res.body)).toBe(true);
-        expect(res.body.length).toBe(1);
-        expect(res.body[0].type).toBe('SALIDA');
+        expect(res.body).toHaveProperty('id');
+        expect(res.body).toHaveProperty('report_data');
+        const reportData = JSON.parse(res.body.report_data);
+        expect(Array.isArray(reportData)).toBe(true);
+        expect(reportData.length).toBe(1);
+        expect(reportData[0].type).toBe('SALIDA');
     });
 
     it('should generate a purchases report', async () => {
@@ -34,9 +37,12 @@ describe('Reports API', () => {
             .send({ startDate: '2025-01-01', endDate: '2025-02-28' });
 
         expect(res.statusCode).toBe(201);
-        expect(Array.isArray(res.body)).toBe(true);
-        expect(res.body.length).toBe(2);
-        expect(res.body[0].type).toBe('ENTRADA');
+        expect(res.body).toHaveProperty('id');
+        expect(res.body).toHaveProperty('report_data');
+        const reportData = JSON.parse(res.body.report_data);
+        expect(Array.isArray(reportData)).toBe(true);
+        expect(reportData.length).toBe(2);
+        expect(reportData[0].type).toBe('ENTRADA');
     });
 
     it('should return 400 for invalid report type', async () => {
