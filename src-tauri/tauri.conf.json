@@ -12,12 +12,19 @@
   },
   "tauri": {
     "allowlist": {
+      
       "shell": {
         "all": false,
         "open": true,
         "sidecar": true,
         "scope": [
-          { "name": "node", "sidecar": true, "args": ["../src-backend/index.js"] }
+          {
+            "name": "node-server",
+            "cmd": "node",
+            "args": [
+              "../src-backend/index.js"
+            ]
+          }
         ]
       }
     },

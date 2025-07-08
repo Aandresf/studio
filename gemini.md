@@ -23,20 +23,30 @@ El archivo `database.sql` define el esquema. El backend de Node.js será el úni
 
 ---
 
-## Tareas Pendientes para la Próxima Sesión
+## Endpoints de la API (Plan)
 
-**Objetivo:** Implementar la lógica inicial del backend en Node.js y conectar el frontend.
+### Productos (`/api/products`)
 
-1.  **Editar `src-backend/index.js`:**
-    *   Añadir el código básico para un servidor Express.
-    *   Configurar la conexión a la base de datos SQLite (`database.sql`).
-    *   Crear el primer endpoint de la API: `GET /api/products` para leer todos los productos de la base de datos.
-    *   Crear el endpoint `POST /api/products` para añadir un nuevo producto.
+*   **`GET /`**: Obtener todos los productos.
+*   **`GET /:id`**: Obtener un producto por su ID.
+*   **`POST /`**: Crear un nuevo producto.
+*   **`PUT /:id`**: Actualizar un producto existente.
+*   **`DELETE /:id`**: Eliminar un producto.
 
-2.  **Editar `src-tauri/src/main.rs`:**
-    *   Añadir el código necesario para lanzar el servidor de Node.js como un proceso sidecar al iniciar la aplicación Tauri.
+### Movimientos de Inventario (`/api/inventory`)
 
-3.  **Editar `src/app/(app)/products/page.tsx`:**
-    *   Modificar el componente para que, en lugar de usar el array estático, llame a `fetch('http://localhost:3001/api/products')` para obtener los datos.
-    *   Conectar el formulario "Añadir Nuevo Producto" para que envíe los datos al endpoint `POST /api/products`.
+*   **`POST /purchase`**: Registrar una entrada de inventario (compra).
+*   **`POST /sale`**: Registrar una salida de inventario (venta).
+*   **`GET /movements/:productId`**: Obtener el historial de movimientos de un producto.
+
+### Reportes (`/api/reports`)
+
+*   **`POST /inventory`**: Generar un nuevo reporte de inventario para un rango de fechas.
+*   **`GET /inventory`**: Obtener la lista de reportes generados.
+*   **`GET /inventory/:id`**: Obtener los datos de un reporte específico.
+
+### Dashboard (`/api/dashboard`)
+
+*   **`GET /stats`**: Obtener estadísticas clave para el dashboard (ej. valor total del inventario, productos con bajo stock, etc.).
+
 
