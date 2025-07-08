@@ -110,6 +110,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                         </SheetContent>
                     </Sheet>
                     <div className="w-full flex-1" />
+                    <span className="hidden sm:block text-sm font-medium">{selectedStoreName}</span>
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="secondary" size="icon" className="rounded-full">
@@ -121,7 +122,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>{selectedStoreName}</DropdownMenuLabel>
+                            <DropdownMenuLabel>Mi Cuenta</DropdownMenuLabel>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem onSelect={() => router.push('/settings')}>Configuración</DropdownMenuItem>
                             <DropdownMenuItem>Soporte</DropdownMenuItem>
@@ -136,8 +137,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <WelcomeModal 
                     isOpen={isWelcomeModalOpen}
                     onStoreSelect={(store) => {
-                        setCurrentStore(store)
-                        setIsWelcomeModalOpen(false)
+                        setCurrentStore(store);
+                        setIsWelcomeModalOpen(false);
+                        router.push('/dashboard');
                     }}
                 />
             </div>
