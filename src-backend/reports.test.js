@@ -22,7 +22,7 @@ describe('Reports API', () => {
             .post('/api/reports/sales')
             .send({ startDate: '2025-01-01', endDate: '2025-01-31' });
 
-        expect(res.statusCode).toBe(200);
+        expect(res.statusCode).toBe(201);
         expect(Array.isArray(res.body)).toBe(true);
         expect(res.body.length).toBe(1);
         expect(res.body[0].type).toBe('SALIDA');
@@ -33,7 +33,7 @@ describe('Reports API', () => {
             .post('/api/reports/purchases')
             .send({ startDate: '2025-01-01', endDate: '2025-02-28' });
 
-        expect(res.statusCode).toBe(200);
+        expect(res.statusCode).toBe(201);
         expect(Array.isArray(res.body)).toBe(true);
         expect(res.body.length).toBe(2);
         expect(res.body[0].type).toBe('ENTRADA');
