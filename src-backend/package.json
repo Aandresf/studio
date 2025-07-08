@@ -10,10 +10,12 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "body-parser": "^2.2.0",
     "express": "^5.1.0",
     "sqlite3": "^5.1.7"
   },
   "devDependencies": {
+    "axios": "^1.10.0",
     "cross-env": "^7.0.3",
     "jest": "^30.0.4",
     "supertest": "^7.1.3"
