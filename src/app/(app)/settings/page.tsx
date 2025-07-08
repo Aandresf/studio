@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useTheme } from "@/components/theme-provider";
@@ -57,30 +56,6 @@ export default function SettingsPage() {
                     <Textarea id="store-address" defaultValue="123 Calle Principal, Ciudad, País" />
                   </div>
                   <Button>Guardar Cambios</Button>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader>
-                  <CardTitle>Cambiar de Tienda</CardTitle>
-                  <CardDescription>
-                    Selecciona otra de tus tiendas registradas para gestionarla.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-1">
-                      <Label htmlFor="store-selector">Tienda Activa</Label>
-                      <Select defaultValue="store1">
-                        <SelectTrigger id="store-selector">
-                          <SelectValue placeholder="Selecciona una tienda" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="store1">InventarioSimple Store (Actual)</SelectItem>
-                          <SelectItem value="store2">Mi Sucursal Principal</SelectItem>
-                          <SelectItem value="store3">Depósito Central</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <Button>Cambiar Tienda</Button>
                 </CardContent>
               </Card>
               <Card>
