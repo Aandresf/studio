@@ -32,6 +32,7 @@ export default function SettingsPage() {
         <TabsList>
           <TabsTrigger value="store">Tienda</TabsTrigger>
           <TabsTrigger value="appearance">Apariencia</TabsTrigger>
+          <TabsTrigger value="miscellaneous">Misceláneos</TabsTrigger>
         </TabsList>
         <TabsContent value="store">
            <div className="grid gap-6">
@@ -56,24 +57,6 @@ export default function SettingsPage() {
                     <Textarea id="store-address" defaultValue="123 Calle Principal, Ciudad, País" />
                   </div>
                   <Button>Guardar Cambios</Button>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader>
-                  <CardTitle>Base de Datos</CardTitle>
-                  <CardDescription>
-                    Realiza respaldos y restauraciones de tu base de datos.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="flex flex-col sm:flex-row gap-4">
-                  <Button>
-                    <Upload />
-                    Respaldar Base de Datos
-                  </Button>
-                  <Button variant="outline">
-                    <Download />
-                    Restaurar Base de Datos
-                  </Button>
                 </CardContent>
               </Card>
            </div>
@@ -101,6 +84,28 @@ export default function SettingsPage() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+        <TabsContent value="miscellaneous">
+           <div className="grid gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Base de Datos</CardTitle>
+                <CardDescription>
+                  Realiza respaldos y restauraciones de tu base de datos.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col sm:flex-row gap-4">
+                <Button>
+                  <Upload />
+                  Respaldar Base de Datos
+                </Button>
+                <Button variant="outline">
+                  <Download />
+                  Restaurar Base de Datos
+                </Button>
+              </CardContent>
+            </Card>
+           </div>
         </TabsContent>
       </Tabs>
     </div>

@@ -62,7 +62,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     const selectedStoreName = storeDetails[currentStore as keyof typeof storeDetails]?.name || 'Mi Cuenta';
 
     return (
-        <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
+        <div className="grid h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
             <div className="hidden border-r bg-card md:block">
                 <div className="flex h-full max-h-screen flex-col gap-2">
                     <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
@@ -81,7 +81,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 </div>
             </div>
             <div className="flex flex-col">
-                <header className="flex h-14 items-center gap-4 border-b bg-card px-4 lg:h-[60px] lg:px-6 sticky top-0 z-30">
+                <header className="flex h-14 items-center gap-4 border-b bg-card px-4 lg:h-[60px] lg:px-6 z-30">
                     <Sheet>
                         <SheetTrigger asChild>
                             <Button
