@@ -2,8 +2,8 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { BarChart3, Box, Home, Package, Settings, ShoppingCart, PanelLeft, ChevronDown } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { BarChart3, Box, Home, Package, ShoppingCart, PanelLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -13,9 +13,7 @@ import {
     DropdownMenuItem, 
     DropdownMenuLabel, 
     DropdownMenuSeparator, 
-    DropdownMenuTrigger,
-    DropdownMenuRadioGroup,
-    DropdownMenuRadioItem
+    DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { WelcomeModal } from '@/components/welcome-modal';
@@ -27,8 +25,6 @@ const navItems = [
   { href: '/products', icon: Box, label: 'Productos' },
   { href: '/reports', icon: BarChart3, label: 'Informes' },
 ];
-
-const settingsNav = { href: '/settings', icon: Settings, label: 'Configuración' };
 
 function SidebarNav() {
     const pathname = usePathname();
@@ -53,9 +49,18 @@ function SidebarNav() {
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
+    const router = useRouter();
     const [currentStore, setCurrentStore] = React.useState('store1');
     const [isWelcomeModalOpen, setIsWelcomeModalOpen] = React.useState(true);
     
+    const storeDetails = {
+        store1: { name: 'InventarioSimple Store' },
+        store2: { name: 'Mi Sucursal Principal' },
+        store3: { name: 'Depósito Central' },
+    };
+
+    const selectedStoreName = storeDetails[currentStore as keyof typeof storeDetails]?.name || 'Mi Cuenta';
+
     return (
         <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
             <div className="hidden border-r bg-card md:block">
@@ -72,18 +77,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     </div>
                     <div className="flex-1 overflow-auto py-2">
                        <SidebarNav />
-                    </div>
-                    <div className="mt-auto p-4 border-t">
-                         <Link
-                            href={settingsNav.href}
-                            className={cn(
-                                "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
-                                pathname.startsWith(settingsNav.href) && "text-primary bg-muted"
-                            )}
-                        >
-                            <settingsNav.icon className="h-4 w-4" />
-                            {settingsNav.label}
-                        </Link>
                     </div>
                 </div>
             </div>
@@ -114,38 +107,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                             <div className="flex-1 overflow-auto py-2">
                                 <SidebarNav />
                             </div>
-                             <div className="mt-auto p-4 border-t">
-                                 <Link
-                                    href={settingsNav.href}
-                                    className={cn(
-                                        "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
-                                        pathname.startsWith(settingsNav.href) && "text-primary bg-muted"
-                                    )}
-                                >
-                                    <settingsNav.icon className="h-4 w-4" />
-                                    {settingsNav.label}
-                                </Link>
-                            </div>
                         </SheetContent>
                     </Sheet>
                     <div className="w-full flex-1" />
-                     <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="outline" className="flex items-center gap-2">
-                                <span>{currentStore === 'store1' ? 'InventarioSimple Store' : currentStore === 'store2' ? 'Mi Sucursal Principal' : 'Depósito Central'}</span>
-                                <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-56">
-                            <DropdownMenuLabel>Cambiar de Tienda</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                             <DropdownMenuRadioGroup value={currentStore} onValueChange={setCurrentStore}>
-                                <DropdownMenuRadioItem value="store1">InventarioSimple Store</DropdownMenuRadioItem>
-                                <DropdownMenuRadioItem value="store2">Mi Sucursal Principal</DropdownMenuRadioItem>
-                                <DropdownMenuRadioItem value="store3">Depósito Central</DropdownMenuRadioItem>
-                            </DropdownMenuRadioGroup>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="secondary" size="icon" className="rounded-full">
@@ -157,12 +121,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Mi Cuenta</DropdownMenuLabel>
+                            <DropdownMenuLabel>{selectedStoreName}</DropdownMenuLabel>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem>Configuración</DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => router.push('/settings')}>Configuración</DropdownMenuItem>
                             <DropdownMenuItem>Soporte</DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem onSelect={() => setIsWelcomeModalOpen(true)}>Cerrar Sesión</DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => setIsWelcomeModalOpen(true)}>Cambiar Tienda</DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </header>
