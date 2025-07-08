@@ -71,64 +71,67 @@ app.delete('/api/products/:id', (req, res) => {
   });
 });
 
+// Helper to promisify db.run, db.get, db.all
+const util = require('util');
+
 // INVENTORY MOVEMENTS
-app.post('/api/inventory/movements', (req, res) => {
-    const { product_id, type, quantity, unit_cost, description } = req.body;
+app.post('/api/inventory/movements', async (req, res) => {
+    const { product_id, type, quantity, unit_cost, description, date } = req.body;
     if (!product_id || !type || !quantity) {
         return res.status(400).json({ error: 'Missing required fields: product_id, type, quantity' });
     }
 
-    db.serialize(() => {
-        db.run('BEGIN TRANSACTION');
+    if (type === 'ENTRADA' && (unit_cost === undefined || unit_cost === null)) {
+        return res.status(400).json({ error: 'unit_cost is required for ENTRADA movements' });
+    }
 
-        // 1. Get current product state
-        db.get('SELECT current_stock, average_cost FROM products WHERE id = ?', [product_id], (err, product) => {
-            if (err) {
-                db.run('ROLLBACK');
-                return res.status(500).json({ error: err.message });
+    const run = util.promisify(db.run.bind(db));
+    const get = util.promisify(db.get.bind(db));
+
+    try {
+        await run('BEGIN TRANSACTION');
+
+        const product = await get('SELECT current_stock, average_cost FROM products WHERE id = ?', [product_id]);
+
+        if (!product) {
+            await run('ROLLBACK');
+            return res.status(404).json({ error: 'Product not found' });
+        }
+
+        let new_stock = product.current_stock;
+        let new_avg_cost = product.average_cost;
+
+        if (type === 'ENTRADA') {
+            new_stock += quantity;
+            const current_total_value = product.current_stock * product.average_cost;
+            const entry_value = quantity * unit_cost;
+            new_avg_cost = new_stock > 0 ? (current_total_value + entry_value) / new_stock : 0;
+        } else { // SALIDA, RETIRO, AUTO-CONSUMO
+            if (product.current_stock < quantity) {
+                await run('ROLLBACK');
+                return res.status(400).json({ error: 'Insufficient stock' });
             }
-            if (!product) {
-                db.run('ROLLBACK');
-                return res.status(404).json({ error: 'Product not found' });
-            }
+            new_stock -= quantity;
+        }
 
-            let new_stock = product.current_stock;
-            let new_avg_cost = product.average_cost;
+        const movementDate = date ? date : new Date().toISOString().slice(0, 19).replace('T', ' ');
+        const movementSql = `INSERT INTO inventory_movements (product_id, type, quantity, unit_cost, description, date) VALUES (?, ?, ?, ?, ?, ?)`;
+        await run(movementSql, [product_id, type, quantity, unit_cost, description, movementDate]);
 
-            if (type === 'ENTRADA') {
-                new_stock += quantity;
-                const current_total_value = product.current_stock * product.average_cost;
-                const entry_value = quantity * unit_cost;
-                new_avg_cost = (current_total_value + entry_value) / new_stock;
-            } else { // SALIDA, RETIRO, AUTO-CONSUMO
-                if (product.current_stock < quantity) {
-                    db.run('ROLLBACK');
-                    return res.status(400).json({ error: 'Insufficient stock' });
-                }
-                new_stock -= quantity;
-            }
+        const productSql = `UPDATE products SET current_stock = ?, average_cost = ?, updated_at = strftime('%Y-%m-%d %H:%M:%S', 'now') WHERE id = ?`;
+        await run(productSql, [new_stock, new_avg_cost, product_id]);
 
-            // 2. Insert movement
-            const movementSql = `INSERT INTO inventory_movements (product_id, type, quantity, unit_cost, description) VALUES (?, ?, ?, ?, ?)`;
-            db.run(movementSql, [product_id, type, quantity, unit_cost, description], function(err) {
-                if (err) {
-                    db.run('ROLLBACK');
-                    return res.status(500).json({ error: err.message });
-                }
+        await run('COMMIT');
+        res.status(201).json({ message: 'Movement registered and product updated' });
 
-                // 3. Update product
-                const productSql = `UPDATE products SET current_stock = ?, average_cost = ?, updated_at = strftime('%Y-%m-%d %H:%M:%S', 'now') WHERE id = ?`;
-                db.run(productSql, [new_stock, new_avg_cost, product_id], (err) => {
-                    if (err) {
-                        db.run('ROLLBACK');
-                        return res.status(500).json({ error: err.message });
-                    }
-                    db.run('COMMIT');
-                    res.status(201).json({ message: 'Movement registered and product updated' });
-                });
-            });
-        });
-    });
+    } catch (err) {
+        try {
+            await run('ROLLBACK');
+        } catch (rollbackErr) {
+            console.error('Fatal: Could not rollback transaction', rollbackErr);
+        }
+        res.status(500).json({ error: err.message });
+    }
 });
 
 
@@ -149,7 +152,7 @@ app.post('/api/reports/:type', (req, res) => {
             SELECT p.name, p.sku, im.*
             FROM inventory_movements im
             JOIN products p ON im.product_id = p.id
-            WHERE im.type = ? AND im.date BETWEEN ? AND ?
+            WHERE im.type = ? AND date(im.date) BETWEEN ? AND ?
             ORDER BY im.date
         `;
         db.all(query, [movementType, startDate, endDate], (err, rows) => {

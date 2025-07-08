@@ -1,25 +1,19 @@
 
 const request = require('supertest');
-const { app, server, db } = require('./index');
-
-
+const { app, db } = require('./index');
 
 describe('Inventory Movements API', () => {
     let productId;
 
     beforeEach(async () => {
-        // Create a product before each test
-        const res = await request(app)
+        // Clear all data
+        await new Promise((resolve) => db.exec("DELETE FROM inventory_movements; DELETE FROM products; PRAGMA sqlite_sequence(name='products', seq=0); PRAGMA sqlite_sequence(name='inventory_movements', seq=0);", resolve));
+
+        // Create a product using the API to ensure a valid state
+        const productRes = await request(app)
             .post('/api/products')
             .send({ name: 'Test Product', sku: 'TP-001', current_stock: 10, average_cost: 20 });
-        productId = res.body.id;
-    });
-
-    afterEach((done) => {
-        db.serialize(() => {
-            db.run("DELETE FROM inventory_movements");
-            db.run("DELETE FROM products", done);
-        });
+        productId = productRes.body.id;
     });
 
     it('should register an IN movement and update product stock and cost', async () => {
@@ -46,6 +40,7 @@ describe('Inventory Movements API', () => {
             product_id: productId,
             type: 'SALIDA',
             quantity: 3,
+            unit_cost: null, // Not needed for sales
             description: 'Sale to customer'
         };
         const res = await request(app)
