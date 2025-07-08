@@ -67,6 +67,7 @@ export default function ProductsPage() {
                                     <span className="sr-only">Imagen</span>
                                 </TableHead>
                                 <TableHead>Nombre</TableHead>
+                                <TableHead className="hidden md:table-cell">SKU</TableHead>
                                 <TableHead>Estado</TableHead>
                                 <TableHead className="hidden md:table-cell">Precio</TableHead>
                                 <TableHead className="hidden md:table-cell">Stock</TableHead>
@@ -91,6 +92,7 @@ export default function ProductsPage() {
                                     <TableCell className="font-medium">
                                         {product.name}
                                     </TableCell>
+                                    <TableCell className="hidden md:table-cell">{product.sku}</TableCell>
                                     <TableCell>
                                         <Badge variant={product.status === 'active' ? 'outline' : 'secondary'}>{product.status === 'active' ? 'Activo' : 'Archivado'}</Badge>
                                     </TableCell>
@@ -132,6 +134,12 @@ export default function ProductsPage() {
                                 Nombre
                             </Label>
                             <Input id="name" placeholder="Nombre del producto" className="col-span-3" />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="sku" className="text-right">
+                                SKU
+                            </Label>
+                            <Input id="sku" placeholder="PROD-001" className="col-span-3" />
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="description" className="text-right">
