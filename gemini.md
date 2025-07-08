@@ -23,30 +23,39 @@ El archivo `database.sql` define el esquema. El backend de Node.js será el úni
 
 ---
 
-## Endpoints de la API (Plan)
+## Endpoints de la API Requeridos
+
+A continuación se detallan los endpoints necesarios para dar vida al frontend.
 
 ### Productos (`/api/products`)
 
-*   **`GET /`**: Obtener todos los productos.
-*   **`GET /:id`**: Obtener un producto por su ID.
-*   **`POST /`**: Crear un nuevo producto.
-*   **`PUT /:id`**: Actualizar un producto existente.
-*   **`DELETE /:id`**: Eliminar un producto.
+*   **`GET /api/products`**: Obtener la lista completa de productos.
+*   **`POST /api/products`**: Crear un nuevo producto.
+*   **`GET /api/products/:id`**: Obtener los detalles de un solo producto.
+*   **`PUT /api/products/:id`**: Actualizar un producto existente.
+*   **`DELETE /api/products/:id`**: Eliminar un producto.
 
 ### Movimientos de Inventario (`/api/inventory`)
 
-*   **`POST /purchase`**: Registrar una entrada de inventario (compra).
-*   **`POST /sale`**: Registrar una salida de inventario (venta).
-*   **`GET /movements/:productId`**: Obtener el historial de movimientos de un producto.
+*   **`POST /api/inventory/movements`**: Registrar un nuevo movimiento (compra, venta, etc.).
 
 ### Reportes (`/api/reports`)
 
-*   **`POST /inventory`**: Generar un nuevo reporte de inventario para un rango de fechas.
-*   **`GET /inventory`**: Obtener la lista de reportes generados.
-*   **`GET /inventory/:id`**: Obtener los datos de un reporte específico.
+*   **`POST /api/reports/inventory`**: Generar un reporte de inventario.
+*   **`POST /api/reports/sales`**: Generar un "Libro de Venta".
+*   **`POST /api/reports/purchases`**: Generar un "Libro de Compra".
+*   **`GET /api/reports`**: Obtener historial de reportes generados.
 
 ### Dashboard (`/api/dashboard`)
 
-*   **`GET /stats`**: Obtener estadísticas clave para el dashboard (ej. valor total del inventario, productos con bajo stock, etc.).
+*   **`GET /api/dashboard/summary`**: Obtener estadísticas clave para el panel.
+*   **`GET /api/dashboard/recent-sales`**: Obtener lista de ventas recientes.
+
+### Configuración (`/api/settings`)
+
+*   **`GET /api/settings/store`**: Obtener los detalles de la tienda.
+*   **`PUT /api/settings/store`**: Actualizar los detalles de la tienda.
+*   **`POST /api/database/backup`**: Iniciar respaldo de la base de datos.
+*   **`POST /api/database/restore`**: Iniciar restauración de la base de datos.
 
 
