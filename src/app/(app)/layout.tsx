@@ -18,6 +18,7 @@ import {
     DropdownMenuRadioItem
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { WelcomeModal } from '@/components/welcome-modal';
 
 const navItems = [
   { href: '/dashboard', icon: Home, label: 'Panel de Control' },
@@ -53,6 +54,7 @@ function SidebarNav() {
 export default function AppLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
     const [currentStore, setCurrentStore] = React.useState('store1');
+    const [isWelcomeModalOpen, setIsWelcomeModalOpen] = React.useState(true);
     
     return (
         <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
@@ -160,13 +162,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                             <DropdownMenuItem>Configuración</DropdownMenuItem>
                             <DropdownMenuItem>Soporte</DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem>Cerrar Sesión</DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => setIsWelcomeModalOpen(true)}>Cerrar Sesión</DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </header>
-                <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
+                <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 overflow-auto">
                     {children}
                 </main>
+                <WelcomeModal 
+                    isOpen={isWelcomeModalOpen}
+                    onStoreSelect={(store) => {
+                        setCurrentStore(store)
+                        setIsWelcomeModalOpen(false)
+                    }}
+                />
             </div>
         </div>
     );

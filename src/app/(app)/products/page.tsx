@@ -21,6 +21,16 @@ const products = [
   { id: 3, name: "Wireless Mouse", sku: "WM-2024", stock: 120, price: 25.00, status: "active", image: "https://placehold.co/64x64.png", hint: "computer mouse" },
   { id: 4, name: "Gaming Keyboard", sku: "GK-2024", stock: 0, price: 150.00, status: "archived", image: "https://placehold.co/64x64.png", hint: "keyboard" },
   { id: 5, name: "4K Monitor", sku: "4KM-2024", stock: 8, price: 450.00, status: "active", image: "https://placehold.co/64x64.png", hint: "computer monitor" },
+  { id: 6, name: "Tablet Pro", sku: "TP-2024", stock: 30, price: 600.00, status: "active", image: "https://placehold.co/64x64.png", hint: "tablet" },
+  { id: 7, name: "Smart Watch 5", sku: "SW5-2024", stock: 75, price: 250.00, status: "active", image: "https://placehold.co/64x64.png", hint: "smart watch" },
+  { id: 8, name: "Bluetooth Headphones", sku: "BH-2024", stock: 200, price: 99.00, status: "active", image: "https://placehold.co/64x64.png", hint: "headphones" },
+  { id: 9, name: "USB-C Hub", sku: "UCH-2024", stock: 150, price: 45.00, status: "active", image: "https://placehold.co/64x64.png", hint: "usb hub" },
+  { id: 10, name: "Webcam HD", sku: "WHD-2024", stock: 60, price: 70.00, status: "archived", image: "https://placehold.co/64x64.png", hint: "webcam" },
+  { id: 11, name: "External SSD 1TB", sku: "SSD1-2024", stock: 40, price: 120.00, status: "active", image: "https://placehold.co/64x64.png", hint: "external drive" },
+  { id: 12, name: "Ergonomic Chair", sku: "EC-2024", stock: 12, price: 350.00, status: "active", image: "https://placehold.co/64x64.png", hint: "office chair" },
+  { id: 13, name: "Standing Desk", sku: "SD-2024", stock: 5, price: 500.00, status: "active", image: "https://placehold.co/64x64.png", hint: "desk" },
+  { id: 14, name: "Power Bank", sku: "PB-2024", stock: 90, price: 35.00, status: "active", image: "https://placehold.co/64x64.png", hint: "power bank" },
+  { id: 15, name: "VR Headset", sku: "VRH-2024", stock: 10, price: 950.00, status: "archived", image: "https://placehold.co/64x64.png", hint: "vr headset" },
 ];
 
 export default function ProductsPage() {
