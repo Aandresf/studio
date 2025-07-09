@@ -29,9 +29,12 @@ const db = new sqlite3.Database(DB_FILE, (err) => {
 
 // --- API Endpoints ---
 
+app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
+
 // PRODUCTS
 app.get('/api/products', (req, res) => {
-  db.all('SELECT * FROM products ORDER BY name', [], (err, rows) => {
+  const sql = " SELECT id, name, sku, status, image, current_stock as stock, average_cost as price FROM products ORDER BY id DESC ";
+  db.all(sql, [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(rows);
   });
@@ -39,16 +42,25 @@ app.get('/api/products', (req, res) => {
 
 app.post('/api/products', (req, res) => {
   const { name, sku, current_stock = 0, average_cost = 0 } = req.body;
+  const status = req.body.status === 'Inactivo' ? 'Inactivo' : 'Activo'; // Ensure valid status
   if (!name) return res.status(400).json({ error: 'Product name is required.' });
-  const sql = `INSERT INTO products (name, sku, current_stock, average_cost) VALUES (?, ?, ?, ?)`;
-  db.run(sql, [name, sku, current_stock, average_cost], function (err) {
+  const sql = `INSERT INTO products (name, sku, status, current_stock, average_cost) VALUES (?, ?, ?, ?, ?)`;
+  db.run(sql, [name, sku, status, current_stock, average_cost], function (err) {
     if (err) return res.status(500).json({ error: err.message });
-    res.status(201).json({ id: this.lastID, ...req.body });
+    res.status(201).json({ id: this.lastID, ...req.body, status }); // Return sanitized status
   });
 });
 
 app.get('/api/products/:id', (req, res) => {
-    db.get('SELECT * FROM products WHERE id = ?', [req.params.id], (err, row) => {
+    const sql = `
+      SELECT
+        id, name, sku, status, image,
+        current_stock as stock,
+        average_cost as price
+      FROM products
+      WHERE id = ?
+    `;
+    db.get(sql, [req.params.id], (err, row) => {
         if (err) return res.status(500).json({ error: err.message });
         if (!row) return res.status(404).json({ error: 'Product not found' });
         res.json(row);
@@ -57,9 +69,10 @@ app.get('/api/products/:id', (req, res) => {
 
 app.put('/api/products/:id', (req, res) => {
   const { name, sku, current_stock, average_cost } = req.body;
+  const status = req.body.status === 'Inactivo' ? 'Inactivo' : 'Activo'; // Ensure valid status
   if (!name) return res.status(400).json({ error: 'Product name is required.' });
-  const sql = `UPDATE products SET name = ?, sku = ?, current_stock = ?, average_cost = ?, updated_at = strftime('%Y-%m-%d %H:%M:%S', 'now') WHERE id = ?`;
-  db.run(sql, [name, sku, current_stock, average_cost, req.params.id], function (err) {
+  const sql = `UPDATE products SET name = ?, sku = ?, status = ?, current_stock = ?, average_cost = ?, updated_at = strftime('%Y-%m-%d %H:%M:%S', 'now') WHERE id = ?`;
+  db.run(sql, [name, sku, status, current_stock, average_cost, req.params.id], function (err) {
     if (err) return res.status(500).json({ error: err.message });
     if (this.changes === 0) return res.status(404).json({ error: 'Product not found' });
     res.json({ message: 'Product updated successfully' });
@@ -137,6 +150,62 @@ app.post('/api/inventory/movements', async (req, res) => {
     }
 });
 
+// PURCHASES (ENTRADA)
+app.get('/api/purchases', (req, res) => {
+    const query = `
+        SELECT 
+            im.id,
+            im.date,
+            p.name as productName,
+            im.quantity,
+            im.unit_cost,
+            im.description
+        FROM inventory_movements im
+        JOIN products p ON im.product_id = p.id
+        WHERE im.type = 'ENTRADA'
+        ORDER BY im.date DESC;
+    `;
+    db.all(query, [], (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        
+        // Calculate total_cost in JS for clarity and consistency.
+        const purchases = rows.map(p => ({ 
+            ...p, 
+            total_cost: (p.quantity || 0) * (p.unit_cost || 0) 
+        }));
+
+        res.json(purchases);
+    });
+});
+
+// SALES (SALIDA)
+app.get('/api/sales', (req, res) => {
+    const query = `
+        SELECT 
+            im.id,
+            im.date,
+            p.name as productName,
+            im.quantity,
+            im.unit_cost, -- This might be the sale price
+            im.description
+        FROM inventory_movements im
+        JOIN products p ON im.product_id = p.id
+        WHERE im.type = 'SALIDA'
+        ORDER BY im.date DESC;
+    `;
+    db.all(query, [], (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+
+        // Calculate total_revenue in JS for clarity and consistency.
+        const sales = rows.map(s => ({ 
+            ...s, 
+            total_revenue: (s.quantity || 0) * (s.unit_cost || 0) 
+        }));
+
+        res.json(sales);
+    });
+});
+
 
 // REPORTS
 app.post('/api/reports/:type', (req, res) => {
@@ -190,22 +259,35 @@ app.get('/api/reports', (req, res) => {
 
 // DASHBOARD
 app.get('/api/dashboard/summary', (req, res) => {
-    const queries = {
-        totalRevenue: `SELECT SUM(quantity * unit_cost) as total FROM inventory_movements WHERE type = 'SALIDA'`, // This is conceptually wrong, needs a sales table
-        totalSales: `SELECT COUNT(*) as total FROM inventory_movements WHERE type = 'SALIDA'`,
-        productCount: `SELECT COUNT(*) as total FROM products`,
-        // newCustomers: `SELECT COUNT(*) as total FROM customers WHERE created_at >= date('now', '-30 days')` // Needs customers table
-    };
-    // This is a simplified version. A real dashboard would need more complex queries and tables.
-    db.get("SELECT (SELECT SUM(current_stock * average_cost) FROM products) as totalValue, (SELECT COUNT(*) FROM products) as productCount", (err, row) => {
+    const query = `
+        SELECT
+            (SELECT SUM(current_stock * average_cost) FROM products) as totalValue,
+            (SELECT COUNT(*) FROM products) as productCount,
+            (SELECT COUNT(*) FROM inventory_movements WHERE type = 'SALIDA' AND date >= date('now', '-30 days')) as salesCount
+    `;
+    db.get(query, (err, row) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.json(row);
+
+        // Ensure backend handles nulls and provides a consistent structure.
+        const summaryData = {
+            totalRevenue: { value: row.totalValue || 0, change: 0 }, // Change placeholder
+            sales: { value: row.salesCount || 0, change: 0 }, // Change placeholder
+            totalProducts: { value: row.productCount || 0, change: 0 }, // Change placeholder
+            newCustomers: { value: 0, change: 0 } // Not implemented yet
+        };
+
+        res.json(summaryData);
     });
 });
 
 app.get('/api/dashboard/recent-sales', (req, res) => {
     const sql = `
-        SELECT p.name as productName, im.quantity, im.date
+        SELECT
+            im.id,
+            p.name as productName,
+            im.quantity,
+            im.unit_cost,
+            im.date
         FROM inventory_movements im
         JOIN products p ON im.product_id = p.id
         WHERE im.type = 'SALIDA'
@@ -214,7 +296,17 @@ app.get('/api/dashboard/recent-sales', (req, res) => {
     `;
     db.all(sql, [], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.json(rows);
+
+        const salesData = rows.map(row => ({
+            id: row.id.toString(),
+            customerName: 'Venta de mostrador', // Generic placeholder
+            customerEmail: '', // Keep it clean
+            status: 'Completado', // Consistent status
+            date: row.date,
+            amount: row.quantity * (row.unit_cost || 0) // Handle possible null cost
+        }));
+
+        res.json(salesData);
     });
 });
 

@@ -49,6 +49,8 @@ A continuación se detallan los endpoints necesarios para dar vida al frontend.
 
 ### Dashboard (`/api/dashboard`)
 
+> **Nota:** Los endpoints del Dashboard (`/summary` y `/recent-sales`) actualmente usan valores de marcador de posición (placeholders) para datos como los porcentajes de cambio y la información del cliente. Estos deben ser reemplazados por consultas dinámicas a la base de datos cuando el esquema lo permita.
+
 *   **`GET /api/dashboard/summary`**: Obtener estadísticas clave para el panel.
 *   **`GET /api/dashboard/recent-sales`**: Obtener lista de ventas recientes.
 
@@ -59,6 +61,10 @@ A continuación se detallan los endpoints necesarios para dar vida al frontend.
 *   **`POST /api/database/backup`**: Iniciar respaldo de la base de datos.
 *   **`POST /api/database/restore`**: Iniciar restauración de la base de datos.
 
+### Health Check (`/api/health`)
+
+*   **`GET /api/health`**: Verifica que el backend esté funcionando correctamente. Devuelve un estado `ok`.
+
 ---
 
 ## Estado Actual del Proyecto
@@ -67,6 +73,32 @@ La estructura inicial del proyecto ya ha sido creada, siguiendo la arquitectura 
 
 El proyecto se encuentra en la **fase de desarrollo e implementación activa**. El trabajo futuro debe centrarse en desarrollar los endpoints de la API y conectar los componentes del frontend, en lugar de volver a generar el código base.
 
-**Última acción:** Se intentó ejecutar `npm run tauri dev`. El proceso falló por una dependencia de compilación ausente en el sistema (MSVC C++ build tools), no por un error en el código.
+**Última acción:** Se implementó un sistema de "pre-arranque" o pantalla de carga. El frontend ahora sondea el nuevo endpoint `/api/health` en el backend y muestra una pantalla de espera. La interfaz de usuario principal no se renderizará hasta que el backend confirme que está completamente operativo, evitando así errores de renderizado y mejorando la experiencia de inicio de la aplicación.
+
+---
+
+## Últimas Actualizaciones (9 de Julio de 2025)
+
+Se ha realizado una revisión y refactorización exhaustiva de varios endpoints del backend para asegurar la consistencia de los datos y prevenir errores en el frontend.
+
+1.  **Alineación de Datos (Producto):**
+    *   Se modificaron los endpoints `GET /api/products` y `GET /api/products/:id`.
+    *   Ahora devuelven los campos `stock` y `price` (usando alias de SQL) en lugar de `current_stock` y `average_cost`, que es lo que el frontend esperaba. Esto solucionó un error crítico que impedía renderizar la página de productos.
+
+2.  **Robustecimiento del Backend:**
+    *   Se revisaron los endpoints del Dashboard (`/api/dashboard/summary` y `/api/dashboard/recent-sales`) para que el backend maneje los valores nulos o indefinidos.
+    *   Los cálculos y los datos de marcador de posición (placeholders) ahora se resuelven en el servidor, enviando una estructura de datos limpia y predecible al cliente.
+
+3.  **Nuevos Endpoints (Compras y Ventas):**
+    *   Se crearon los endpoints `GET /api/purchases` y `GET /api/sales`.
+    *   Estos endpoints proporcionan listas dedicadas para el historial de compras (`ENTRADA`) y ventas (`SALIDA`), filtrando la tabla `inventory_movements`. Esto permite que las páginas de Compras y Ventas del frontend funcionen correctamente.
+
+4.  **Implementación del Estado de Productos y Corrección de Errores:**
+    *   Se solucionó un error crítico (`SQLITE_ERROR: no such column: status`) que impedía la carga de las páginas de productos, compras y ventas.
+    *   Se añadió una columna `status` a la tabla `products` en la base de datos (`schema.sql`) para gestionar si un producto está 'Activo' o 'Inactivo'.
+    *   Se actualizaron los endpoints del backend (`POST`, `PUT`, `GET` para productos) para que sean compatibles con el nuevo campo `status`.
+    *   Se refactorizó por completo la página de productos del frontend (`products/page.tsx`) para implementar la funcionalidad de **edición**, que no existía.
+    *   El diálogo de productos ahora sirve tanto para crear como para editar, y utiliza un componente `Switch` para cambiar el estado del producto.
+    *   Se actualizaron las definiciones de tipos (`Product`) y las llamadas a la API (`createProduct`, `updateProduct`) para alinearlas con los cambios.
 
 

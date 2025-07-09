@@ -34,14 +34,14 @@ export const getProducts = (): Promise<Product[]> => fetchAPI('/products');
 
 
 
-export const createProduct = (product: Omit<Product, 'id' | 'created_at' | 'updated_at'>): Promise<Product> => {
+export const createProduct = (product: Partial<Product>): Promise<Product> => {
     return fetchAPI('/products', {
         method: 'POST',
         body: JSON.stringify(product),
     });
 };
 
-export const updateProduct = (id: number, product: Partial<Omit<Product, 'id' | 'created_at' | 'updated_at'>>): Promise<{ message: string }> => {
+export const updateProduct = (id: number, product: Partial<Product>): Promise<{ message: string }> => {
     return fetchAPI(`/products/${id}`, {
         method: 'PUT',
         body: JSON.stringify(product),

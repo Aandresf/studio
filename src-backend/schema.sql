@@ -9,6 +9,8 @@ CREATE TABLE IF NOT EXISTS products (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,
   sku TEXT UNIQUE,
+  status TEXT NOT NULL DEFAULT 'Activo', -- Puede ser 'Activo' o 'Inactivo'
+  image TEXT, -- URL o path a la imagen del producto
   current_stock REAL NOT NULL DEFAULT 0,
   average_cost REAL NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now')),

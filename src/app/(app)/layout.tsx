@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { WelcomeModal } from '@/components/welcome-modal';
-import { event } from '@tauri-apps/api';
+import { LoadingScreen } from '@/components/ui/loading-screen'; // Importar la pantalla de carga
 
 // 1. Crear el Contexto para el estado del Backend
 interface BackendStatusContextType {
@@ -82,21 +82,33 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     const [currentStore, setCurrentStore] = React.useState('store1');
     const [isWelcomeModalOpen, setIsWelcomeModalOpen] = React.useState(true);
     
-    // Estado para la conexión con el backend y para forzar re-fetch
     const [isBackendReady, setIsBackendReady] = React.useState(false);
     const [refetchKey, setRefetchKey] = React.useState(0);
 
-    // Listener para el evento de Tauri
+    // Lógica para verificar si el backend está listo
     React.useEffect(() => {
-        const unlisten = event.listen('backend-ready', () => {
-            console.log('Backend is ready, updating state.');
-            setIsBackendReady(true);
-        });
+        if (isBackendReady) return;
 
-        return () => {
-            unlisten.then(f => f());
+        const checkBackendStatus = async () => {
+            try {
+                const response = await fetch('http://localhost:3001/api/health');
+                if (response.ok) {
+                    console.log('Backend is ready, updating state.');
+                    setIsBackendReady(true);
+                    clearInterval(intervalId);
+                }
+            } catch (error) {
+                // El backend aún no está listo, se intentará de nuevo.
+                console.log('Waiting for backend...');
+            }
         };
-    }, []);
+
+        const intervalId = setInterval(checkBackendStatus, 2000); // Reintentar cada 2 segundos
+
+        // Limpieza al desmontar el componente
+        return () => clearInterval(intervalId);
+    }, [isBackendReady]);
+
 
     const triggerRefetch = () => {
         setRefetchKey(prev => prev + 1);
@@ -109,6 +121,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     };
 
     const selectedStoreName = storeDetails[currentStore as keyof typeof storeDetails]?.name || 'Mi Cuenta';
+
+    // Mostrar la pantalla de carga si el backend no está listo
+    if (!isBackendReady) {
+        return <LoadingScreen />;
+    }
 
     return (
         <BackendStatusContext.Provider value={{ isBackendReady, triggerRefetch, refetchKey }}>

@@ -1,12 +1,15 @@
 
 export interface Product {
-    id: number;
-    name: string;
-    sku: string | null;
-    current_stock: number;
-    average_cost: number;
-    created_at: string;
-    updated_at: string;
+  id: number;
+  name: string;
+  sku: string | null;
+  stock: number;
+  price: number;
+  status: 'Activo' | 'Inactivo';
+  image?: string;
+  // Campos de la BD que se mapean a los de arriba
+  current_stock?: number;
+  average_cost?: number;
 }
 
 export interface DashboardSummary {
