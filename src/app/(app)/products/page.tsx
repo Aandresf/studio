@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { MoreHorizontal, PlusCircle } from 'lucide-react';
 
+import { useBackendStatus } from '@/app/(app)/layout';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,28 +15,97 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { Skeleton } from '@/components/ui/skeleton';
 
-const products = [
-  { id: 1, name: "Laptop Pro 15", sku: "LP15-2024", stock: 15, price: 1200.00, status: "active", image: "https://placehold.co/64x64.png", hint: "laptop" },
-  { id: 2, name: "Smartphone X", sku: "SPX-2024", stock: 45, price: 800.00, status: "active", image: "https://placehold.co/64x64.png", hint: "smartphone" },
-  { id: 3, name: "Wireless Mouse", sku: "WM-2024", stock: 120, price: 25.00, status: "active", image: "https://placehold.co/64x64.png", hint: "computer mouse" },
-  { id: 4, name: "Gaming Keyboard", sku: "GK-2024", stock: 0, price: 150.00, status: "archived", image: "https://placehold.co/64x64.png", hint: "keyboard" },
-  { id: 5, name: "4K Monitor", sku: "4KM-2024", stock: 8, price: 450.00, status: "active", image: "https://placehold.co/64x64.png", hint: "computer monitor" },
-  { id: 6, name: "Tablet Pro", sku: "TP-2024", stock: 30, price: 600.00, status: "active", image: "https://placehold.co/64x64.png", hint: "tablet" },
-  { id: 7, name: "Smart Watch 5", sku: "SW5-2024", stock: 75, price: 250.00, status: "active", image: "https://placehold.co/64x64.png", hint: "smart watch" },
-  { id: 8, name: "Bluetooth Headphones", sku: "BH-2024", stock: 200, price: 99.00, status: "active", image: "https://placehold.co/64x64.png", hint: "headphones" },
-  { id: 9, name: "USB-C Hub", sku: "UCH-2024", stock: 150, price: 45.00, status: "active", image: "https://placehold.co/64x64.png", hint: "usb hub" },
-  { id: 10, name: "Webcam HD", sku: "WHD-2024", stock: 60, price: 70.00, status: "archived", image: "https://placehold.co/64x64.png", hint: "webcam" },
-  { id: 11, name: "External SSD 1TB", sku: "SSD1-2024", stock: 40, price: 120.00, status: "active", image: "https://placehold.co/64x64.png", hint: "external drive" },
-  { id: 12, name: "Ergonomic Chair", sku: "EC-2024", stock: 12, price: 350.00, status: "active", image: "https://placehold.co/64x64.png", hint: "office chair" },
-  { id: 13, name: "Standing Desk", sku: "SD-2024", stock: 5, price: 500.00, status: "active", image: "https://placehold.co/64x64.png", hint: "desk" },
-  { id: 14, name: "Power Bank", sku: "PB-2024", stock: 90, price: 35.00, status: "active", image: "https://placehold.co/64x64.png", hint: "power bank" },
-  { id: 15, name: "VR Headset", sku: "VRH-2024", stock: 10, price: 950.00, status: "archived", image: "https://placehold.co/64x64.png", hint: "vr headset" },
-];
+interface Product {
+  id: number;
+  name: string;
+  sku: string;
+  stock: number;
+  price: number;
+  status: 'active' | 'archived';
+  image: string;
+  hint?: string;
+}
+
+function ProductTableSkeleton() {
+    return (
+        <Table>
+            <TableHeader>
+                <TableRow>
+                    <TableHead className="hidden w-[100px] sm:table-cell">
+                        <span className="sr-only">Imagen</span>
+                    </TableHead>
+                    <TableHead>Nombre</TableHead>
+                    <TableHead className="hidden md:table-cell">SKU</TableHead>
+                    <TableHead>Estado</TableHead>
+                    <TableHead className="hidden md:table-cell">Precio</TableHead>
+                    <TableHead className="hidden md:table-cell">Stock</TableHead>
+                    <TableHead>
+                        <span className="sr-only">Acciones</span>
+                    </TableHead>
+                </TableRow>
+            </TableHeader>
+            <TableBody>
+                {Array.from({ length: 5 }).map((_, index) => (
+                    <TableRow key={index}>
+                        <TableCell className="hidden sm:table-cell">
+                            <Skeleton className="h-16 w-16 rounded-md" />
+                        </TableCell>
+                        <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                        <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-24" /></TableCell>
+                        <TableCell><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
+                        <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-16" /></TableCell>
+                        <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-12" /></TableCell>
+                        <TableCell>
+                            <Skeleton className="h-8 w-8" />
+                        </TableCell>
+                    </TableRow>
+                ))}
+            </TableBody>
+        </Table>
+    );
+}
+
 
 export default function ProductsPage() {
     const [open, setOpen] = useState(false);
     const [isProductActive, setIsProductActive] = useState(true);
+    
+    const [products, setProducts] = useState<Product[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    
+    const { isBackendReady, refetchKey } = useBackendStatus();
+
+    useEffect(() => {
+        if (!isBackendReady) {
+            setLoading(true);
+            setError("Esperando conexión con el backend...");
+            return;
+        };
+
+        const fetchProducts = async () => {
+            setLoading(true);
+            setError(null);
+            try {
+                const response = await fetch('http://localhost:3001/api/products');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                setProducts(data);
+            } catch (e: any) {
+                setError(`Failed to fetch products: ${e.message}`);
+                console.error(e);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchProducts();
+    }, [isBackendReady, refetchKey]);
+
 
     const handleOpenChange = (isOpen: boolean) => {
         setOpen(isOpen);
@@ -60,63 +130,69 @@ export default function ProductsPage() {
             </div>
             <Card>
                 <CardContent className="pt-6">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead className="hidden w-[100px] sm:table-cell">
-                                    <span className="sr-only">Imagen</span>
-                                </TableHead>
-                                <TableHead>Nombre</TableHead>
-                                <TableHead className="hidden md:table-cell">SKU</TableHead>
-                                <TableHead>Estado</TableHead>
-                                <TableHead className="hidden md:table-cell">Precio</TableHead>
-                                <TableHead className="hidden md:table-cell">Stock</TableHead>
-                                <TableHead>
-                                    <span className="sr-only">Acciones</span>
-                                </TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {products.map(product => (
-                                <TableRow key={product.id}>
-                                    <TableCell className="hidden sm:table-cell">
-                                        <Image
-                                            alt={product.name}
-                                            className="aspect-square rounded-md object-cover"
-                                            height="64"
-                                            src={product.image}
-                                            width="64"
-                                            data-ai-hint={product.hint}
-                                        />
-                                    </TableCell>
-                                    <TableCell className="font-medium">
-                                        {product.name}
-                                    </TableCell>
-                                    <TableCell className="hidden md:table-cell">{product.sku}</TableCell>
-                                    <TableCell>
-                                        <Badge variant={product.status === 'active' ? 'outline' : 'secondary'}>{product.status === 'active' ? 'Activo' : 'Archivado'}</Badge>
-                                    </TableCell>
-                                    <TableCell className="hidden md:table-cell">${product.price.toFixed(2)}</TableCell>
-                                    <TableCell className="hidden md:table-cell">{product.stock}</TableCell>
-                                    <TableCell>
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button aria-haspopup="true" size="icon" variant="ghost">
-                                                    <MoreHorizontal className="h-4 w-4" />
-                                                    <span className="sr-only">Toggle menu</span>
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                                                <DropdownMenuItem>Editar</DropdownMenuItem>
-                                                <DropdownMenuItem className="text-destructive">Eliminar</DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </TableCell>
+                    {loading ? (
+                        <ProductTableSkeleton />
+                    ) : error ? (
+                        <div className="text-center py-10 text-red-500">{error}</div>
+                    ) : (
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead className="hidden w-[100px] sm:table-cell">
+                                        <span className="sr-only">Imagen</span>
+                                    </TableHead>
+                                    <TableHead>Nombre</TableHead>
+                                    <TableHead className="hidden md:table-cell">SKU</TableHead>
+                                    <TableHead>Estado</TableHead>
+                                    <TableHead className="hidden md:table-cell">Precio</TableHead>
+                                    <TableHead className="hidden md:table-cell">Stock</TableHead>
+                                    <TableHead>
+                                        <span className="sr-only">Acciones</span>
+                                    </TableHead>
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
+                            </TableHeader>
+                            <TableBody>
+                                {products.map(product => (
+                                    <TableRow key={product.id}>
+                                        <TableCell className="hidden sm:table-cell">
+                                            <Image
+                                                alt={product.name}
+                                                className="aspect-square rounded-md object-cover"
+                                                height="64"
+                                                src={product.image || "https://placehold.co/64x64.png"}
+                                                width="64"
+                                                data-ai-hint={product.hint}
+                                            />
+                                        </TableCell>
+                                        <TableCell className="font-medium">
+                                            {product.name}
+                                        </TableCell>
+                                        <TableCell className="hidden md:table-cell">{product.sku}</TableCell>
+                                        <TableCell>
+                                            <Badge variant={product.status === 'active' ? 'outline' : 'secondary'}>{product.status === 'active' ? 'Activo' : 'Archivado'}</Badge>
+                                        </TableCell>
+                                        <TableCell className="hidden md:table-cell">${product.price.toFixed(2)}</TableCell>
+                                        <TableCell className="hidden md:table-cell">{product.stock}</TableCell>
+                                        <TableCell>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button aria-haspopup="true" size="icon" variant="ghost">
+                                                        <MoreHorizontal className="h-4 w-4" />
+                                                        <span className="sr-only">Toggle menu</span>
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                                                    <DropdownMenuItem>Editar</DropdownMenuItem>
+                                                    <DropdownMenuItem className="text-destructive">Eliminar</DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    )}
                 </CardContent>
             </Card>
 
@@ -144,8 +220,7 @@ export default function ProductsPage() {
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="description" className="text-right">
                                 Descripción
-                            </Label>
-                            <Textarea id="description" placeholder="Descripción detallada" className="col-span-3" />
+                            </                            <Textarea id="description" placeholder="Descripción detallada" className="col-span-3" />
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="price" className="text-right">

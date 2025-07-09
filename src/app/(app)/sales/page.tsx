@@ -5,6 +5,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Calendar as CalendarIcon, PlusCircle, Trash2 } from 'lucide-react';
 
+import { useBackendStatus } from '@/app/(app)/layout';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,8 +16,81 @@ import { Separator } from '@/components/ui/separator';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 
+interface Product {
+  id: number;
+  name: string;
+  price: number;
+  stock: number;
+}
+
+interface CartItem {
+  productId: number;
+  name: string;
+  quantity: number;
+  price: number;
+}
+
 export default function SalesPage() {
-    const [date, setDate] = React.useState<Date>();
+    const [date, setDate] = React.useState<Date>(new Date());
+    const [products, setProducts] = React.useState<Product[]>([]);
+    const [cart, setCart] = React.useState<CartItem[]>([]);
+    const [isLoadingProducts, setIsLoadingProducts] = React.useState(true);
+
+    const { isBackendReady, refetchKey } = useBackendStatus();
+
+    React.useEffect(() => {
+        if (!isBackendReady) return;
+
+        const fetchProducts = async () => {
+            setIsLoadingProducts(true);
+            try {
+                const response = await fetch('http://localhost:3001/api/products');
+                const data = await response.json();
+                setProducts(data.filter((p: any) => p.status === 'active'));
+            } catch (error) {
+                console.error("Failed to fetch products", error);
+                // Aquí podrías mostrar un toast o un mensaje de error
+            } finally {
+                setIsLoadingProducts(false);
+            }
+        };
+        fetchProducts();
+    }, [isBackendReady, refetchKey]);
+
+    const handleAddProductToCart = () => {
+        if (products.length > 0) {
+            const firstProduct = products[0];
+            setCart([...cart, { productId: firstProduct.id, name: firstProduct.name, quantity: 1, price: firstProduct.price }]);
+        }
+    };
+
+    const handleRemoveFromCart = (index: number) => {
+        const newCart = [...cart];
+        newCart.splice(index, 1);
+        setCart(newCart);
+    };
+
+    const handleCartChange = (index: number, field: keyof CartItem, value: any) => {
+        const newCart = [...cart];
+        const item = newCart[index];
+
+        if (field === 'productId') {
+            const selectedProduct = products.find(p => p.id === value);
+            if (selectedProduct) {
+                item.productId = selectedProduct.id;
+                item.name = selectedProduct.name;
+                item.price = selectedProduct.price;
+            }
+        } else if (field === 'quantity') {
+            item.quantity = Number(value);
+        }
+        
+        setCart(newCart);
+    };
+
+    const subtotal = cart.reduce((acc, item) => acc + item.quantity * item.price, 0);
+    const iva = subtotal * 0.16;
+    const total = subtotal + iva;
 
     return (
         <div className="flex flex-col gap-6">
@@ -74,24 +148,40 @@ export default function SalesPage() {
                                 <div className="grid gap-3">
                                 <Label>Productos</Label>
                                 <div className="grid gap-4 border rounded-lg p-4">
-                                    <div className="flex items-center gap-4">
-                                        <Select>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Seleccionar producto" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="laptop">Laptop Pro 15</SelectItem>
-                                                <SelectItem value="phone">Smartphone X</SelectItem>
-                                                <SelectItem value="mouse">Wireless Mouse</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                        <Input type="number" placeholder="Cantidad" className="w-24" />
-                                        <Input type="text" readOnly value="$1200.00" className="w-28 text-right" />
-                                        <Button variant="outline" size="icon" className="text-muted-foreground">
-                                            <Trash2 className="h-4 w-4"/>
-                                        </Button>
-                                    </div>
-                                    <Button variant="outline" size="sm" className="gap-1 justify-self-start">
+                                    {cart.map((item, index) => (
+                                        <div key={index} className="flex items-center gap-4">
+                                            <Select
+                                                value={String(item.productId)}
+                                                onValueChange={(value) => handleCartChange(index, 'productId', Number(value))}
+                                                disabled={isLoadingProducts}
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Seleccionar producto" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {isLoadingProducts ? (
+                                                        <SelectItem value="loading" disabled>Cargando...</SelectItem>
+                                                    ) : (
+                                                        products.map(p => (
+                                                            <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
+                                                        ))
+                                                    )}
+                                                </SelectContent>
+                                            </Select>
+                                            <Input 
+                                                type="number" 
+                                                placeholder="Cant." 
+                                                className="w-24" 
+                                                value={item.quantity}
+                                                onChange={(e) => handleCartChange(index, 'quantity', e.target.value)}
+                                            />
+                                            <Input type="text" readOnly value={`${item.price.toFixed(2)}`} className="w-28 text-right" />
+                                            <Button variant="outline" size="icon" className="text-muted-foreground" onClick={() => handleRemoveFromCart(index)}>
+                                                <Trash2 className="h-4 w-4"/>
+                                            </Button>
+                                        </div>
+                                    ))}
+                                    <Button variant="outline" size="sm" className="gap-1 justify-self-start" onClick={handleAddProductToCart} disabled={isLoadingProducts}>
                                         <PlusCircle className="h-3.5 w-3.5" />
                                         Añadir Producto
                                     </Button>
@@ -106,18 +196,18 @@ export default function SalesPage() {
                                     <CardContent className="grid gap-4">
                                         <div className="flex justify-between">
                                             <span>Subtotal</span>
-                                            <span>$1200.00</span>
+                                            <span>${subtotal.toFixed(2)}</span>
                                         </div>
                                         <div className="flex justify-between">
                                             <span>IVA (16%)</span>
-                                            <span>$192.00</span>
+                                            <span>${iva.toFixed(2)}</span>
                                         </div>
                                         <Separator />
                                         <div className="flex justify-between font-semibold text-lg">
                                             <span>Total</span>
-                                            <span>$1392.00</span>
+                                            <span>${total.toFixed(2)}</span>
                                         </div>
-                                        <Button className="w-full">Crear Factura</Button>
+                                        <Button className="w-full" disabled={cart.length === 0}>Crear Factura</Button>
                                     </CardContent>
                                 </Card>
                             </div>

@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -8,9 +9,91 @@ import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useTheme } from "@/components/theme-provider";
 import { Download, Upload } from "lucide-react";
+import { useBackendStatus } from '@/app/(app)/layout';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
+
+interface StoreDetails {
+  name: string;
+  rif: string;
+  address: string;
+}
+
+function StoreDetailsSkeleton() {
+    return (
+        <div className="space-y-4">
+            <div className="space-y-1">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-10 w-full" />
+            </div>
+            <div className="space-y-1">
+                <Skeleton className="h-4 w-16" />
+                <Skeleton className="h-10 w-full" />
+            </div>
+            <div className="space-y-1">
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-20 w-full" />
+            </div>
+            <Skeleton className="h-10 w-32" />
+        </div>
+    );
+}
 
 export default function SettingsPage() {
   const { setTheme } = useTheme();
+  const { toast } = useToast();
+  const { isBackendReady, refetchKey } = useBackendStatus();
+
+  const [storeDetails, setStoreDetails] = useState<StoreDetails>({ name: '', rif: '', address: '' });
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (!isBackendReady) {
+        setIsLoading(true);
+        return;
+    };
+
+    const fetchStoreDetails = async () => {
+        setIsLoading(true);
+        try {
+            const response = await fetch('http://localhost:3001/api/settings/store');
+            if (!response.ok) throw new Error("Failed to fetch store details");
+            const data = await response.json();
+            setStoreDetails(data);
+        } catch (error) {
+            console.error(error);
+            toast({ title: "Error", description: "No se pudo cargar la configuración de la tienda.", variant: "destructive" });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    fetchStoreDetails();
+  }, [isBackendReady, refetchKey, toast]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { id, value } = e.target;
+    setStoreDetails(prev => ({ ...prev, [id]: value }));
+  };
+
+  const handleSaveChanges = async () => {
+    setIsSaving(true);
+    try {
+        const response = await fetch('http://localhost:3001/api/settings/store', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(storeDetails),
+        });
+        if (!response.ok) throw new Error("Failed to save changes");
+        toast({ title: "Éxito", description: "La configuración de la tienda ha sido actualizada." });
+    } catch (error) {
+        console.error(error);
+        toast({ title: "Error", description: "No se pudieron guardar los cambios.", variant: "destructive" });
+    } finally {
+        setIsSaving(false);
+    }
+  };
 
   const themes = [
     { value: 'light', label: 'Claro' },
@@ -43,20 +126,26 @@ export default function SettingsPage() {
                     Actualiza la información de tu tienda.
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-1">
-                    <Label htmlFor="store-name">Nombre de la Tienda</Label>
-                    <Input id="store-name" defaultValue="InventarioSimple Store" />
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="store-rif">RIF</Label>
-                    <Input id="store-rif" placeholder="J-12345678-9" />
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="store-address">Dirección</Label>
-                    <Textarea id="store-address" defaultValue="123 Calle Principal, Ciudad, País" />
-                  </div>
-                  <Button>Guardar Cambios</Button>
+                <CardContent>
+                    {isLoading ? <StoreDetailsSkeleton /> : (
+                        <div className="space-y-4">
+                            <div className="space-y-1">
+                                <Label htmlFor="name">Nombre de la Tienda</Label>
+                                <Input id="name" value={storeDetails.name} onChange={handleInputChange} />
+                            </div>
+                            <div className="space-y-1">
+                                <Label htmlFor="rif">RIF</Label>
+                                <Input id="rif" placeholder="J-12345678-9" value={storeDetails.rif} onChange={handleInputChange} />
+                            </div>
+                            <div className="space-y-1">
+                                <Label htmlFor="address">Dirección</Label>
+                                <Textarea id="address" value={storeDetails.address} onChange={handleInputChange} />
+                            </div>
+                            <Button onClick={handleSaveChanges} disabled={isSaving}>
+                                {isSaving ? 'Guardando...' : 'Guardar Cambios'}
+                            </Button>
+                        </div>
+                    )}
                 </CardContent>
               </Card>
            </div>
@@ -96,11 +185,11 @@ export default function SettingsPage() {
               </CardHeader>
               <CardContent className="flex flex-col sm:flex-row gap-4">
                 <Button>
-                  <Upload />
+                  <Upload className="mr-2 h-4 w-4" />
                   Respaldar Base de Datos
                 </Button>
                 <Button variant="outline">
-                  <Download />
+                  <Download className="mr-2 h-4 w-4" />
                   Restaurar Base de Datos
                 </Button>
               </CardContent>

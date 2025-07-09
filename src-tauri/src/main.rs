@@ -25,7 +25,11 @@ fn main() {
 
                 while let Some(event) = rx.recv().await {
                     if let Event::Stdout(line) = event {
-                        println!("[Backend]: {}", String::from_utf8_lossy(&line));
+                        let line_str = String::from_utf8_lossy(&line);
+                        println!("[Backend]: {}", line_str);
+                        if line_str.contains("Backend server listening") {
+                            handle.emit("backend-ready", ()).unwrap();
+                        }
                     } else if let Event::Stderr(line) = event {
                         eprintln!("[Backend ERROR]: {}", String::from_utf8_lossy(&line));
                     }

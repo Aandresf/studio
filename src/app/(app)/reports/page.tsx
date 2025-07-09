@@ -17,6 +17,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 
 import { ReportMetadata, ReportType, FullReport } from '@/lib/types';
+import { useBackendStatus } from '@/app/(app)/layout';
 import { getReports, createReport, getReportById } from '@/lib/api';
 
 type OutputFormat = 'excel' | 'pdf';
@@ -28,6 +29,7 @@ const reportOptions: { type: ReportType; label: string; icon: React.ElementType 
 ];
 
 export default function ReportsPage() {
+    const { isBackendReady, refetchKey } = useBackendStatus();
     const [reports, setReports] = useState<ReportMetadata[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -44,8 +46,14 @@ export default function ReportsPage() {
     const { toast } = useToast();
 
     const fetchReports = useCallback(async () => {
+        if (!isBackendReady) {
+            setIsLoading(true);
+            setError("Esperando conexión con el backend...");
+            return;
+        }
         try {
             setIsLoading(true);
+            setError(null);
             const data = await getReports();
             setReports(data);
         } catch (err: any) {
@@ -54,11 +62,11 @@ export default function ReportsPage() {
         } finally {
             setIsLoading(false);
         }
-    }, [toast]);
+    }, [isBackendReady, toast]);
 
     useEffect(() => {
         fetchReports();
-    }, [fetchReports]);
+    }, [fetchReports, refetchKey]);
 
     const handleReportSelection = (reportType: ReportType) => {
         setSelectedReportType(reportType);
