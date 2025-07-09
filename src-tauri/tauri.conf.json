@@ -34,17 +34,5 @@
       "../icons/icon.ico"
     ]
   },
-  "plugins": {
-    "shell": {
-      "open": true,
-      "sidecar": true,
-      "scope": [
-        {
-          "name": "node-server",
-          "cmd": "node",
-          "args": ["../src-backend/index.js"]
-        }
-      ]
-    }
-  }
+  "plugins": {}
 }

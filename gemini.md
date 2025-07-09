@@ -1,3 +1,4 @@
+Responde siempre en español y recuerda que estamos trabajando en windows
 # Contexto y Planes de Gemini
 
 ## Objetivo: Aplicación de Escritorio con Tauri + Node.js
