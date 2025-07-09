@@ -1,21 +1,22 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use tauri::{Manager, WindowEvent};
-use tauri_plugin_shell::ShellExt;
+use tauri::Manager;
+use tauri_plugin_shell::{process::CommandEvent as Event, ShellExt};
 
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .setup(|app| {
-            let shell = app.shell();
-
-            // Resolvemos la ruta al script del backend que hemos incluido en los recursos
-            let backend_script = app.path().resource_dir()
-                .expect("failed to get resource directory")
-                .join("src-backend/index.js");
+            let handle = app.handle().clone();
 
             // Lanzamos el sidecar en un hilo asíncrono
             tauri::async_runtime::spawn(async move {
+                let shell = handle.shell();
+                // Resolvemos la ruta al script del backend que hemos incluido en los recursos
+                let backend_script = handle.path().resource_dir()
+                    .expect("failed to get resource directory")
+                    .join("src-backend/index.js");
+
                 let (mut rx, _child) = shell
                     .sidecar("node")
                     .expect("Failed to create sidecar command")
@@ -26,9 +27,9 @@ fn main() {
                 // Escuchamos la salida del proceso para depuración
                 while let Some(event) = rx.recv().await {
                     if let Event::Stdout(line) = event {
-                        println!("[Backend]: {}", line);
+                        println!("[Backend]: {}", String::from_utf8_lossy(&line));
                     } else if let Event::Stderr(line) = event {
-                        eprintln!("[Backend ERROR]: {}", line);
+                        eprintln!("[Backend ERROR]: {}", String::from_utf8_lossy(&line));
                     }
                 }
             });
