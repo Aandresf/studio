@@ -53,42 +53,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     const [currentStore, setCurrentStore] = React.useState('store1');
     const [isWelcomeModalOpen, setIsWelcomeModalOpen] = React.useState(true);
     
-    React.useEffect(() => {
-        const startBackend = async () => {
-            console.log('Attempting to start backend...');
-            try {
-                const { Command } = await import('@tauri-apps/plugin-shell');
-                // `node` es el nombre del binario definido en `externalBin`
-                const command = Command.sidecar('node', ['../src-backend/index.js']);
-                
-                command.spawn().then(child => {
-                    console.log('Backend process started:', child);
-                    
-                    command.stdout.on('data', (line: any) => {
-                        console.log(`[Backend]: ${line}`);
-                    });
-
-                    command.stderr.on('data', (line: any) => {
-                        console.error(`[Backend ERROR]: ${line}`);
-                    });
-
-                }).catch(err => {
-                    console.error('Failed to spawn backend process:', err);
-                });
-
-            } catch (error) {
-                console.error("Failed to load shell command:", error);
-            }
-        };
-
-        // Evitar que se ejecute en el navegador durante el desarrollo web normal
-        if (window.__TAURI__) {
-            startBackend();
-        } else {
-            console.log('Not in Tauri environment, skipping backend start.');
-        }
-    }, []);
-
     const storeDetails = {
         store1: { name: 'InventarioSimple Store' },
         store2: { name: 'Mi Sucursal Principal' },
