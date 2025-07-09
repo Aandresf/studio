@@ -255,34 +255,55 @@ app.post('/api/database/restore', (req, res) => {
 });
 
 
-// Server Initialization
-const server = app.listen(PORT, () => {
-  if (!isTestEnv) {
-    console.log(`Backend server listening on http://localhost:${PORT}`);
-    const SQL_SETUP_FILE = path.join(__dirname, 'schema.sql');
-    const sql = fs.readFileSync(SQL_SETUP_FILE, 'utf8');
-    db.exec(sql, (err) => {
-      if (err && !err.message.includes('already exists')) {
-        console.error('Error executing schema.sql:', err.message);
-      } else if (!isTestEnv) {
-        console.log('Database initialized successfully.');
-      }
-    });
-  }
-});
+// Server Initialization & Graceful Shutdown
+let server;
 
-// Graceful Shutdown
-const shutdown = () => {
-  server.close(() => {
-    if (!isTestEnv) console.log('Server closed.');
-    db.close((err) => {
-      if (err) return console.error(err.message);
-      if (!isTestEnv) console.log('Database connection closed.');
-      process.exit(0);
-    });
+const startServer = () => {
+  server = app.listen(PORT, () => {
+    if (!isTestEnv) {
+      console.log(`Backend server listening on http://localhost:${PORT}`);
+      const SQL_SETUP_FILE = path.join(__dirname, 'schema.sql');
+      const sql = fs.readFileSync(SQL_SETUP_FILE, 'utf8');
+      db.exec(sql, (err) => {
+        if (err && !err.message.includes('already exists')) {
+          console.error('Error executing schema.sql:', err.message);
+        } else if (!isTestEnv) {
+          console.log('Database initialized successfully.');
+        }
+      });
+    }
   });
 };
 
-process.on('SIGINT', shutdown);
+const shutdown = (signal) => {
+  if (!isTestEnv) console.log(`\n${signal} received. Shutting down gracefully...`);
+  
+  server.close(() => {
+    if (!isTestEnv) console.log('HTTP server closed.');
+    
+    db.close((err) => {
+      if (err) {
+        console.error('Error closing database:', err.message);
+      } else {
+        if (!isTestEnv) console.log('Database connection closed.');
+      }
+      process.exit(err ? 1 : 0);
+    });
+  });
 
-module.exports = { app, server, db, shutdown };
+  // Force shutdown after a timeout
+  setTimeout(() => {
+    if (!isTestEnv) console.error('Could not close connections in time, forcefully shutting down');
+    process.exit(1);
+  }, 10000); // 10 seconds
+};
+
+// Listen for termination signals
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
+
+// Start the server
+startServer();
+
+module.exports = { app, db, startServer, shutdown };
+

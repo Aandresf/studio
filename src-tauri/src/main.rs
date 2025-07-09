@@ -1,6 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use tauri::Manager;
+use tauri::{Emitter, Manager};
 use tauri_plugin_shell::{process::CommandEvent as Event, ShellExt};
 
 fn main() {

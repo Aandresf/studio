@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { MoreHorizontal, PlusCircle } from 'lucide-react';
 
 import { useBackendStatus } from '@/app/(app)/layout';
+import { getProducts } from '@/lib/api';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -89,11 +90,7 @@ export default function ProductsPage() {
             setLoading(true);
             setError(null);
             try {
-                const response = await fetch('http://localhost:3001/api/products');
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                const data = await response.json();
+                const data = await getProducts();
                 setProducts(data);
             } catch (e: any) {
                 setError(`Failed to fetch products: ${e.message}`);
@@ -220,7 +217,8 @@ export default function ProductsPage() {
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="description" className="text-right">
                                 Descripción
-                            </                            <Textarea id="description" placeholder="Descripción detallada" className="col-span-3" />
+                            </Label>
+                            <Textarea id="description" placeholder="Descripción detallada" className="col-span-3" />
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="price" className="text-right">

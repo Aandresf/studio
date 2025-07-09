@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { DollarSign, Package, ShoppingCart, Users } from "lucide-react";
+import { getDashboardSummary, getRecentSales } from '@/lib/api';
 import { useBackendStatus } from '@/app/(app)/layout';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -87,18 +88,10 @@ export default function Dashboard() {
             setLoading(true);
             setError(null);
             try {
-                const [summaryRes, salesRes] = await Promise.all([
-                    fetch('http://localhost:3001/api/dashboard/summary'),
-                    fetch('http://localhost:3001/api/dashboard/recent-sales')
+                const [summaryData, salesData] = await Promise.all([
+                    getDashboardSummary(),
+                    getRecentSales()
                 ]);
-
-                if (!summaryRes.ok || !salesRes.ok) {
-                    throw new Error('Failed to fetch dashboard data');
-                }
-
-                const summaryData = await summaryRes.json();
-                const salesData = await salesRes.json();
-
                 setSummary(summaryData);
                 setRecentSales(salesData);
             } catch (e: any) {

@@ -6,6 +6,7 @@ import { es } from 'date-fns/locale';
 import { Calendar as CalendarIcon, PlusCircle, Trash2 } from 'lucide-react';
 
 import { useBackendStatus } from '@/app/(app)/layout';
+import { getProducts } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -40,8 +41,7 @@ export default function PurchasesPage() {
         const fetchProducts = async () => {
             setIsLoadingProducts(true);
             try {
-                const response = await fetch('http://localhost:3001/api/products');
-                const data = await response.json();
+                const data = await getProducts();
                 setProducts(data);
             } catch (error) {
                 console.error("Failed to fetch products", error);

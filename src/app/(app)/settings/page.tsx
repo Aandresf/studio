@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useTheme } from "@/components/theme-provider";
 import { Download, Upload } from "lucide-react";
 import { useBackendStatus } from '@/app/(app)/layout';
+import { getStoreSettings, updateStoreSettings } from '@/lib/api';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 
@@ -57,9 +58,7 @@ export default function SettingsPage() {
     const fetchStoreDetails = async () => {
         setIsLoading(true);
         try {
-            const response = await fetch('http://localhost:3001/api/settings/store');
-            if (!response.ok) throw new Error("Failed to fetch store details");
-            const data = await response.json();
+            const data = await getStoreSettings();
             setStoreDetails(data);
         } catch (error) {
             console.error(error);
@@ -80,12 +79,7 @@ export default function SettingsPage() {
   const handleSaveChanges = async () => {
     setIsSaving(true);
     try {
-        const response = await fetch('http://localhost:3001/api/settings/store', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(storeDetails),
-        });
-        if (!response.ok) throw new Error("Failed to save changes");
+        await updateStoreSettings(storeDetails);
         toast({ title: "Éxito", description: "La configuración de la tienda ha sido actualizada." });
     } catch (error) {
         console.error(error);
