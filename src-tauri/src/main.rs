@@ -11,17 +11,26 @@ fn main() {
 
             // Lanzamos el sidecar en un hilo asíncrono
             tauri::async_runtime::spawn(async move {
-                let sidecar_path = handle.path().resource_dir().unwrap().join("binaries/node.exe");
-
-                let mut script_path = handle.path().resource_dir().unwrap();
-                script_path.push("../../../src-backend/index.js");
-
+                // En modo de desarrollo (debug), usamos `node` para ejecutar el script directamente.
+                // Esto permite hot-reload y acceso directo a los módulos de node.
+                #[cfg(debug_assertions)]
                 let (mut rx, _child) = handle.shell()
-                    .sidecar(sidecar_path)
-                    .expect("Failed to create sidecar command")
-                    .args([script_path])
+                    .command("node")
+                    // La ruta es relativa al directorio de trabajo de `cargo run`, que es `src-tauri`.
+                    .args(["../src-backend/index.js"])
                     .spawn()
-                    .expect("Failed to spawn sidecar");
+                    .expect("Failed to spawn node backend for development");
+
+                // En modo de producción (release), usamos el binario pre-compilado.
+                #[cfg(not(debug_assertions))]
+                let (mut rx, _child) = {
+                    let sidecar_path = handle.path().resource_dir().unwrap().join("binaries/backend.exe");
+                    handle.shell()
+                        .sidecar(sidecar_path)
+                        .expect("Failed to create sidecar command")
+                        .spawn()
+                        .expect("Failed to spawn sidecar")
+                };
 
                 while let Some(event) = rx.recv().await {
                     if let Event::Stdout(line) = event {

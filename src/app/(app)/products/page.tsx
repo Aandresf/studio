@@ -103,12 +103,22 @@ export default function ProductsPage() {
     };
 
     const handleEdit = (product: Product) => {
-        setEditingProduct(product);
+        // Mapeamos los campos de la API a los campos del formulario para asegurar consistencia.
+        // El backend devuelve 'stock' y 'price' como alias, así que esto es una salvaguarda.
+        const productForEditing = {
+            ...product,
+            stock: product.stock ?? 0,
+            price: product.price ?? 0,
+        };
+        setEditingProduct(productForEditing);
         setIsDialogOpen(true);
     };
 
     const handleSaveProduct = async () => {
         if (!editingProduct) return;
+
+        // ¡Depuración! Mostramos el objeto justo antes de enviarlo.
+        console.log("Enviando al backend:", editingProduct);
 
         try {
             if ('id' in editingProduct && editingProduct.id) {
@@ -120,8 +130,9 @@ export default function ProductsPage() {
             setEditingProduct(null);
             refetch(); // Refrescar la lista de productos
         } catch (e: any) {
-            setError(`Error saving product: ${e.message}`);
-            console.error(e);
+            // El error ya se muestra a través del toast en api.ts
+            // setError(`Error saving product: ${e.message}`);
+            console.error("Error al guardar el producto:", e);
         }
     };
 

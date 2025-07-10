@@ -34,8 +34,7 @@
       "../icons/icon.ico"
     ],
     "resources": [
-      "../src-backend",
-      "binaries/node.exe"
+      "binaries/backend.exe"
     ]
   },
   "plugins": {}

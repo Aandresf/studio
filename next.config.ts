@@ -20,6 +20,19 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // Añadimos esta configuración para el observador de archivos.
+  webpack: (config, { isServer }) => {
+    // Hacemos que el observador de Webpack ignore las carpetas del backend y tauri.
+    config.watchOptions = {
+      ...config.watchOptions,
+      ignored: [
+        ...(config.watchOptions.ignored || []),
+        '**/src-backend/**',
+        '**/src-tauri/**',
+      ],
+    };
+    return config;
+  },
 };
 
 export default nextConfig;

@@ -33,25 +33,59 @@ app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 
 // PRODUCTS
 app.get('/api/products', (req, res) => {
-  const sql = " SELECT id, name, sku, status, image, current_stock as stock, average_cost as price FROM products ORDER BY id DESC ";
+  console.log('--- INICIO DE PETICIÓN GET /api/products ---');
+  console.log('Query params:', req.query);
+  // 1. Obtenemos los datos con los nombres de columna originales.
+  const sql = "SELECT id, name, sku, status, image, current_stock, average_cost FROM products ORDER BY id DESC";
+  
   db.all(sql, [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
-    res.json(rows);
+
+    // 2. Transformamos manualmente los datos para asegurar que el frontend reciba 'stock' y 'price'.
+    // Esto elimina la dependencia en el comportamiento del alias del driver de la BD.
+    const products = rows.map(p => ({
+      id: p.id,
+      name: p.name,
+      sku: p.sku,
+      status: p.status,
+      image: p.image,
+      stock: p.current_stock, // Mapeo explícito
+      price: p.average_cost   // Mapeo explícito
+    }));
+    
+    res.json(products);
   });
 });
 
 app.post('/api/products', (req, res) => {
-  const { name, sku, current_stock = 0, average_cost = 0 } = req.body;
-  const status = req.body.status === 'Inactivo' ? 'Inactivo' : 'Activo'; // Ensure valid status
-  if (!name) return res.status(400).json({ error: 'Product name is required.' });
+  // Frontend envía 'stock' y 'price'. Los mapeamos a las columnas de la BD.
+  const { name, sku, stock = 0, price = 0 } = req.body;
+  const status = req.body.status === 'Inactivo' ? 'Inactivo' : 'Activo';
+
+  if (!name) {
+    return res.status(400).json({ error: 'Product name is required.' });
+  }
+
   const sql = `INSERT INTO products (name, sku, status, current_stock, average_cost) VALUES (?, ?, ?, ?, ?)`;
-  db.run(sql, [name, sku, status, current_stock, average_cost], function (err) {
+  // Usamos los valores de 'stock' y 'price' para las columnas correctas.
+  db.run(sql, [name, sku, status, stock, price], function (err) {
     if (err) return res.status(500).json({ error: err.message });
-    res.status(201).json({ id: this.lastID, ...req.body, status }); // Return sanitized status
+    
+    // Devolvemos el objeto creado con la misma estructura que espera el frontend.
+    res.status(201).json({ 
+      id: this.lastID, 
+      name,
+      sku,
+      status,
+      stock,
+      price
+    });
   });
 });
 
 app.get('/api/products/:id', (req, res) => {
+  console.log('--- INICIO DE PETICIÓN GET /api/products/:id ---');
+  console.log('ID del producto:', req.params.id);
     const sql = `
       SELECT
         id, name, sku, status, image,
@@ -68,13 +102,49 @@ app.get('/api/products/:id', (req, res) => {
 });
 
 app.put('/api/products/:id', (req, res) => {
-  const { name, sku, current_stock, average_cost } = req.body;
-  const status = req.body.status === 'Inactivo' ? 'Inactivo' : 'Activo'; // Ensure valid status
-  if (!name) return res.status(400).json({ error: 'Product name is required.' });
-  const sql = `UPDATE products SET name = ?, sku = ?, status = ?, current_stock = ?, average_cost = ?, updated_at = strftime('%Y-%m-%d %H:%M:%S', 'now') WHERE id = ?`;
-  db.run(sql, [name, sku, status, current_stock, average_cost, req.params.id], function (err) {
-    if (err) return res.status(500).json({ error: err.message });
-    if (this.changes === 0) return res.status(404).json({ error: 'Product not found' });
+
+  console.log('--- INICIO DE PETICIÓN PUT /api/products/:id ---');
+  console.log('ID del producto:', req.params.id);
+  console.log('Cuerpo de la petición (req.body):', JSON.stringify(req.body, null, 2));
+
+  // Frontend envía 'stock' y 'price'. Los mapeamos a las columnas de la BD.
+  const { name, sku, stock, price } = req.body;
+  const status = req.body.status === 'Inactivo' ? 'Inactivo' : 'Activo';
+  
+  if (!name) {
+    return res.status(400).json({ error: 'Product name is required.' });
+  }
+
+  const sql = `
+    UPDATE products 
+    SET 
+      name = ?, 
+      sku = ?, 
+      status = ?, 
+      current_stock = ?, 
+      average_cost = ?, 
+      updated_at = strftime('%Y-%m-%d %H:%M:%S', 'now') 
+    WHERE id = ?
+  `;
+  
+  // Usamos los valores de 'stock' y 'price' y nos aseguramos de que no sean nulos.
+  const params = [
+    name, 
+    sku, 
+    status, 
+    stock ?? 0, 
+    price ?? 0, 
+    req.params.id
+  ];
+
+  console.log('Executing SQL:', sql, 'with params:', params);
+  db.run(sql, params, function (err) {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    if (this.changes === 0) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
     res.json({ message: 'Product updated successfully' });
   });
 });

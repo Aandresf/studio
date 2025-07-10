@@ -1,4 +1,7 @@
 
+import { toastError } from "@/hooks/use-toast";
+import { Product, DashboardSummary, RecentSale, InventoryMovement, ReportMetadata, FullReport, ReportType, StoreSettings } from './types';
+
 const API_BASE_URL = 'http://localhost:3001/api';
 
 // Generic fetch function
@@ -13,26 +16,39 @@ async function fetchAPI(endpoint: string, options: RequestInit = {}) {
         headers,
     };
 
-    const response = await fetch(url, config);
+    try {
+        const response = await fetch(url, config);
 
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({})); // Catch if error response is not JSON
-        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ error: 'El servidor respondió con un error inesperado.' }));
+            const errorMessage = errorData.error || `Error HTTP: ${response.status}`;
+            
+            // Usamos el nuevo toast para mostrar el error
+            toastError("Error de API", errorMessage);
+
+            // Relanzamos el error para que el componente que llama a la API pueda manejarlo
+            throw new Error(errorMessage);
+        }
+
+        if (response.status === 204) { // No Content
+            return null;
+        }
+
+        return response.json();
+    } catch (error) {
+        // Si el error no fue lanzado por nosotros (ej. error de red), lo mostramos también.
+        if (!(error instanceof Error && error.message.includes('Error de API'))) {
+            const message = error instanceof Error ? error.message : 'Ocurrió un error de red o de conexión.';
+            toastError("Error de Conexión", message);
+        }
+        // Relanzamos el error para que la lógica de la UI pueda reaccionar.
+        throw error;
     }
-
-    if (response.status === 204) { // No Content
-        return null;
-    }
-
-    return response.json();
 }
 
-import { Product, DashboardSummary, RecentSale, InventoryMovement, ReportMetadata, FullReport, ReportType, StoreSettings } from './types';
 
 // Product API calls
 export const getProducts = (): Promise<Product[]> => fetchAPI('/products');
-
-
 
 export const createProduct = (product: Partial<Product>): Promise<Product> => {
     return fetchAPI('/products', {
@@ -42,6 +58,7 @@ export const createProduct = (product: Partial<Product>): Promise<Product> => {
 };
 
 export const updateProduct = (id: number, product: Partial<Product>): Promise<{ message: string }> => {
+    console.log(JSON.stringify(product));
     return fetchAPI(`/products/${id}`, {
         method: 'PUT',
         body: JSON.stringify(product),
@@ -55,8 +72,6 @@ export const deleteProduct = (id: number): Promise<null> => {
 };
 
 // Dashboard API calls
-import { DashboardSummary, RecentSale } from './types';
-
 export const getDashboardSummary = (): Promise<DashboardSummary> => fetchAPI('/dashboard/summary');
 export const getRecentSales = (): Promise<RecentSale[]> => fetchAPI('/dashboard/recent-sales');
 
