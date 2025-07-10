@@ -150,6 +150,9 @@ app.put('/api/products/:id', (req, res) => {
 });
 
 app.delete('/api/products/:id', (req, res) => {
+  console.log('--- INICIO DE PETICIÓN DELETE /api/products/:id ---');
+  console.log('ID del producto:', req.params.id);
+  
   db.run('DELETE FROM products WHERE id = ?', [req.params.id], function (err) {
     if (err) return res.status(500).json({ error: err.message });
     if (this.changes === 0) return res.status(404).json({ error: 'Product not found' });

@@ -66,6 +66,7 @@ export const updateProduct = (id: number, product: Partial<Product>): Promise<{ 
 };
 
 export const deleteProduct = (id: number): Promise<null> => {
+    console.log(`Deleting product with ID: ${id}`);
     return fetchAPI(`/products/${id}`, {
         method: 'DELETE',
     });

@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { MoreHorizontal, PlusCircle } from 'lucide-react';
 
 import { useBackendStatus } from '@/app/(app)/layout';
-import { getProducts, createProduct, updateProduct } from '@/lib/api';
+import { getProducts, createProduct, updateProduct, deleteProduct } from '@/lib/api';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -64,7 +64,7 @@ export default function ProductsPage() {
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingProduct, setEditingProduct] = useState<Partial<Product> | null>(null);
 
-    const { isBackendReady, refetch } = useBackendStatus();
+    const { isBackendReady, triggerRefetch } = useBackendStatus();
 
     useEffect(() => {
         if (!isBackendReady) {
@@ -81,7 +81,7 @@ export default function ProductsPage() {
                 //console.log(data);
                 setProducts(data);
             } catch (e: any) {
-                setError(`Failed to fetch products: ${e.message}`);
+                //setError(`Failed to fetch products: ${e.message}`);
                 console.error(e);
             } finally {
                 setLoading(false);
@@ -89,7 +89,7 @@ export default function ProductsPage() {
         };
 
         fetchProducts();
-    }, [isBackendReady, refetch]);
+    }, [isBackendReady, triggerRefetch]);
 
     const handleAddNew = () => {
         setEditingProduct({
@@ -100,6 +100,19 @@ export default function ProductsPage() {
             status: 'Activo',
         });
         setIsDialogOpen(true);
+    };
+
+    const handleDelete = async (id: number) => {
+        if (!confirm("¿Estás seguro de que quieres eliminar este producto? Esta acción no se puede deshacer.")) return;
+
+        try {
+            await deleteProduct(id);
+            setProducts(products.filter(product => product.id !== id));
+        } catch (e: any) {
+            // El error ya se muestra a través del toast en api.ts
+            // setError(`Error deleting product: ${e.message}`);
+            console.error("Error al eliminar el producto:", e);
+        }
     };
 
     const handleEdit = (product: Product) => {
@@ -128,7 +141,7 @@ export default function ProductsPage() {
             }
             setIsDialogOpen(false);
             setEditingProduct(null);
-            refetch(); // Refrescar la lista de productos
+            triggerRefetch(); // Refrescar la lista de productos
         } catch (e: any) {
             // El error ya se muestra a través del toast en api.ts
             // setError(`Error saving product: ${e.message}`);
@@ -199,7 +212,7 @@ export default function ProductsPage() {
                                                 <DropdownMenuContent align="end">
                                                     <DropdownMenuLabel>Acciones</DropdownMenuLabel>
                                                     <DropdownMenuItem onClick={() => handleEdit(product)}>Editar</DropdownMenuItem>
-                                                    <DropdownMenuItem className="text-destructive">Eliminar</DropdownMenuItem>
+                                                    <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(product.id)} >Eliminar</DropdownMenuItem>
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
                                         </TableCell>
