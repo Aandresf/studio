@@ -100,5 +100,23 @@ Se ha realizado una revisión y refactorización exhaustiva de varios endpoints 
     *   Se refactorizó por completo la página de productos del frontend (`products/page.tsx`) para implementar la funcionalidad de **edición**, que no existía.
     *   El diálogo de productos ahora sirve tanto para crear como para editar, y utiliza un componente `Switch` para cambiar el estado del producto.
     *   Se actualizaron las definiciones de tipos (`Product`) y las llamadas a la API (`createProduct`, `updateProduct`) para alinearlas con los cambios.
+---
+
+## Decisiones de Arquitectura y Lecciones Aprendidas
+
+### Manejo de Operaciones de Lote (Batch Operations)
+
+**Fecha:** 10 de Julio de 2025
+
+**Lección:** Se detectó un error crítico al procesar operaciones que involucran múltiples registros, como una compra con varios productos.
+
+*   **El Problema:** Al registrar una compra, el frontend enviaba múltiples peticiones en paralelo al backend (una por cada producto). El backend intentaba abrir una transacción de base de datos (`BEGIN TRANSACTION`) para cada petición, resultando en el error `SQLITE_ERROR: cannot start a transaction within a transaction` porque SQLite no permite transacciones anidadas o concurrentes de esta manera.
+
+*   **La Solución:** Se refactorizó el backend para manejar la operación completa como un lote atómico.
+    1.  Se creó un nuevo endpoint de lote: `POST /api/purchases`.
+    2.  Este endpoint acepta un array con todos los productos de la compra en **una sola llamada a la API**.
+    3.  El método del backend envuelve todo el proceso (recorrer los productos, actualizar el stock de cada uno, registrar los movimientos) dentro de una **única transacción** (`BEGIN`...`COMMIT`). Si un solo producto falla, se revierten todos los cambios (`ROLLBACK`), garantizando la integridad de los datos.
+
+*   **Acción Requerida para la Página de Ventas:** Se debe aplicar este mismo patrón a la funcionalidad de **Ventas**. En lugar de registrar la salida de cada producto con llamadas individuales, se debe crear un nuevo endpoint de lote (ej. `POST /api/sales`) que acepte la venta completa y la procese dentro de una única transacción en el backend. Esto prevendrá el mismo error de concurrencia y hará el sistema más robusto. Adicionalmente, se debe implementar la funcionalidad de **Historial de Ventas**, que incluya un modal con la lista de ventas y la capacidad de reimprimir el recibo, de forma análoga a como se implementó en la página de Compras.
 
 

@@ -16,7 +16,12 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { Combobox } from '@/components/ui/combobox';
 import { ProductDialog } from '@/components/dialogs/ProductDialog';
-import { Product } from '@/lib/types';
+import { PurchaseReceiptDialog } from '@/components/dialogs/PurchaseReceiptDialog';
+import { PurchaseHistoryDialog } from '@/components/dialogs/PurchaseHistoryDialog';
+import { Product, PurchasePayload, GroupedPurchase } from '@/lib/types';
+import { createPurchase } from '@/lib/api';
+import { useToast } from '@/hooks/use-toast';
+import { History } from 'lucide-react';
 
 interface PurchaseItem {
   id: string; // ID temporal para el renderizado
@@ -33,12 +38,21 @@ const createEmptyItem = (): PurchaseItem => ({
 });
 
 export default function PurchasesPage() {
+    const { toast } = useToast();
     const [date, setDate] = React.useState<Date>(new Date());
+    const [supplier, setSupplier] = React.useState('');
+    const [invoiceNumber, setInvoiceNumber] = React.useState('');
     const [products, setProducts] = React.useState<Product[]>([]);
     const [purchaseItems, setPurchaseItems] = React.useState<PurchaseItem[]>([createEmptyItem()]);
+    
+    const [isLoading, setIsLoading] = React.useState(false);
     const [isLoadingProducts, setIsLoadingProducts] = React.useState(true);
     const [isProductDialogOpen, setIsProductDialogOpen] = React.useState(false);
     const [openComboboxIndex, setOpenComboboxIndex] = React.useState<number | null>(null);
+
+    const [isReceiptOpen, setIsReceiptOpen] = React.useState(false);
+    const [isHistoryOpen, setIsHistoryOpen] = React.useState(false);
+    const [lastPurchase, setLastPurchase] = React.useState<PurchasePayload | null>(null);
 
     const { isBackendReady, refetchKey, triggerRefetch } = useBackendStatus();
 
@@ -51,7 +65,7 @@ export default function PurchasesPage() {
                 const data = await getProducts();
                 setProducts(data);
             } catch (error) {
-                console.error("Failed to fetch products", error);
+                // El error ya se muestra en un toast desde la capa de API
             } finally {
                 setIsLoadingProducts(false);
             }
@@ -73,7 +87,7 @@ export default function PurchasesPage() {
         if (field === 'productId') {
             const selectedProduct = products.find(p => String(p.id) === value);
             item.productId = value;
-            item.unitCost = selectedProduct?.price ?? 0; // Auto-rellenar precio
+            item.unitCost = selectedProduct?.price ?? 0;
         } else if (field === 'quantity') {
             item.quantity = Number(value);
         } else if (field === 'unitCost') {
@@ -93,8 +107,68 @@ export default function PurchasesPage() {
         setPurchaseItems(newItems);
     };
 
+    const resetForm = () => {
+        setDate(new Date());
+        setSupplier('');
+        setInvoiceNumber('');
+        setPurchaseItems([createEmptyItem()]);
+        setOpenComboboxIndex(null);
+    };
+
+    const handleRegisterPurchase = async () => {
+        setIsLoading(true);
+        const purchasePayload: PurchasePayload = {
+            date: date.toISOString(),
+            supplier: supplier || undefined,
+            invoiceNumber: invoiceNumber || undefined,
+            items: purchaseItems
+                .filter(item => item.productId !== null)
+                .map(item => ({
+                    productId: Number(item.productId),
+                    quantity: item.quantity,
+                    unitCost: item.unitCost,
+                }))
+        };
+
+        try {
+            await createPurchase(purchasePayload);
+            toast({
+                variant: "default",
+                title: "Compra Registrada",
+                description: "La compra se ha guardado exitosamente.",
+                className: "bg-green-600 text-white"
+            });
+            setLastPurchase(purchasePayload);
+            setIsReceiptOpen(true);
+            triggerRefetch();
+            resetForm();
+        } catch (error) {
+            // API layer handles toast
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleViewReceiptFromHistory = (groupedPurchase: GroupedPurchase) => {
+        const productMap = new Map(products.map(p => [p.name, p.id]));
+        
+        const payload: PurchasePayload = {
+            date: groupedPurchase.date,
+            supplier: groupedPurchase.supplier,
+            invoiceNumber: groupedPurchase.invoiceNumber,
+            items: groupedPurchase.movements.map(m => ({
+                productId: productMap.get(m.productName) || 0,
+                quantity: m.quantity,
+                unitCost: m.unit_cost,
+            }))
+        };
+        setLastPurchase(payload);
+        setIsHistoryOpen(false);
+        setIsReceiptOpen(true);
+    };
+
     const handleProductSaved = (savedProduct: Product) => {
-        triggerRefetch(); // Actualiza la lista de productos global
+        triggerRefetch();
         
         const lastEmptyItemIndex = purchaseItems.findIndex(item => item.productId === null);
         if (lastEmptyItemIndex !== -1) {
@@ -106,12 +180,20 @@ export default function PurchasesPage() {
         setIsProductDialogOpen(false);
     };
 
+    const isSubmitDisabled = purchaseItems.some(item => !item.productId || item.quantity <= 0) || isLoading;
+
     return (
         <>
             <div className="flex flex-col gap-6">
-                <div className="flex-1">
-                    <h1 className="font-semibold text-lg md:text-2xl">Compras</h1>
-                    <p className="text-sm text-muted-foreground">Registra nuevas órdenes de compra.</p>
+                <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                        <h1 className="font-semibold text-lg md:text-2xl">Compras</h1>
+                        <p className="text-sm text-muted-foreground">Registra nuevas órdenes de compra.</p>
+                    </div>
+                    <Button variant="outline" onClick={() => setIsHistoryOpen(true)}>
+                        <History className="mr-2 h-4 w-4" />
+                        Historial
+                    </Button>
                 </div>
                 <Card>
                     <CardHeader>
@@ -124,11 +206,11 @@ export default function PurchasesPage() {
                     <div className="grid gap-6 md:grid-cols-3">
                         <div className="grid gap-3">
                             <Label htmlFor="supplier">Proveedor</Label>
-                            <Input id="supplier" type="text" placeholder="Nombre del proveedor" />
+                            <Input id="supplier" type="text" placeholder="Nombre del proveedor" value={supplier} onChange={e => setSupplier(e.target.value)} />
                         </div>
                         <div className="grid gap-3">
                             <Label htmlFor="invoice-number">Nº de Factura</Label>
-                            <Input id="invoice-number" type="text" placeholder="Factura del proveedor" />
+                            <Input id="invoice-number" type="text" placeholder="Factura del proveedor" value={invoiceNumber} onChange={e => setInvoiceNumber(e.target.value)} />
                         </div>
                         <div className="grid gap-3">
                             <Label>Fecha de Compra</Label>
@@ -143,7 +225,7 @@ export default function PurchasesPage() {
                                     </Button>
                                 </PopoverTrigger>
                                 <PopoverContent className="w-auto p-0">
-                                    <Calendar mode="single" selected={date} onSelect={setDate} initialFocus />
+                                    <Calendar mode="single" selected={date} onSelect={(d) => setDate(d || new Date())} initialFocus />
                                 </PopoverContent>
                             </Popover>
                         </div>
@@ -178,6 +260,7 @@ export default function PurchasesPage() {
                                             placeholder="0" 
                                             value={item.quantity}
                                             onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
+                                            min="1"
                                         />
                                     </div>
                                     <div className="w-32">
@@ -188,6 +271,7 @@ export default function PurchasesPage() {
                                             placeholder="0.00" 
                                             value={item.unitCost}
                                             onChange={(e) => handleItemChange(index, 'unitCost', e.target.value)}
+                                            min="0"
                                         />
                                     </div>
                                     <Button variant="outline" size="icon" className="text-muted-foreground" onClick={() => removePurchaseItem(index)} disabled={purchaseItems.length <= 1}>
@@ -195,11 +279,6 @@ export default function PurchasesPage() {
                                     </Button>
                                 </div>
                             ))}
-                             {purchaseItems.length === 0 && (
-                                <p className="text-sm text-muted-foreground text-center py-4">
-                                    Añade productos a la orden de compra.
-                                </p>
-                            )}
                         </div>
                         <div className="flex items-center gap-2 mt-4">
                             <Button size="sm" className="gap-1" onClick={addPurchaseItem}>
@@ -213,7 +292,9 @@ export default function PurchasesPage() {
                         </div>
                     </div>
                     <div className="mt-6 flex justify-end">
-                        <Button disabled={purchaseItems.some(item => !item.productId)}>Registrar Compra</Button>
+                        <Button onClick={handleRegisterPurchase} disabled={isSubmitDisabled}>
+                            {isLoading ? "Registrando..." : "Registrar Compra"}
+                        </Button>
                     </div>
                     </CardContent>
                 </Card>
@@ -226,6 +307,17 @@ export default function PurchasesPage() {
                     onProductSaved={handleProductSaved}
                 />
             )}
+            <PurchaseHistoryDialog
+                open={isHistoryOpen}
+                onOpenChange={setIsHistoryOpen}
+                onViewReceipt={handleViewReceiptFromHistory}
+            />
+            <PurchaseReceiptDialog
+                open={isReceiptOpen}
+                onOpenChange={setIsReceiptOpen}
+                purchase={lastPurchase}
+                products={products}
+            />
         </>
     )
 }

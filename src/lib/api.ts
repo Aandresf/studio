@@ -1,6 +1,6 @@
 
 import { toastError } from "@/hooks/use-toast";
-import { Product, DashboardSummary, RecentSale, InventoryMovement, ReportMetadata, FullReport, ReportType, StoreSettings } from './types';
+import { Product, DashboardSummary, RecentSale, InventoryMovement, ReportMetadata, FullReport, ReportType, StoreSettings, PurchasePayload } from './types';
 
 const API_BASE_URL = 'http://localhost:3001/api';
 
@@ -71,6 +71,17 @@ export const deleteProduct = (id: number): Promise<null> => {
         method: 'DELETE',
     });
 };
+
+// Purchase API call
+export const createPurchase = (purchase: PurchasePayload): Promise<{ message: string }> => {
+    return fetchAPI('/purchases', {
+        method: 'POST',
+        body: JSON.stringify(purchase),
+    });
+};
+
+export const getPurchaseHistory = (): Promise<PurchaseHistoryMovement[]> => fetchAPI('/purchases');
+
 
 // Dashboard API calls
 export const getDashboardSummary = (): Promise<DashboardSummary> => fetchAPI('/dashboard/summary');

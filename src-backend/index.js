@@ -223,6 +223,70 @@ app.post('/api/inventory/movements', async (req, res) => {
     }
 });
 
+// PURCHASES (BATCH)
+app.post('/api/purchases', async (req, res) => {
+    console.log('--- INICIO DE PETICIÓN POST /api/purchases ---');
+    console.log('Cuerpo de la petición (req.body):', JSON.stringify(req.body, null, 2));
+
+    const { date, supplier, invoiceNumber, items } = req.body;
+
+    if (!date || !items || !Array.isArray(items) || items.length === 0) {
+        return res.status(400).json({ error: 'Missing required fields: date, items' });
+    }
+
+    const run = util.promisify(db.run.bind(db));
+    const get = util.promisify(db.get.bind(db));
+
+    try {
+        // Inicia una única transacción para toda la compra.
+        await run('BEGIN TRANSACTION');
+
+        for (const item of items) {
+            const { productId, quantity, unitCost } = item;
+
+            if (!productId || !quantity || unitCost === undefined) {
+                throw new Error('Cada item debe tener productId, quantity y unitCost.');
+            }
+
+            const product = await get('SELECT current_stock, average_cost FROM products WHERE id = ?', [productId]);
+            if (!product) {
+                throw new Error(`Producto con ID ${productId} no encontrado.`);
+            }
+
+            // Calcula el nuevo stock y costo promedio
+            const new_stock = product.current_stock + quantity;
+            const current_total_value = product.current_stock * product.average_cost;
+            const entry_value = quantity * unitCost;
+            const new_avg_cost = new_stock > 0 ? (current_total_value + entry_value) / new_stock : 0;
+
+            // Inserta el movimiento de inventario
+            const movementDate = date ? new Date(date).toISOString().slice(0, 19).replace('T', ' ') : new Date().toISOString().slice(0, 19).replace('T', ' ');
+            const description = `Compra a ${supplier || 'proveedor'}. Factura: ${invoiceNumber || 'N/A'}`;
+            const movementSql = `INSERT INTO inventory_movements (product_id, type, quantity, unit_cost, description, date) VALUES (?, ?, ?, ?, ?, ?)`;
+            await run(movementSql, [productId, 'ENTRADA', quantity, unitCost, description, movementDate]);
+
+            // Actualiza el producto
+            const productSql = `UPDATE products SET current_stock = ?, average_cost = ?, updated_at = strftime('%Y-%m-%d %H:%M:%S', 'now') WHERE id = ?`;
+            await run(productSql, [new_stock, new_avg_cost, productId]);
+        }
+
+        // Si todo fue bien, confirma la transacción.
+        await run('COMMIT');
+        res.status(201).json({ message: 'Purchase registered successfully' });
+
+    } catch (err) {
+        console.error('Error durante la transacción de compra:', err.message);
+        try {
+            // Si algo falla, revierte todos los cambios.
+            await run('ROLLBACK');
+            res.status(500).json({ error: `Error en la transacción: ${err.message}` });
+        } catch (rollbackErr) {
+            console.error('Fatal: Could not rollback transaction', rollbackErr);
+            res.status(500).json({ error: 'Error fatal en la base de datos durante el rollback.' });
+        }
+    }
+});
+
 // PURCHASES (ENTRADA)
 app.get('/api/purchases', (req, res) => {
     const query = `

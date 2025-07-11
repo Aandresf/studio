@@ -78,3 +78,38 @@ export interface StoreSettings {
     email?: string;
     website?: string;
 }
+
+export interface PurchaseItemPayload {
+  productId: number;
+  quantity: number;
+  unitCost: number;
+  description?: string;
+}
+
+export interface PurchasePayload {
+  date: string;
+  supplier?: string;
+  invoiceNumber?: string;
+  items: PurchaseItemPayload[];
+}
+
+export interface PurchaseHistoryMovement {
+  id: number;
+  date: string;
+  productName: string;
+  quantity: number;
+  unit_cost: number;
+  total_cost: number;
+  description: string;
+}
+
+export interface GroupedPurchase {
+    // Usamos la descripción como clave única para agrupar
+    key: string; 
+    date: string;
+    supplier: string;
+    invoiceNumber: string;
+    total: number;
+    // Guardamos los items originales para poder reconstruir el recibo
+    movements: PurchaseHistoryMovement[];
+}
