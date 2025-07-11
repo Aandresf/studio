@@ -287,6 +287,102 @@ app.post('/api/purchases', async (req, res) => {
     }
 });
 
+app.put('/api/purchases', async (req, res) => {
+    console.log('--- INICIO DE PETICIÓN PUT /api/purchases (EDITAR) ---');
+    const { originalKey, purchaseData } = req.body;
+
+    if (!originalKey || !purchaseData || !purchaseData.items) {
+        return res.status(400).json({ error: 'Faltan datos para la edición: originalKey y purchaseData son requeridos.' });
+    }
+
+    const [originalDescription, originalDate] = originalKey.split(" | ");
+    if (!originalDescription || !originalDate) {
+        return res.status(400).json({ error: 'El identificador original (originalKey) es inválido.' });
+    }
+
+    const run = util.promisify(db.run.bind(db));
+    const all = util.promisify(db.all.bind(db));
+    const get = util.promisify(db.get.bind(db));
+
+    try {
+        await run('BEGIN TRANSACTION');
+        console.log('Transacción iniciada para edición.');
+
+        // 1. ANULACIÓN: Revertir los movimientos originales
+        const originalMovements = await all(
+            "SELECT * FROM inventory_movements WHERE description = ? AND date(date) = date(?)",
+            [originalDescription, originalDate]
+        );
+
+        if (originalMovements.length === 0) {
+            throw new Error('No se encontraron los movimientos de la compra original para anular.');
+        }
+
+        // Revertir en orden inverso para mayor seguridad con los cálculos
+        for (const move of originalMovements.reverse()) {
+            const product = await get('SELECT current_stock, average_cost FROM products WHERE id = ?', [move.product_id]);
+            if (!product) throw new Error(`Producto con ID ${move.product_id} no encontrado durante la anulación.`);
+
+            const stock_before_entry = product.current_stock - move.quantity;
+            let avg_cost_before_entry = 0;
+
+            if (stock_before_entry > 0) {
+                const current_total_value = product.current_stock * product.average_cost;
+                const entry_value = move.quantity * move.unit_cost;
+                avg_cost_before_entry = (current_total_value - entry_value) / stock_before_entry;
+            }
+            // Si el stock queda en 0, el costo promedio también es 0.
+
+            // Actualizar producto a su estado anterior
+            await run('UPDATE products SET current_stock = ?, average_cost = ? WHERE id = ?', [stock_before_entry, avg_cost_before_entry, move.product_id]);
+
+            // Registrar el movimiento de anulación para auditoría
+            const reversalDescription = `ANULACIÓN de compra. Factura: ${purchaseData.invoiceNumber || 'N/A'}`;
+            await run(
+                'INSERT INTO inventory_movements (product_id, type, quantity, unit_cost, description, date) VALUES (?, ?, ?, ?, ?, ?)',
+                [move.product_id, 'ANULACION_ENTRADA', move.quantity, move.unit_cost, reversalDescription, new Date().toISOString()]
+            );
+        }
+        console.log('Fase de anulación completada.');
+
+        // 2. RE-CREACIÓN: Crear los nuevos movimientos con los datos actualizados
+        const { date, supplier, invoiceNumber, items } = purchaseData;
+        const newDescription = `Compra a ${supplier || 'proveedor'}. Factura: ${invoiceNumber || 'N/A'}`;
+
+        for (const item of items) {
+            const product = await get('SELECT current_stock, average_cost FROM products WHERE id = ?', [item.productId]);
+            if (!product) throw new Error(`Producto con ID ${item.productId} no encontrado durante la re-creación.`);
+
+            const new_stock = product.current_stock + item.quantity;
+            const current_total_value = product.current_stock * product.average_cost;
+            const entry_value = item.quantity * item.unitCost;
+            const new_avg_cost = new_stock > 0 ? (current_total_value + entry_value) / new_stock : 0;
+
+            await run(
+                'INSERT INTO inventory_movements (product_id, type, quantity, unit_cost, description, date) VALUES (?, ?, ?, ?, ?, ?)',
+                [item.productId, 'ENTRADA', item.quantity, item.unitCost, newDescription, new Date(date).toISOString()]
+            );
+            await run('UPDATE products SET current_stock = ?, average_cost = ? WHERE id = ?', [new_stock, new_avg_cost, item.productId]);
+        }
+        console.log('Fase de re-creación completada.');
+
+        await run('COMMIT');
+        console.log('Transacción completada (COMMIT).');
+        res.status(200).json({ message: 'Purchase updated successfully' });
+
+    } catch (err) {
+        console.error('Error durante la transacción de edición:', err.message);
+        try {
+            await run('ROLLBACK');
+            console.log('Transacción revertida (ROLLBACK).');
+            res.status(500).json({ error: `Error en la transacción: ${err.message}` });
+        } catch (rollbackErr) {
+            console.error('Fatal: Could not rollback transaction', rollbackErr);
+            res.status(500).json({ error: 'Error fatal en la base de datos durante el rollback.' });
+        }
+    }
+});
+
 // PURCHASES (ENTRADA)
 app.get('/api/purchases', (req, res) => {
     const query = `

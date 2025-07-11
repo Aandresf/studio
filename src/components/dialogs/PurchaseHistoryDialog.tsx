@@ -23,22 +23,25 @@ import { PurchaseHistoryMovement, GroupedPurchase } from "@/lib/types";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { FileText, Pencil } from "lucide-react";
+
 
 interface PurchaseHistoryDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onViewReceipt: (purchase: GroupedPurchase) => void;
+  onEditPurchase: (purchase: GroupedPurchase) => void;
 }
 
 const groupPurchases = (movements: PurchaseHistoryMovement[]): GroupedPurchase[] => {
     const purchaseMap = new Map<string, GroupedPurchase>();
 
     movements.forEach(move => {
-        // Usamos la descripción como clave de agrupación. Es frágil pero funciona por ahora.
-        const key = move.description + " | " + move.date.substring(0, 10);
+        // Clave de agrupación: descripción + fecha (solo día)
+        const key = move.description + " | " + new Date(move.date).toISOString().substring(0, 10);
 
         if (!purchaseMap.has(key)) {
-            // Extraer proveedor y factura de la descripción
             const supplierMatch = move.description.match(/Compra a (.*?)\. Factura:/);
             const invoiceMatch = move.description.match(/Factura: (.*)/);
 
@@ -61,7 +64,7 @@ const groupPurchases = (movements: PurchaseHistoryMovement[]): GroupedPurchase[]
 };
 
 
-export function PurchaseHistoryDialog({ open, onOpenChange, onViewReceipt }: PurchaseHistoryDialogProps) {
+export function PurchaseHistoryDialog({ open, onOpenChange, onViewReceipt, onEditPurchase }: PurchaseHistoryDialogProps) {
   const [history, setHistory] = React.useState<GroupedPurchase[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
 
@@ -70,7 +73,8 @@ export function PurchaseHistoryDialog({ open, onOpenChange, onViewReceipt }: Pur
       setIsLoading(true);
       getPurchaseHistory()
         .then(movements => {
-            const grouped = groupPurchases(movements);
+            const nonReversalMovements = movements.filter(m => m.description.indexOf('ANULACIÓN') === -1);
+            const grouped = groupPurchases(nonReversalMovements);
             setHistory(grouped);
         })
         .catch(() => {
@@ -86,7 +90,7 @@ export function PurchaseHistoryDialog({ open, onOpenChange, onViewReceipt }: Pur
         <DialogHeader>
           <DialogTitle>Historial de Compras</DialogTitle>
           <DialogDescription>
-            Aquí puedes ver todas las compras registradas.
+            Aquí puedes ver y editar todas las compras registradas.
           </DialogDescription>
         </DialogHeader>
         <ScrollArea className="h-[60vh] pr-6">
@@ -108,7 +112,7 @@ export function PurchaseHistoryDialog({ open, onOpenChange, onViewReceipt }: Pur
                         <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                         <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                         <TableCell><Skeleton className="h-5 w-16 ml-auto" /></TableCell>
-                        <TableCell className="text-center"><Skeleton className="h-8 w-24 mx-auto" /></TableCell>
+                        <TableCell className="text-center"><Skeleton className="h-8 w-48 mx-auto" /></TableCell>
                     </TableRow>
                 ))
               ) : history.length > 0 ? (
@@ -121,13 +125,30 @@ export function PurchaseHistoryDialog({ open, onOpenChange, onViewReceipt }: Pur
                     <TableCell>{purchase.invoiceNumber}</TableCell>
                     <TableCell className="text-right">${purchase.total.toFixed(2)}</TableCell>
                     <TableCell className="text-center">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onViewReceipt(purchase)}
-                      >
-                        Ver Recibo
-                      </Button>
+                      <TooltipProvider>
+                        <div className="flex justify-center items-center space-x-2">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="ghost" size="icon" onClick={() => onEditPurchase(purchase)}>
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Editar Compra</p>
+                            </TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="ghost" size="icon" onClick={() => onViewReceipt(purchase)}>
+                                <FileText className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Ver Recibo</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
+                      </TooltipProvider>
                     </TableCell>
                   </TableRow>
                 ))

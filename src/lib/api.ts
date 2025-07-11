@@ -82,6 +82,13 @@ export const createPurchase = (purchase: PurchasePayload): Promise<{ message: st
 
 export const getPurchaseHistory = (): Promise<PurchaseHistoryMovement[]> => fetchAPI('/purchases');
 
+export const updatePurchase = (originalKey: string, purchaseData: PurchasePayload): Promise<{ message: string }> => {
+    return fetchAPI('/purchases', {
+        method: 'PUT',
+        body: JSON.stringify({ originalKey, purchaseData }),
+    });
+};
+
 
 // Dashboard API calls
 export const getDashboardSummary = (): Promise<DashboardSummary> => fetchAPI('/dashboard/summary');
