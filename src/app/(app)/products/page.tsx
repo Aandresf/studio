@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { MoreHorizontal, PlusCircle } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Search } from 'lucide-react';
 
 import { useBackendStatus } from '@/app/(app)/layout';
 import { getProducts, createProduct, updateProduct, deleteProduct } from '@/lib/api';
@@ -19,6 +19,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Product } from '@/lib/types';
 
 
+import { toast } from '@/hooks/use-toast';
+
 function ProductTableSkeleton() {
     return (
         <Table>
@@ -27,8 +29,8 @@ function ProductTableSkeleton() {
                     <TableHead className="hidden w-[100px] sm:table-cell">
                         <span className="sr-only">Imagen</span>
                     </TableHead>
+                    <TableHead>Código</TableHead>
                     <TableHead>Nombre</TableHead>
-                    <TableHead>Estado</TableHead>
                     <TableHead className="hidden md:table-cell">Precio</TableHead>
                     <TableHead className="hidden md:table-cell">Stock</TableHead>
                     <TableHead>
@@ -42,8 +44,8 @@ function ProductTableSkeleton() {
                         <TableCell className="hidden sm:table-cell">
                             <Skeleton className="h-16 w-16 rounded-md" />
                         </TableCell>
+                        <TableCell><Skeleton className="h-4 w-20" /></TableCell>
                         <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-                        <TableCell><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
                         <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-16" /></TableCell>
                         <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-12" /></TableCell>
                         <TableCell>
@@ -63,6 +65,9 @@ export default function ProductsPage() {
     const [error, setError] = useState<string | null>(null);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [editingProduct, setEditingProduct] = useState<Partial<Product> | null>(null);
+    const [formErrors, setFormErrors] = useState<{ price?: string; stock?: string }>({});
+    const [searchQuery, setSearchQuery] = useState('');
+
 
     const { isBackendReady, triggerRefetch } = useBackendStatus();
 
@@ -78,10 +83,8 @@ export default function ProductsPage() {
             setError(null);
             try {
                 const data = await getProducts();
-                //console.log(data);
                 setProducts(data);
             } catch (e: any) {
-                //setError(`Failed to fetch products: ${e.message}`);
                 console.error(e);
             } finally {
                 setLoading(false);
@@ -91,12 +94,25 @@ export default function ProductsPage() {
         fetchProducts();
     }, [isBackendReady, triggerRefetch]);
 
+    const generateNextSku = () => {
+        if (products.length === 0) {
+            return '1'; // Si no hay productos, empezamos en 1
+        }
+        const maxSku = products.reduce((max, p) => {
+            const skuNumber = parseInt(p.sku, 10);
+            return !isNaN(skuNumber) && skuNumber > max ? skuNumber : max;
+        }, 0);
+        return (maxSku + 1).toString();
+    };
+
+
     const handleAddNew = () => {
+        setFormErrors({});
         setEditingProduct({
             name: '',
-            sku: '',
-            price: 0,
-            stock: 0,
+            sku: generateNextSku(),
+            price: '', // Empezar como string vacío
+            stock: '', // Empezar como string vacío
             status: 'Activo',
         });
         setIsDialogOpen(true);
@@ -109,15 +125,12 @@ export default function ProductsPage() {
             await deleteProduct(id);
             setProducts(products.filter(product => product.id !== id));
         } catch (e: any) {
-            // El error ya se muestra a través del toast en api.ts
-            // setError(`Error deleting product: ${e.message}`);
             console.error("Error al eliminar el producto:", e);
         }
     };
 
     const handleEdit = (product: Product) => {
-        // Mapeamos los campos de la API a los campos del formulario para asegurar consistencia.
-        // El backend devuelve 'stock' y 'price' como alias, así que esto es una salvaguarda.
+        setFormErrors({});
         const productForEditing = {
             ...product,
             stock: product.stock ?? 0,
@@ -129,25 +142,63 @@ export default function ProductsPage() {
 
     const handleSaveProduct = async () => {
         if (!editingProduct) return;
-
-        // ¡Depuración! Mostramos el objeto justo antes de enviarlo.
-        console.log("Enviando al backend:", editingProduct);
-
+    
+        const newErrors: { price?: string; stock?: string } = {};
+        if (editingProduct.price === '' || editingProduct.price === null || isNaN(Number(editingProduct.price))) {
+            newErrors.price = 'El precio es obligatorio y debe ser un número.';
+        }
+        if (editingProduct.stock === '' || editingProduct.stock === null || isNaN(Number(editingProduct.stock))) {
+            newErrors.stock = 'El stock es obligatorio y debe ser un número.';
+        }
+    
+        setFormErrors(newErrors);
+    
+        if (Object.keys(newErrors).length > 0) {
+            // Lanzar un toast por cada error
+            Object.values(newErrors).forEach(error => {
+                toast({
+                    variant: "destructive",
+                    title: "Error de validación",
+                    description: error,
+                });
+            });
+            return;
+        }
+    
+        const productToSave = {
+            ...editingProduct,
+            price: parseFloat(String(editingProduct.price)),
+            stock: parseInt(String(editingProduct.stock), 10),
+        };
+    
         try {
-            if ('id' in editingProduct && editingProduct.id) {
-                await updateProduct(editingProduct.id, editingProduct);
+            if ('id' in productToSave && productToSave.id) {
+                await updateProduct(productToSave.id, productToSave);
             } else {
-                await createProduct(editingProduct);
+                await createProduct(productToSave);
             }
             setIsDialogOpen(false);
             setEditingProduct(null);
-            triggerRefetch(); // Refrescar la lista de productos
+            triggerRefetch();
         } catch (e: any) {
-            // El error ya se muestra a través del toast en api.ts
-            // setError(`Error saving product: ${e.message}`);
             console.error("Error al guardar el producto:", e);
         }
     };
+
+    const handleDialogChange = (open: boolean) => {
+        if (!open) {
+            setEditingProduct(null);
+            setFormErrors({});
+        }
+        setIsDialogOpen(open);
+    }
+
+    const filteredProducts = products.filter(product => {
+        const query = searchQuery.toLowerCase();
+        const nameMatch = product.name.toLowerCase().includes(query);
+        const skuMatch = product.sku?.toLowerCase().includes(query) ?? false;
+        return nameMatch || skuMatch;
+    });
 
     return (
         <div className="flex flex-col gap-6">
@@ -164,7 +215,19 @@ export default function ProductsPage() {
                 </Button>
             </div>
             <Card>
-                <CardContent className="pt-6">
+                <CardHeader>
+                    <div className="relative">
+                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            type="search"
+                            placeholder="Buscar por nombre o código..."
+                            className="w-full appearance-none bg-background pl-8 shadow-none md:w-1/3 lg:w-1/3"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                    </div>
+                </CardHeader>
+                <CardContent>
                     {loading ? (
                         <ProductTableSkeleton />
                     ) : error ? (
@@ -174,15 +237,15 @@ export default function ProductsPage() {
                             <TableHeader>
                                 <TableRow>
                                     <TableHead className="hidden w-[100px] sm:table-cell">Imagen</TableHead>
+                                    <TableHead>Código</TableHead>
                                     <TableHead>Nombre</TableHead>
-                                    <TableHead>Estado</TableHead>
                                     <TableHead className="hidden md:table-cell">Precio</TableHead>
                                     <TableHead className="hidden md:table-cell">Stock</TableHead>
                                     <TableHead><span className="sr-only">Acciones</span></TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {products.map(product => (
+                                {filteredProducts.map(product => (
                                     <TableRow key={product.id}>
                                         <TableCell className="hidden sm:table-cell">
                                             <Image
@@ -193,12 +256,8 @@ export default function ProductsPage() {
                                                 width="64"
                                             />
                                         </TableCell>
+                                        <TableCell>{product.sku}</TableCell>
                                         <TableCell className="font-medium">{product.name}</TableCell>
-                                        <TableCell>
-                                            <Badge variant={product.status === 'Activo' ? 'outline' : 'secondary'}>
-                                                {product.status}
-                                            </Badge>
-                                        </TableCell>
                                         <TableCell className="hidden md:table-cell">${product.price?.toFixed(2) ?? '0.00'}</TableCell>
                                         <TableCell className="hidden md:table-cell">{product.stock}</TableCell>
                                         <TableCell>
@@ -224,7 +283,7 @@ export default function ProductsPage() {
                 </CardContent>
             </Card>
 
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <Dialog open={isDialogOpen} onOpenChange={handleDialogChange}>
                 <DialogContent className="sm:max-w-[425px]">
                     <DialogHeader>
                         <DialogTitle>{editingProduct?.id ? 'Editar Producto' : 'Añadir Nuevo Producto'}</DialogTitle>
@@ -241,11 +300,33 @@ export default function ProductsPage() {
                             </div>
                             <div className="grid grid-cols-4 items-center gap-4">
                                 <Label htmlFor="price" className="text-right">Precio</Label>
-                                <Input id="price" type="number" value={editingProduct.price} onChange={(e) => setEditingProduct({ ...editingProduct, price: parseFloat(e.target.value) || 0 })} className="col-span-3" />
+                                <Input 
+                                    id="price" 
+                                    type="text" 
+                                    value={editingProduct.price ?? ''} 
+                                    onChange={(e) => {
+                                        setEditingProduct({ ...editingProduct, price: e.target.value });
+                                        if (formErrors.price) {
+                                            setFormErrors({...formErrors, price: undefined});
+                                        }
+                                    }} 
+                                    className={`col-span-3 ${formErrors.price ? 'border-red-500' : ''}`}
+                                    />
                             </div>
                             <div className="grid grid-cols-4 items-center gap-4">
                                 <Label htmlFor="stock" className="text-right">Stock</Label>
-                                <Input id="stock" type="number" value={editingProduct.stock} onChange={(e) => setEditingProduct({ ...editingProduct, stock: parseInt(e.target.value) || 0 })} className="col-span-3" />
+                                <Input 
+                                    id="stock" 
+                                    type="text" 
+                                    value={editingProduct.stock ?? ''} 
+                                    onChange={(e) => {
+                                        setEditingProduct({ ...editingProduct, stock: e.target.value });
+                                        if (formErrors.stock) {
+                                            setFormErrors({...formErrors, stock: undefined});
+                                        }
+                                    }} 
+                                    className={`col-span-3 ${formErrors.stock ? 'border-red-500' : ''}`}
+                                    />
                             </div>
                             <div className="grid grid-cols-4 items-center gap-4">
                                 <Label htmlFor="status" className="text-right">Estado</Label>
@@ -265,7 +346,7 @@ export default function ProductsPage() {
                         </div>
                     )}
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
+                        <Button variant="outline" onClick={() => handleDialogChange(false)}>Cancelar</Button>
                         <Button type="submit" onClick={handleSaveProduct}>Guardar</Button>
                     </DialogFooter>
                 </DialogContent>
