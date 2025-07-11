@@ -24,6 +24,26 @@ const db = new sqlite3.Database(DB_FILE, (err) => {
     console.error('Error opening database', err.message);
   } else {
     console.log(`Connected to the SQLite database: ${DB_FILE}`);
+    // Run migrations/updates
+    db.serialize(() => {
+        // Add 'status' column to 'inventory_movements' if it doesn't exist
+        db.all("PRAGMA table_info(inventory_movements)", (err, columns) => {
+            if (err) {
+                console.error("Error getting table info for inventory_movements:", err);
+                return;
+            }
+            const hasStatusColumn = columns.some(col => col.name === 'status');
+            if (!hasStatusColumn) {
+                db.run("ALTER TABLE inventory_movements ADD COLUMN status TEXT NOT NULL DEFAULT 'Activo'", (alterErr) => {
+                    if (alterErr) {
+                        console.error("Error adding status column to inventory_movements:", alterErr);
+                    } else {
+                        console.log("Column 'status' added to 'inventory_movements' table.");
+                    }
+                });
+            }
+        });
+    });
   }
 });
 
@@ -36,7 +56,7 @@ app.get('/api/products', (req, res) => {
   console.log('--- INICIO DE PETICIÓN GET /api/products ---');
   console.log('Query params:', req.query);
   // 1. Obtenemos los datos con los nombres de columna originales.
-  const sql = "SELECT id, name, sku, status, image, current_stock, average_cost FROM products ORDER BY id DESC";
+  const sql = "SELECT id, name, sku, status, image, current_stock, average_cost, tax_rate FROM products ORDER BY id DESC";
   
   db.all(sql, [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
@@ -49,6 +69,7 @@ app.get('/api/products', (req, res) => {
       sku: p.sku,
       status: p.status,
       image: p.image,
+      tax_rate: p.tax_rate,
       stock: p.current_stock, // Mapeo explícito
       price: p.average_cost   // Mapeo explícito
     }));
@@ -59,16 +80,16 @@ app.get('/api/products', (req, res) => {
 
 app.post('/api/products', (req, res) => {
   // Frontend envía 'stock' y 'price'. Los mapeamos a las columnas de la BD.
-  const { name, sku, stock = 0, price = 0 } = req.body;
+  const { name, sku, stock = 0, price = 0, tax_rate = 16.00 } = req.body;
   const status = req.body.status === 'Inactivo' ? 'Inactivo' : 'Activo';
 
   if (!name) {
     return res.status(400).json({ error: 'Product name is required.' });
   }
 
-  const sql = `INSERT INTO products (name, sku, status, current_stock, average_cost) VALUES (?, ?, ?, ?, ?)`;
+  const sql = `INSERT INTO products (name, sku, status, current_stock, average_cost, tax_rate) VALUES (?, ?, ?, ?, ?, ?)`;
   // Usamos los valores de 'stock' y 'price' para las columnas correctas.
-  db.run(sql, [name, sku, status, stock, price], function (err) {
+  db.run(sql, [name, sku, status, stock, price, tax_rate], function (err) {
     if (err) return res.status(500).json({ error: err.message });
     
     // Devolvemos el objeto creado con la misma estructura que espera el frontend.
@@ -78,7 +99,8 @@ app.post('/api/products', (req, res) => {
       sku,
       status,
       stock,
-      price
+      price,
+      tax_rate
     });
   });
 });
@@ -88,7 +110,7 @@ app.get('/api/products/:id', (req, res) => {
   console.log('ID del producto:', req.params.id);
     const sql = `
       SELECT
-        id, name, sku, status, image,
+        id, name, sku, status, image, tax_rate,
         current_stock as stock,
         average_cost as price
       FROM products
@@ -108,7 +130,7 @@ app.put('/api/products/:id', (req, res) => {
   console.log('Cuerpo de la petición (req.body):', JSON.stringify(req.body, null, 2));
 
   // Frontend envía 'stock' y 'price'. Los mapeamos a las columnas de la BD.
-  const { name, sku, stock, price } = req.body;
+  const { name, sku, stock, price, tax_rate } = req.body;
   const status = req.body.status === 'Inactivo' ? 'Inactivo' : 'Activo';
   
   if (!name) {
@@ -123,6 +145,7 @@ app.put('/api/products/:id', (req, res) => {
       status = ?, 
       current_stock = ?, 
       average_cost = ?, 
+      tax_rate = ?,
       updated_at = strftime('%Y-%m-%d %H:%M:%S', 'now') 
     WHERE id = ?
   `;
@@ -134,6 +157,7 @@ app.put('/api/products/:id', (req, res) => {
     status, 
     stock ?? 0, 
     price ?? 0, 
+    tax_rate ?? 16.00,
     req.params.id
   ];
 
@@ -262,7 +286,7 @@ app.post('/api/purchases', async (req, res) => {
             // Inserta el movimiento de inventario
             const movementDate = date ? new Date(date).toISOString().slice(0, 19).replace('T', ' ') : new Date().toISOString().slice(0, 19).replace('T', ' ');
             const description = `Compra a ${supplier || 'proveedor'}. Factura: ${invoiceNumber || 'N/A'}`;
-            const movementSql = `INSERT INTO inventory_movements (product_id, type, quantity, unit_cost, description, date) VALUES (?, ?, ?, ?, ?, ?)`;
+            const movementSql = `INSERT INTO inventory_movements (product_id, type, quantity, unit_cost, description, date, status) VALUES (?, ?, ?, ?, ?, ?, 'Activo')`;
             await run(movementSql, [productId, 'ENTRADA', quantity, unitCost, description, movementDate]);
 
             // Actualiza el producto
@@ -289,15 +313,10 @@ app.post('/api/purchases', async (req, res) => {
 
 app.put('/api/purchases', async (req, res) => {
     console.log('--- INICIO DE PETICIÓN PUT /api/purchases (EDITAR) ---');
-    const { originalKey, purchaseData } = req.body;
+    const { movementIdsToAnnul, purchaseData } = req.body;
 
-    if (!originalKey || !purchaseData || !purchaseData.items) {
-        return res.status(400).json({ error: 'Faltan datos para la edición: originalKey y purchaseData son requeridos.' });
-    }
-
-    const [originalDescription, originalDate] = originalKey.split(" | ");
-    if (!originalDescription || !originalDate) {
-        return res.status(400).json({ error: 'El identificador original (originalKey) es inválido.' });
+    if (!movementIdsToAnnul || !Array.isArray(movementIdsToAnnul) || movementIdsToAnnul.length === 0 || !purchaseData || !purchaseData.items) {
+        return res.status(400).json({ error: 'Faltan datos para la edición: movementIdsToAnnul y purchaseData son requeridos.' });
     }
 
     const run = util.promisify(db.run.bind(db));
@@ -308,18 +327,18 @@ app.put('/api/purchases', async (req, res) => {
         await run('BEGIN TRANSACTION');
         console.log('Transacción iniciada para edición.');
 
-        // 1. ANULACIÓN: Revertir los movimientos originales
+        // 1. ANULACIÓN: Revertir los movimientos originales usando sus IDs
+        const placeholders = movementIdsToAnnul.map(() => '?').join(',');
         const originalMovements = await all(
-            "SELECT * FROM inventory_movements WHERE description = ? AND date(date) = date(?)",
-            [originalDescription, originalDate]
+            `SELECT * FROM inventory_movements WHERE id IN (${placeholders}) AND status = 'Activo'`,
+            movementIdsToAnnul
         );
 
-        if (originalMovements.length === 0) {
-            throw new Error('No se encontraron los movimientos de la compra original para anular.');
+        if (originalMovements.length !== movementIdsToAnnul.length) {
+            throw new Error('No se encontraron todos los movimientos de la compra original para anular, o algunos ya estaban anulados.');
         }
 
-        // Revertir en orden inverso para mayor seguridad con los cálculos
-        for (const move of originalMovements.reverse()) {
+        for (const move of originalMovements) {
             const product = await get('SELECT current_stock, average_cost FROM products WHERE id = ?', [move.product_id]);
             if (!product) throw new Error(`Producto con ID ${move.product_id} no encontrado durante la anulación.`);
 
@@ -331,17 +350,9 @@ app.put('/api/purchases', async (req, res) => {
                 const entry_value = move.quantity * move.unit_cost;
                 avg_cost_before_entry = (current_total_value - entry_value) / stock_before_entry;
             }
-            // Si el stock queda en 0, el costo promedio también es 0.
 
-            // Actualizar producto a su estado anterior
             await run('UPDATE products SET current_stock = ?, average_cost = ? WHERE id = ?', [stock_before_entry, avg_cost_before_entry, move.product_id]);
-
-            // Registrar el movimiento de anulación para auditoría
-            const reversalDescription = `ANULACIÓN de compra. Factura: ${purchaseData.invoiceNumber || 'N/A'}`;
-            await run(
-                'INSERT INTO inventory_movements (product_id, type, quantity, unit_cost, description, date) VALUES (?, ?, ?, ?, ?, ?)',
-                [move.product_id, 'ANULACION_ENTRADA', move.quantity, move.unit_cost, reversalDescription, new Date().toISOString()]
-            );
+            await run("UPDATE inventory_movements SET status = 'Anulado' WHERE id = ?", [move.id]);
         }
         console.log('Fase de anulación completada.');
 
@@ -359,7 +370,7 @@ app.put('/api/purchases', async (req, res) => {
             const new_avg_cost = new_stock > 0 ? (current_total_value + entry_value) / new_stock : 0;
 
             await run(
-                'INSERT INTO inventory_movements (product_id, type, quantity, unit_cost, description, date) VALUES (?, ?, ?, ?, ?, ?)',
+                "INSERT INTO inventory_movements (product_id, type, quantity, unit_cost, description, date, status) VALUES (?, ?, ?, ?, ?, ?, 'Activo')",
                 [item.productId, 'ENTRADA', item.quantity, item.unitCost, newDescription, new Date(date).toISOString()]
             );
             await run('UPDATE products SET current_stock = ?, average_cost = ? WHERE id = ?', [new_stock, new_avg_cost, item.productId]);
@@ -395,7 +406,7 @@ app.get('/api/purchases', (req, res) => {
             im.description
         FROM inventory_movements im
         JOIN products p ON im.product_id = p.id
-        WHERE im.type = 'ENTRADA'
+        WHERE im.type = 'ENTRADA' AND im.status = 'Activo'
         ORDER BY im.date DESC;
     `;
     db.all(query, [], (err, rows) => {

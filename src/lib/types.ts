@@ -5,6 +5,7 @@ export interface Product {
   sku: string | null;
   stock: number;
   price: number;
+  tax_rate: number;
   status: 'Activo' | 'Inactivo';
   image?: string;
   // Campos de la BD que se mapean a los de arriba

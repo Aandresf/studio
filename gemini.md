@@ -117,6 +117,10 @@ Se ha realizado una revisión y refactorización exhaustiva de varios endpoints 
     2.  Este endpoint acepta un array con todos los productos de la compra en **una sola llamada a la API**.
     3.  El método del backend envuelve todo el proceso (recorrer los productos, actualizar el stock de cada uno, registrar los movimientos) dentro de una **única transacción** (`BEGIN`...`COMMIT`). Si un solo producto falla, se revierten todos los cambios (`ROLLBACK`), garantizando la integridad de los datos.
 
-*   **Acción Requerida para la Página de Ventas:** Se debe aplicar este mismo patrón a la funcionalidad de **Ventas**. En lugar de registrar la salida de cada producto con llamadas individuales, se debe crear un nuevo endpoint de lote (ej. `POST /api/sales`) que acepte la venta completa y la procese dentro de una única transacción en el backend. Esto prevendrá el mismo error de concurrencia y hará el sistema más robusto. Adicionalmente, se debe implementar la funcionalidad de **Historial de Ventas**, que incluya un modal con la lista de ventas y la capacidad de reimprimir el recibo, de forma análoga a como se implementó en la página de Compras.
+*   **Acción Requerida para la Página de Ventas:** Se debe replicar la funcionalidad completa de la sección de Compras en la sección de Ventas, incluyendo:
+    1.  **Operaciones de Lote:** Crear un endpoint `POST /api/sales` que procese la venta completa en una única transacción para evitar errores de concurrencia.
+    2.  **Historial y Recibos:** Implementar un modal de "Historial de Ventas" que permita visualizar ventas pasadas y reimprimir sus respectivos recibos.
+    3.  **Edición Segura:** Añadir la capacidad de editar ventas desde el historial. El backend (`PUT /api/sales`) debe seguir el patrón de **anulación y re-creación** para garantizar la integridad del inventario y mantener un rastro de auditoría.
+    4.  **Interfaz de Usuario Pulida:** Reemplazar los botones de texto en los modales de historial y recibo por **botones de icono con tooltips** (para acciones como Editar, Ver Recibo, Imprimir, etc.), manteniendo la consistencia visual con la sección de Compras.
 
 

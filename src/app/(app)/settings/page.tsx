@@ -12,7 +12,7 @@ import { Download, Upload } from "lucide-react";
 import { useBackendStatus } from '@/app/(app)/layout';
 import { getStoreSettings, updateStoreSettings } from '@/lib/api';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useToast } from '@/hooks/use-toast';
+import { toastSuccess, toastError } from '@/hooks/use-toast';
 
 interface StoreDetails {
   name: string;
@@ -42,7 +42,6 @@ function StoreDetailsSkeleton() {
 
 export default function SettingsPage() {
   const { setTheme } = useTheme();
-  const { toast } = useToast();
   const { isBackendReady, refetchKey } = useBackendStatus();
 
   const [storeDetails, setStoreDetails] = useState<StoreDetails>({ name: '', rif: '', address: '' });
@@ -61,15 +60,14 @@ export default function SettingsPage() {
             const data = await getStoreSettings();
             setStoreDetails(data);
         } catch (error) {
-            console.error(error);
-            toast({ title: "Error", description: "No se pudo cargar la configuración de la tienda.", variant: "destructive" });
+            // El error ya se maneja en la capa de API
         } finally {
             setIsLoading(false);
         }
     };
 
     fetchStoreDetails();
-  }, [isBackendReady, refetchKey, toast]);
+  }, [isBackendReady, refetchKey]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { id, value } = e.target;
@@ -80,10 +78,9 @@ export default function SettingsPage() {
     setIsSaving(true);
     try {
         await updateStoreSettings(storeDetails);
-        toast({ title: "Éxito", description: "La configuración de la tienda ha sido actualizada." });
+        toastSuccess("Éxito", "La configuración de la tienda ha sido actualizada.");
     } catch (error) {
-        console.error(error);
-        toast({ title: "Error", description: "No se pudieron guardar los cambios.", variant: "destructive" });
+        // El error ya se maneja en la capa de API
     } finally {
         setIsSaving(false);
     }

@@ -43,14 +43,21 @@ const toastVariants = cva(
 const Toast = React.forwardRef<
   React.ElementRef<typeof ToastPrimitives.Root>,
   React.ComponentPropsWithoutRef<typeof ToastPrimitives.Root> &
-    VariantProps<typeof toastVariants>
->(({ className, variant, ...props }, ref) => {
+    VariantProps<typeof toastVariants> & { countdown?: number }
+>(({ className, variant, countdown, ...props }, ref) => {
   return (
     <ToastPrimitives.Root
       ref={ref}
       className={cn(toastVariants({ variant }), className)}
       {...props}
-    />
+    >
+      {props.children}
+      {countdown !== undefined && (
+         <div className="absolute right-10 top-2 flex items-center justify-center w-5 h-5 text-xs rounded-full bg-muted text-muted-foreground">
+           {countdown}
+         </div>
+      )}
+    </ToastPrimitives.Root>
   )
 })
 Toast.displayName = ToastPrimitives.Root.displayName

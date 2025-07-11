@@ -43,10 +43,30 @@ export function PurchaseReceiptDialog({
       getStoreSettings()
         .then(setStoreSettings)
         .catch(() => {
-          // Error is handled by the generic fetchAPI, but we can add specific logic here if needed
+          // Error is handled by the generic fetchAPI
         });
     }
   }, [open]);
+
+  const consolidatedItems = React.useMemo(() => {
+    if (!purchase) return [];
+
+    const itemMap = new Map<number, { productId: number; quantity: number; totalCost: number }>();
+    purchase.items.forEach((item) => {
+        if (itemMap.has(item.productId)) {
+            const existing = itemMap.get(item.productId)!;
+            existing.quantity += item.quantity;
+            existing.totalCost += item.quantity * item.unitCost;
+        } else {
+            itemMap.set(item.productId, {
+                productId: item.productId,
+                quantity: item.quantity,
+                totalCost: item.quantity * item.unitCost,
+            });
+        }
+    });
+    return Array.from(itemMap.values());
+  }, [purchase]);
 
   const handlePrint = () => {
     const printContents = receiptRef.current?.innerHTML;
@@ -86,7 +106,7 @@ export function PurchaseReceiptDialog({
   if (!purchase) return null;
 
   const findProduct = (id: number) => products.find((p) => p.id === id);
-  const total = purchase.items.reduce((acc, item) => acc + item.quantity * item.unitCost, 0);
+  const total = consolidatedItems.reduce((acc, item) => acc + item.totalCost, 0);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -121,13 +141,13 @@ export function PurchaseReceiptDialog({
                         <div className="col-span-2 text-right">Cant</div>
                         <div className="col-span-4 text-right">Subtotal</div>
                     </div>
-                    {purchase.items.map((item) => {
+                    {consolidatedItems.map((item, index) => {
                         const product = findProduct(item.productId);
                         return (
-                            <div key={item.productId} className="grid grid-cols-12 gap-2">
+                            <div key={`${item.productId}-${index}`} className="grid grid-cols-12 gap-2">
                                 <div className="col-span-6 truncate">{product?.name || "Producto no encontrado"}</div>
                                 <div className="col-span-2 text-right">{item.quantity}</div>
-                                <div className="col-span-4 text-right">{(item.quantity * item.unitCost).toFixed(2)}</div>
+                                <div className="col-span-4 text-right">{item.totalCost.toFixed(2)}</div>
                             </div>
                         );
                     })}

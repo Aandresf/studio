@@ -1,19 +1,18 @@
-"use client"
-
 import * as React from "react"
 import { useState } from "react"
-import { ClipboardCopyIcon } from "lucide-react"
+import { ClipboardCopyIcon, CheckCircle2, XCircle } from "lucide-react"
 import type { ToastActionElement, ToastProps } from "@/components/ui/toast"
 import { cn } from "@/lib/utils"
 
 const TOAST_LIMIT = 1
-const TOAST_REMOVE_DELAY = 1000000
+const TOAST_REMOVE_DELAY = 5000 // Default remove delay
 
 type ToasterToast = ToastProps & {
   id: string
   title?: React.ReactNode
   description?: React.ReactNode
   action?: ToastActionElement
+  duration?: number // Duration in seconds
 }
 
 const actionTypes = {
@@ -56,7 +55,7 @@ interface State {
 
 const toastTimeouts = new Map<string, ReturnType<typeof setTimeout>>()
 
-const addToRemoveQueue = (toastId: string) => {
+const addToRemoveQueue = (toastId: string, duration: number = TOAST_REMOVE_DELAY) => {
   if (toastTimeouts.has(toastId)) {
     return
   }
@@ -67,7 +66,7 @@ const addToRemoveQueue = (toastId: string) => {
       type: "REMOVE_TOAST",
       toastId: toastId,
     })
-  }, TOAST_REMOVE_DELAY)
+  }, duration)
 
   toastTimeouts.set(toastId, timeout)
 }
@@ -90,6 +89,8 @@ export const reducer = (state: State, action: Action): State => {
 
     case "DISMISS_TOAST": {
       const { toastId } = action
+      // We don't immediately remove the toast. Instead, we set its 'open' state to false,
+      // which triggers the exit animation. The toast is removed later.
       if (toastId) {
         addToRemoveQueue(toastId)
       } else {
@@ -193,8 +194,18 @@ const ErrorToastDescription = ({ text }: { text: string }) => {
 function toastError(title: string, description: string) {
   return toast({
     variant: "destructive",
-    title: title,
+    title: <div className="flex items-center"><XCircle className="mr-2 h-5 w-5" /> {title}</div>,
     description: <ErrorToastDescription text={description} />,
+    duration: 5,
+  })
+}
+
+// Función específica para mostrar toasts de éxito
+function toastSuccess(title: string, description: string) {
+  return toast({
+    title: <div className="flex items-center"><CheckCircle2 className="mr-2 h-5 w-5 text-green-500" /> {title}</div>,
+    description: description,
+    duration: 5,
   })
 }
 
@@ -219,4 +230,4 @@ function useToast() {
   }
 }
 
-export { useToast, toast, toastError }
+export { useToast, toast, toastError, toastSuccess }

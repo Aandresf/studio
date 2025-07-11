@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
+import { useToast, toastSuccess, toastError } from '@/hooks/use-toast';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 
@@ -43,8 +43,6 @@ export default function ReportsPage() {
     const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
     const [selectedReport, setSelectedReport] = useState<FullReport | null>(null);
 
-    const { toast } = useToast();
-
     const fetchReports = useCallback(async () => {
         if (!isBackendReady) {
             setIsLoading(true);
@@ -58,11 +56,11 @@ export default function ReportsPage() {
             setReports(data);
         } catch (err: any) {
             setError(err.message);
-            toast({ title: "Error", description: "No se pudieron cargar los informes.", variant: "destructive" });
+            // El toast de error ya se maneja en la capa de API
         } finally {
             setIsLoading(false);
         }
-    }, [isBackendReady, toast]);
+    }, [isBackendReady]);
 
     useEffect(() => {
         fetchReports();
@@ -75,7 +73,7 @@ export default function ReportsPage() {
 
     const handleGenerateReport = async () => {
         if (!selectedReportType || !date?.from || !date?.to) {
-            toast({ title: "Error de Validación", description: "Por favor, seleccione un tipo de informe y un rango de fechas.", variant: "destructive" });
+            toastError("Error de Validación", "Por favor, seleccione un tipo de informe y un rango de fechas.");
             return;
         }
         
@@ -89,11 +87,11 @@ export default function ReportsPage() {
             const startDate = format(date.from, 'yyyy-MM-dd');
             const endDate = format(date.to, 'yyyy-MM-dd');
             await createReport(selectedReportType, startDate, endDate);
-            toast({ title: "Éxito", description: "El informe se ha generado correctamente." });
+            toastSuccess("Éxito", "El informe se ha generado correctamente.");
             fetchReports(); // Refresh the list
             setIsGenerateModalOpen(false); // Close modal on success
         } catch (err: any) {
-            toast({ title: "Error", description: `No se pudo generar el informe. Formato ${outputFormat} no implementado.`, variant: "destructive" });
+            // El toast de error ya se maneja en la capa de API
         } finally {
             setIsSubmitting(false);
         }
@@ -105,7 +103,7 @@ export default function ReportsPage() {
             setSelectedReport(reportData);
             setIsViewDialogOpen(true);
         } catch (err: any) {
-            toast({ title: "Error", description: "No se pudo cargar el detalle del informe.", variant: "destructive" });
+            // El toast de error ya se maneja en la capa de API
         }
     };
     

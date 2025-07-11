@@ -17,9 +17,10 @@ import { Combobox } from '@/components/ui/combobox';
 import { ProductDialog } from '@/components/dialogs/ProductDialog';
 import { PurchaseReceiptDialog } from '@/components/dialogs/PurchaseReceiptDialog';
 import { PurchaseHistoryDialog } from '@/components/dialogs/PurchaseHistoryDialog';
-import { Product, PurchasePayload, GroupedPurchase } from '@/lib/types';
+import { PurchaseConfirmationDialog } from '@/components/dialogs/PurchaseConfirmationDialog';
+import { Product, PurchasePayload, GroupedPurchase, PurchaseItemPayload } from '@/lib/types';
 import { createPurchase, getProducts, updatePurchase } from '@/lib/api';
-import { useToast } from '@/hooks/use-toast';
+import { toastSuccess, toastError } from '@/hooks/use-toast';
 
 interface PurchaseItem {
   id: string; 
@@ -36,7 +37,6 @@ const createEmptyItem = (): PurchaseItem => ({
 });
 
 export default function PurchasesPage() {
-    const { toast } = useToast();
     const [date, setDate] = React.useState<Date>(new Date());
     const [supplier, setSupplier] = React.useState('');
     const [invoiceNumber, setInvoiceNumber] = React.useState('');
@@ -50,9 +50,11 @@ export default function PurchasesPage() {
 
     const [isReceiptOpen, setIsReceiptOpen] = React.useState(false);
     const [isHistoryOpen, setIsHistoryOpen] = React.useState(false);
+    const [isConfirmationOpen, setIsConfirmationOpen] = React.useState(false);
     const [lastPurchase, setLastPurchase] = React.useState<PurchasePayload | null>(null);
+    const [consolidatedItems, setConsolidatedItems] = React.useState<(PurchaseItemPayload & { productName: string })[]>([]);
     
-    const [editingPurchaseKey, setEditingPurchaseKey] = React.useState<string | null>(null);
+    const [editingMovementIds, setEditingMovementIds] = React.useState<number[] | null>(null);
 
     const { isBackendReady, refetchKey, triggerRefetch } = useBackendStatus();
 
@@ -63,6 +65,7 @@ export default function PurchasesPage() {
             try {
                 setProducts(await getProducts());
             } catch (error) {
+                toastError("Error de Red", "No se pudieron cargar los productos.");
             } finally {
                 setIsLoadingProducts(false);
             }
@@ -101,40 +104,64 @@ export default function PurchasesPage() {
         setInvoiceNumber('');
         setPurchaseItems([createEmptyItem()]);
         setOpenComboboxIndex(null);
-        setEditingPurchaseKey(null);
+        setEditingMovementIds(null);
     };
 
-    const handleSubmit = async () => {
+    const handleOpenConfirmation = () => {
+        // 1. Consolidate items
+        const itemMap = new Map<string, PurchaseItemPayload & { productName: string }>();
+        const productInfoMap = new Map(products.map(p => [String(p.id), p]));
+
+        purchaseItems
+            .filter(item => item.productId !== null)
+            .forEach(item => {
+                const productIdStr = item.productId!;
+                if (itemMap.has(productIdStr)) {
+                    const existing = itemMap.get(productIdStr)!;
+                    existing.quantity += item.quantity;
+                    // NOTE: We keep the unitCost of the *first* item encountered.
+                } else {
+                    const product = productInfoMap.get(productIdStr);
+                    itemMap.set(productIdStr, {
+                        productId: Number(productIdStr),
+                        productName: product?.name || 'Desconocido',
+                        quantity: item.quantity,
+                        unitCost: item.unitCost,
+                    });
+                }
+            });
+        
+        const finalItems = Array.from(itemMap.values());
+        setConsolidatedItems(finalItems);
+        setIsConfirmationOpen(true);
+    };
+
+    const handleConfirmPurchase = async () => {
         setIsLoading(true);
         const purchasePayload: PurchasePayload = {
             date: date.toISOString(),
             supplier: supplier || undefined,
             invoiceNumber: invoiceNumber || undefined,
-            items: purchaseItems
-                .filter(item => item.productId !== null)
-                .map(item => ({
-                    productId: Number(item.productId),
-                    quantity: item.quantity,
-                    unitCost: item.unitCost,
-                }))
+            items: consolidatedItems.map(({ productName, ...item }) => item), // Remove productName before sending
         };
 
         try {
-            if (editingPurchaseKey) {
-                await updatePurchase(editingPurchaseKey, purchasePayload);
-                toast({ title: "Compra Actualizada", description: "La compra se ha modificado exitosamente.", className: "bg-blue-600 text-white" });
+            if (editingMovementIds) {
+                await updatePurchase({ movementIdsToAnnul: editingMovementIds, purchaseData: purchasePayload });
+                toastSuccess("Compra Actualizada", "La compra se ha modificado exitosamente.");
             } else {
                 await createPurchase(purchasePayload);
-                toast({ title: "Compra Registrada", description: "La compra se ha guardado exitosamente.", className: "bg-green-600 text-white" });
+                toastSuccess("Compra Registrada", "La compra se ha guardado exitosamente.");
             }
             setLastPurchase(purchasePayload);
             setIsReceiptOpen(true);
             triggerRefetch();
             resetForm();
         } catch (error) {
-            // API layer handles toast
+            // API layer handles toast, so no need to call toastError here
         } finally {
             setIsLoading(false);
+            setIsConfirmationOpen(false);
         }
     };
 
@@ -150,7 +177,7 @@ export default function PurchasesPage() {
             quantity: m.quantity,
             unitCost: m.unit_cost,
         })));
-        setEditingPurchaseKey(purchase.key);
+        setEditingMovementIds(purchase.movements.map(m => m.id));
         setIsHistoryOpen(false);
     };
 
@@ -168,6 +195,7 @@ export default function PurchasesPage() {
 
     const handleProductSaved = (savedProduct: Product) => {
         triggerRefetch();
+        toastSuccess("Producto Guardado", `El producto "${savedProduct.name}" ha sido guardado.`);
         const lastEmptyItemIndex = purchaseItems.findIndex(item => item.productId === null);
         if (lastEmptyItemIndex !== -1) {
             handleItemChange(lastEmptyItemIndex, 'productId', String(savedProduct.id));
@@ -185,16 +213,16 @@ export default function PurchasesPage() {
                 <div className="flex items-center justify-between">
                     <div className="flex-1">
                         <h1 className="font-semibold text-lg md:text-2xl">Compras</h1>
-                        <p className="text-sm text-muted-foreground">{editingPurchaseKey ? `Editando compra de ${supplier}` : "Registra nuevas órdenes de compra."}</p>
+                        <p className="text-sm text-muted-foreground">{editingMovementIds ? `Editando compra de ${supplier}` : "Registra nuevas órdenes de compra."}</p>
                     </div>
-                    <Button variant="outline" onClick={() => setIsHistoryOpen(true)} disabled={editingPurchaseKey !== null}>
+                    <Button variant="outline" onClick={() => setIsHistoryOpen(true)} disabled={editingMovementIds !== null}>
                         <History className="mr-2 h-4 w-4" />
                         Historial
                     </Button>
                 </div>
                 <Card>
                     <CardHeader>
-                        <CardTitle>{editingPurchaseKey ? "Editar Orden de Compra" : "Nueva Orden de Compra"}</CardTitle>
+                        <CardTitle>{editingMovementIds ? "Editar Orden de Compra" : "Nueva Orden de Compra"}</CardTitle>
                     </CardHeader>
                     <CardContent>
                     <div className="grid gap-6 md:grid-cols-3">
@@ -220,15 +248,22 @@ export default function PurchasesPage() {
                         </div>
                     </div>
                     <div className="mt-6 flex justify-end gap-2">
-                        {editingPurchaseKey && (<Button variant="ghost" onClick={resetForm}><XCircle className="mr-2 h-4 w-4" />Cancelar Edición</Button>)}
-                        <Button onClick={handleSubmit} disabled={isSubmitDisabled}>{isLoading ? (editingPurchaseKey ? "Guardando..." : "Registrando...") : (editingPurchaseKey ? "Guardar Cambios" : "Registrar Compra")}</Button>
+                        {editingMovementIds && (<Button variant="ghost" onClick={resetForm}><XCircle className="mr-2 h-4 w-4" />Cancelar Edición</Button>)}
+                        <Button onClick={handleOpenConfirmation} disabled={isSubmitDisabled}>{isLoading ? (editingMovementIds ? "Guardando..." : "Registrando...") : (editingMovementIds ? "Guardar Cambios" : "Registrar Compra")}</Button>
                     </div>
                     </CardContent>
                 </Card>
             </div>
-            <ProductDialog open={isProductDialogOpen} onOpenChange={setIsProductDialogOpen} product={{ name: '', price: '', stock: 0, status: 'Activo' }} onProductSaved={handleProductSaved} />
+            <ProductDialog open={isProductDialogOpen} onOpenChange={setIsProductDialogOpen} product={{ name: '', price: 0, stock: 0, status: 'Activo' }} onProductSaved={handleProductSaved} />
             <PurchaseHistoryDialog open={isHistoryOpen} onOpenChange={setIsHistoryOpen} onViewReceipt={handleViewReceiptFromHistory} onEditPurchase={handleEditPurchase} />
             <PurchaseReceiptDialog open={isReceiptOpen} onOpenChange={setIsReceiptOpen} purchase={lastPurchase} products={products} />
+            <PurchaseConfirmationDialog 
+                open={isConfirmationOpen} 
+                onOpenChange={setIsConfirmationOpen}
+                purchaseItems={consolidatedItems}
+                onConfirm={handleConfirmPurchase}
+                isSaving={isLoading}
+            />
         </>
     )
 }

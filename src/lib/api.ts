@@ -82,10 +82,10 @@ export const createPurchase = (purchase: PurchasePayload): Promise<{ message: st
 
 export const getPurchaseHistory = (): Promise<PurchaseHistoryMovement[]> => fetchAPI('/purchases');
 
-export const updatePurchase = (originalKey: string, purchaseData: PurchasePayload): Promise<{ message: string }> => {
+export const updatePurchase = (payload: { movementIdsToAnnul: number[], purchaseData: PurchasePayload }): Promise<{ message: string }> => {
     return fetchAPI('/purchases', {
         method: 'PUT',
-        body: JSON.stringify({ originalKey, purchaseData }),
+        body: JSON.stringify(payload),
     });
 };
 

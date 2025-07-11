@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS products (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,
   sku TEXT UNIQUE,
+  tax_rate REAL NOT NULL DEFAULT 16.00, -- Tasa de impuesto (ej. 16.00 para 16%). 0 para exento.
   status TEXT NOT NULL DEFAULT 'Activo', -- Puede ser 'Activo' o 'Inactivo'
   image TEXT, -- URL o path a la imagen del producto
   current_stock REAL NOT NULL DEFAULT 0,
@@ -23,11 +24,12 @@ CREATE TABLE IF NOT EXISTS products (
 CREATE TABLE IF NOT EXISTS inventory_movements (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   product_id INTEGER NOT NULL,
-  type TEXT NOT NULL CHECK(type IN ('ENTRADA', 'SALIDA', 'RETIRO', 'AUTO-CONSUMO')),
+  type TEXT CHECK(type IN ('ENTRADA', 'SALIDA', 'RETIRO', 'AUTO-CONSUMO', 'ANULACION_ENTRADA')) NOT NULL,
   quantity REAL NOT NULL,
   unit_cost REAL, -- Costo unitario al momento de la entrada
   date TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now')),
   description TEXT,
+  status TEXT NOT NULL DEFAULT 'Activo', -- Puede ser 'Activo' o 'Anulado'
   FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE
 );
 
