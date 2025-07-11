@@ -163,7 +163,7 @@ export default function PurchasesPage() {
             }))
         };
         setLastPurchase(payload);
-        setIsHistoryOpen(false);
+        // No cerramos el historial, solo abrimos el recibo "encima".
         setIsReceiptOpen(true);
     };
 
