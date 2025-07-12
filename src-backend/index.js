@@ -4,6 +4,7 @@ const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
 const sqlite3 = require('sqlite3').verbose();
+const { subDays, formatISO } = require('date-fns');
 
 const isTestEnv = process.env.NODE_ENV === 'test';
 
@@ -779,27 +780,68 @@ app.get('/api/reports', (req, res) => {
 
 
 // DASHBOARD
-app.get('/api/dashboard/summary', (req, res) => {
-    const query = `
-        SELECT
-            (SELECT SUM(current_stock * average_cost) FROM products) as totalValue,
-            (SELECT COUNT(*) FROM products) as productCount,
-            (SELECT COUNT(*) FROM inventory_movements WHERE type = 'SALIDA' AND date >= date('now', '-30 days')) as salesCount
-    `;
-    db.get(query, (err, row) => {
-        if (err) return res.status(500).json({ error: err.message });
+app.get('/api/dashboard/summary', async (req, res) => {
+    const get = util.promisify(db.get.bind(db));
 
-        // Ensure backend handles nulls and provides a consistent structure.
-        const summaryData = {
-            totalRevenue: { value: row.totalValue || 0, change: 0 }, // Change placeholder
-            sales: { value: row.salesCount || 0, change: 0 }, // Change placeholder
-            totalProducts: { value: row.productCount || 0, change: 0 }, // Change placeholder
-            newCustomers: { value: 0, change: 0 } // Not implemented yet
+    try {
+        const now = new Date();
+        const thirtyDaysAgo = formatISO(subDays(now, 30));
+        const sixtyDaysAgo = formatISO(subDays(now, 60));
+
+        const salesQuery = `
+            SELECT
+                SUM(CASE WHEN date >= ? THEN quantity * unit_cost ELSE 0 END) as currentRevenue,
+                COUNT(CASE WHEN date >= ? THEN 1 ELSE NULL END) as currentSalesCount,
+                SUM(CASE WHEN date >= ? AND date < ? THEN quantity * unit_cost ELSE 0 END) as previousRevenue,
+                COUNT(CASE WHEN date >= ? AND date < ? THEN 1 ELSE NULL END) as previousSalesCount
+            FROM inventory_movements
+            WHERE type = 'SALIDA' AND status = 'Activo' AND date >= ?
+        `;
+
+        const productQuery = `
+            SELECT
+                COUNT(*) as totalProducts
+            FROM products
+            WHERE status = 'Activo'
+        `;
+
+        const salesData = await get(salesQuery, [thirtyDaysAgo, thirtyDaysAgo, sixtyDaysAgo, thirtyDaysAgo, sixtyDaysAgo, thirtyDaysAgo, sixtyDaysAgo]);
+        const productData = await get(productQuery);
+
+        const calculateChange = (current, previous) => {
+            if (previous === 0) {
+                return current > 0 ? 100.0 : 0.0;
+            }
+            return ((current - previous) / previous) * 100;
         };
 
-        res.json(summaryData);
-    });
+        const summary = {
+            totalRevenue: {
+                value: salesData.currentRevenue || 0,
+                change: calculateChange(salesData.currentRevenue || 0, salesData.previousRevenue || 0)
+            },
+            sales: {
+                value: salesData.currentSalesCount || 0,
+                change: calculateChange(salesData.currentSalesCount || 0, salesData.previousSalesCount || 0)
+            },
+            totalProducts: {
+                value: productData.totalProducts || 0,
+                change: 0 // Not implemented yet
+            },
+            newCustomers: {
+                value: 0, // Not implemented yet
+                change: 0
+            }
+        };
+
+        res.json(summary);
+
+    } catch (err) {
+        console.error("Error fetching dashboard summary:", err);
+        res.status(500).json({ error: "Failed to fetch dashboard summary" });
+    }
 });
+
 
 app.get('/api/dashboard/recent-sales', (req, res) => {
     const sql = `
