@@ -205,6 +205,9 @@ const util = require('util');
 
 // INVENTORY MOVEMENTS
 app.post('/api/inventory/movements', async (req, res) => {
+    console.log('--- INICIO DE PETICIÓN POST /api/inventory/movements ---');
+    console.log('Cuerpo recibido:', JSON.stringify(req.body, null, 2));
+    
     const { product_id, type, quantity, unit_cost, description, date } = req.body;
     if (!product_id || !type || !quantity) {
         return res.status(400).json({ error: 'Missing required fields: product_id, type, quantity' });

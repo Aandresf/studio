@@ -55,13 +55,19 @@ export function RegisterMovementDialog({
     }
 
     setIsSaving(true);
+
+    const movementData = {
+      product_id: product.id,
+      type,
+      quantity,
+      description,
+      unit_cost: 0, // Always send 0 for non-sale movements
+    };
+
+    console.log("Enviando al backend:", JSON.stringify(movementData, null, 2));
+
     try {
-      await createInventoryMovement({
-        product_id: product.id,
-        type,
-        quantity,
-        description,
-      });
+      await createInventoryMovement(movementData);
       toastSuccess("Movimiento Registrado", "El movimiento de inventario se ha registrado correctamente.");
       onMovementRegistered();
       onOpenChange(false);
