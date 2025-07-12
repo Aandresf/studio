@@ -32,6 +32,7 @@ interface ComboboxProps {
   popoverClassName?: string;
   renderHeader?: () => React.ReactNode;
   renderOption?: (option: ComboboxOption) => React.ReactNode;
+  sideOffset?: number;
 }
 
 export function Combobox({
@@ -48,6 +49,7 @@ export function Combobox({
   popoverClassName,
   renderHeader,
   renderOption,
+  sideOffset = 4,
 }: ComboboxProps) {
   const [internalOpen, setInternalOpen] = React.useState(false);
   const [searchValue, setSearchValue] = React.useState("");
@@ -87,7 +89,10 @@ export function Combobox({
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className={cn("w-[--radix-popover-trigger-width] p-0", popoverClassName)}>
+      <PopoverContent 
+        sideOffset={sideOffset}
+        className={cn("w-[--radix-popover-trigger-width] p-0", popoverClassName)}
+      >
         <div className="p-2">
             <Input
                 autoFocus
