@@ -1,6 +1,6 @@
 
 import { toastError } from "@/hooks/use-toast";
-import { Product, DashboardSummary, RecentSale, InventoryMovement, ReportMetadata, FullReport, ReportType, StoreSettings, PurchasePayload } from './types';
+import { Product, DashboardSummary, RecentSale, InventoryMovement, ReportMetadata, FullReport, ReportType, StoreSettings, PurchasePayload, SalePayload, PurchaseHistoryMovement, SalesHistoryMovement } from './types';
 
 const API_BASE_URL = 'http://localhost:3001/api';
 
@@ -100,6 +100,10 @@ export const annulPurchase = (payload: { movementIds: number[] }): Promise<{ mes
 // Sale API calls
 export const getSalesHistory = (): Promise<SalesHistoryMovement[]> => fetchAPI('/sales');
 
+export const getSaleDetails = (transactionId: string): Promise<SalePayload> => {
+    return fetchAPI(`/sales/details?id=${encodeURIComponent(transactionId)}`);
+};
+
 export const createSale = (sale: SalePayload): Promise<{ message: string }> => {
     return fetchAPI('/sales', {
         method: 'POST',
@@ -107,7 +111,7 @@ export const createSale = (sale: SalePayload): Promise<{ message: string }> => {
     });
 };
 
-export const updateSale = (payload: { movementIdsToAnnul: number[], saleData: SalePayload }): Promise<{ message: string }> => {
+export const updateSale = (payload: { movementIdsToAnnul: number[], saleData: SalePayload }): Promise<{ message:string }> => {
     return fetchAPI('/sales', {
         method: 'PUT',
         body: JSON.stringify(payload),

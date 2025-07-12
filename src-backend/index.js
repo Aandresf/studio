@@ -535,6 +535,51 @@ app.get('/api/sales', (req, res) => {
     });
 });
 
+// GET SALE DETAILS BY TRANSACTION ID
+app.get('/api/sales/details', (req, res) => {
+    const transactionId = req.query.id;
+    if (!transactionId) {
+        return res.status(400).json({ error: 'Transaction ID is required' });
+    }
+
+    const sql = `
+        SELECT
+            im.product_id as productId,
+            p.name as productName,
+            im.quantity,
+            im.unit_cost as unitPrice,
+            p.tax_rate,
+            im.date,
+            im.description
+        FROM inventory_movements im
+        JOIN products p ON im.product_id = p.id
+        WHERE im.description = ? AND im.type = 'SALIDA' AND im.status = 'Activo'
+    `;
+    db.all(sql, [transactionId], (err, items) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (items.length === 0) return res.status(404).json({ error: 'Sale not found' });
+
+        const firstItem = items[0];
+        const match = firstItem.description.match(/Venta a (?<clientName>.*?) \(DNI: (?<clientDni>.*?)\)\. Factura: (?<invoiceNumber>.*)/);
+
+        const salePayload = {
+            date: firstItem.date,
+            clientName: match?.groups.clientName.trim() || 'N/A',
+            clientDni: match?.groups.clientDni.trim() || 'N/A',
+            invoiceNumber: match?.groups.invoiceNumber.trim() || 'N/A',
+            items: items.map(i => ({
+                productId: i.productId,
+                quantity: i.quantity,
+                unitPrice: i.unitPrice,
+                tax_rate: i.tax_rate
+            }))
+        };
+
+        res.json(salePayload);
+    });
+});
+
+
 // SALES (BATCH - NEW)
 app.post('/api/sales', async (req, res) => {
     console.log('--- INICIO DE PETICIÓN POST /api/sales ---');
@@ -759,27 +804,27 @@ app.get('/api/dashboard/summary', (req, res) => {
 app.get('/api/dashboard/recent-sales', (req, res) => {
     const sql = `
         SELECT
-            im.id,
-            p.name as productName,
-            im.quantity,
-            im.unit_cost,
-            im.date
+            description as id, -- Use description as the unique transaction ID
+            SUM(im.quantity * im.unit_cost) as amount,
+            MAX(im.date) as date,
+            -- Extract client name from the description string
+            SUBSTR(im.description, 9, INSTR(SUBSTR(im.description, 9), ' (DNI:') - 1) as customerName
         FROM inventory_movements im
-        JOIN products p ON im.product_id = p.id
-        WHERE im.type = 'SALIDA'
-        ORDER BY im.date DESC
+        WHERE im.type = 'SALIDA' AND im.status = 'Activo'
+        GROUP BY description
+        ORDER BY date DESC
         LIMIT 5
     `;
     db.all(sql, [], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
 
         const salesData = rows.map(row => ({
-            id: row.id.toString(),
-            customerName: 'Venta de mostrador', // Generic placeholder
+            id: row.id, // This is now the transaction ID (description)
+            customerName: row.customerName || 'Venta de mostrador',
             customerEmail: '', // Keep it clean
             status: 'Completado', // Consistent status
             date: row.date,
-            amount: row.quantity * (row.unit_cost || 0) // Handle possible null cost
+            amount: row.amount || 0
         }));
 
         res.json(salesData);

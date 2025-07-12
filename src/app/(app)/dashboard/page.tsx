@@ -8,6 +8,7 @@ import { DollarSign, Package, ShoppingCart, Users } from "lucide-react";
 import { getDashboardSummary, getRecentSales } from '@/lib/api';
 import { useBackendStatus } from '@/app/(app)/layout';
 import { Skeleton } from '@/components/ui/skeleton';
+import { SalesReceiptDialog } from '@/components/dialogs/SalesReceiptDialog'; // Import the dialog
 
 // Tipos de datos esperados de la API
 interface SummaryStats {
@@ -18,7 +19,7 @@ interface SummaryStats {
 }
 
 interface RecentSale {
-    id: string;
+    id: string; // This will be the transactionId
     customerName: string;
     customerEmail: string;
     status: 'Completed' | 'Pending' | 'Cancelled';
@@ -76,6 +77,7 @@ export default function Dashboard() {
     const [recentSales, setRecentSales] = useState<RecentSale[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [selectedTransactionId, setSelectedTransactionId] = useState<string | null>(null);
 
     useEffect(() => {
         if (!isBackendReady) {
@@ -193,7 +195,7 @@ export default function Dashboard() {
                             </TableHeader>
                             <TableBody>
                                 {recentSales.map(sale => (
-                                    <TableRow key={sale.id}>
+                                    <TableRow key={sale.id} onClick={() => setSelectedTransactionId(sale.id)} className="cursor-pointer hover:bg-muted/50">
                                         <TableCell>
                                             <div className="font-medium">{sale.customerName}</div>
                                             <div className="text-sm text-muted-foreground">{sale.customerEmail}</div>
@@ -212,12 +214,23 @@ export default function Dashboard() {
     };
 
     return (
-        <div className="flex flex-col gap-6">
-             <div className="flex-1">
-                <h1 className="font-semibold text-lg md:text-2xl">Panel de Control</h1>
-                <p className="text-sm text-muted-foreground">Vista general de tu inventario.</p>
+        <>
+            <div className="flex flex-col gap-6">
+                <div className="flex-1">
+                    <h1 className="font-semibold text-lg md:text-2xl">Panel de Control</h1>
+                    <p className="text-sm text-muted-foreground">Vista general de tu inventario.</p>
+                </div>
+                {renderContent()}
             </div>
-            {renderContent()}
-        </div>
+            <SalesReceiptDialog
+                transactionId={selectedTransactionId}
+                open={selectedTransactionId !== null}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setSelectedTransactionId(null);
+                    }
+                }}
+            />
+        </>
     )
 }
