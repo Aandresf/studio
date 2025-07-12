@@ -75,21 +75,19 @@ export function ProductDialog({ open, onOpenChange, product, onProductSaved, gen
     };
 
     try {
-      let savedProduct;
       if ('id' in productToSave && productToSave.id) {
-        // @ts-ignore
-        savedProduct = await updateProduct(productToSave.id, productToSave);
+        // UPDATE operation
+        await updateProduct(productToSave.id, productToSave);
+        onProductSaved(productToSave as Product); // Pass the local state which has the updates
       } else {
-        // @ts-ignore
-        savedProduct = await createProduct(productToSave);
+        // CREATE operation
+        const newProduct = await createProduct(productToSave); // newProduct has the ID from the backend
+        onProductSaved(newProduct); // Pass the backend response
       }
-      toastSuccess("Éxito", `Producto ${productToSave.id ? 'actualizado' : 'creado'} correctamente.`);
-      // El backend devuelve un objeto diferente, así que pasamos el que guardamos
-      onProductSaved(productToSave as Product);
       handleClose();
     } catch (e: any) {
       console.error("Error al guardar el producto:", e);
-      // El toast de error ya se muestra desde la capa de API (api.ts)
+      // The API layer already shows an error toast
     }
   };
 

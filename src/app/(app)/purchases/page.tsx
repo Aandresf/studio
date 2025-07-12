@@ -46,6 +46,7 @@ export default function PurchasesPage() {
     const [isLoading, setIsLoading] = React.useState(false);
     const [isLoadingProducts, setIsLoadingProducts] = React.useState(true);
     const [isProductDialogOpen, setIsProductDialogOpen] = React.useState(false);
+    const [productDialogInitialData, setProductDialogInitialData] = React.useState<Partial<Product> | null>(null);
     const [openComboboxIndex, setOpenComboboxIndex] = React.useState<number | null>(null);
 
     const [isReceiptOpen, setIsReceiptOpen] = React.useState(false);
@@ -72,6 +73,15 @@ export default function PurchasesPage() {
         };
         fetchProducts();
     }, [isBackendReady, refetchKey]);
+
+    const generateNextSku = () => {
+        if (products.length === 0) return '1';
+        const maxSku = products.reduce((max, p) => {
+            const skuNumber = parseInt(p.sku || '0', 10);
+            return !isNaN(skuNumber) && skuNumber > max ? skuNumber : max;
+        }, 0);
+        return (maxSku + 1).toString();
+    };
 
     const productOptions = React.useMemo(() => products.map(p => ({ value: String(p.id), label: `(${p.sku}) ${p.name}` })), [products]);
 
@@ -105,6 +115,17 @@ export default function PurchasesPage() {
         setPurchaseItems([createEmptyItem()]);
         setOpenComboboxIndex(null);
         setEditingMovementIds(null);
+    };
+
+    const handleOpenNewProductDialog = () => {
+        setProductDialogInitialData({
+            name: '',
+            price: 0,
+            stock: 0,
+            status: 'Activo',
+            sku: generateNextSku(),
+        });
+        setIsProductDialogOpen(true);
     };
 
     const handleOpenConfirmation = () => {
@@ -194,15 +215,31 @@ export default function PurchasesPage() {
     };
 
     const handleProductSaved = (savedProduct: Product) => {
-        triggerRefetch();
-        toastSuccess("Producto Guardado", `El producto "${savedProduct.name}" ha sido guardado.`);
-        const lastEmptyItemIndex = purchaseItems.findIndex(item => item.productId === null);
-        if (lastEmptyItemIndex !== -1) {
-            handleItemChange(lastEmptyItemIndex, 'productId', String(savedProduct.id));
+        // First, add the new product to the local state to avoid race conditions
+        setProducts(currentProducts => [...currentProducts, savedProduct]);
+
+        // Now, update the purchase items list
+        const newItems = [...purchaseItems];
+        const firstEmptyIndex = newItems.findIndex(item => item.productId === null);
+
+        const newItemLine = {
+            id: `temp-${Date.now()}`,
+            productId: String(savedProduct.id),
+            quantity: 1, // Default to 1
+            unitCost: savedProduct.price ?? 0,
+        };
+
+        if (firstEmptyIndex !== -1) {
+            newItems[firstEmptyIndex] = newItemLine;
+            setPurchaseItems(newItems);
         } else {
-            setPurchaseItems(prev => [...prev, { ...createEmptyItem(), productId: String(savedProduct.id), unitCost: savedProduct.price ?? 0 }]);
+            setPurchaseItems(prev => [...prev, newItemLine]);
         }
+        
+        toastSuccess("Producto Guardado", `El producto "${savedProduct.name}" ha sido añadido a la compra.`);
         setIsProductDialogOpen(false);
+        // We can still trigger a refetch for long-term consistency if needed, but it's not critical for the UI
+        triggerRefetch(); 
     };
 
     const isSubmitDisabled = purchaseItems.some(item => !item.productId || item.quantity <= 0) || isLoading;
@@ -244,7 +281,7 @@ export default function PurchasesPage() {
                         </div>
                         <div className="flex items-center gap-2 mt-4">
                             <Button size="sm" className="gap-1" onClick={addPurchaseItem}><PlusCircle className="h-3.5 w-3.5" />Añadir Producto</Button>
-                            <Button variant="outline" size="sm" className="gap-1" onClick={() => setIsProductDialogOpen(true)}><PlusCircle className="h-3.5 w-3.5" />Crear Producto</Button>
+                            <Button variant="outline" size="sm" className="gap-1" onClick={handleOpenNewProductDialog}><PlusCircle className="h-3.5 w-3.5" />Crear Producto</Button>
                         </div>
                     </div>
                     <div className="mt-6 flex justify-end gap-2">
@@ -254,7 +291,13 @@ export default function PurchasesPage() {
                     </CardContent>
                 </Card>
             </div>
-            <ProductDialog open={isProductDialogOpen} onOpenChange={setIsProductDialogOpen} product={{ name: '', price: 0, stock: 0, status: 'Activo' }} onProductSaved={handleProductSaved} />
+            <ProductDialog 
+                open={isProductDialogOpen} 
+                onOpenChange={setIsProductDialogOpen} 
+                product={productDialogInitialData} 
+                onProductSaved={handleProductSaved} 
+                generateSku={generateNextSku}
+            />
             <PurchaseHistoryDialog open={isHistoryOpen} onOpenChange={setIsHistoryOpen} onViewReceipt={handleViewReceiptFromHistory} onEditPurchase={handleEditPurchase} />
             <PurchaseReceiptDialog open={isReceiptOpen} onOpenChange={setIsReceiptOpen} purchase={lastPurchase} products={products} />
             <PurchaseConfirmationDialog 
