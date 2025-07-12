@@ -72,7 +72,7 @@ export default function SalesPage() {
     const [isReceiptOpen, setIsReceiptOpen] = React.useState(false);
     const [isConfirmationOpen, setIsConfirmationOpen] = React.useState(false);
     const [consolidatedItems, setConsolidatedItems] = React.useState<(SaleItemPayload & { name: string })[]>([]);
-    const [lastSale, setLastSale] = React.useState<SalePayload | null>(null);
+    const [selectedTransactionId, setSelectedTransactionId] = React.useState<string | null>(null);
     const [editingMovementIds, setEditingMovementIds] = React.useState<number[] | null>(null);
 
     const { isBackendReady, refetchKey, triggerRefetch } = useBackendStatus();
@@ -176,17 +176,19 @@ export default function SalesPage() {
         };
 
         try {
+            let transactionId;
             if (editingMovementIds) {
                 await updateSale({ movementIdsToAnnul: editingMovementIds, saleData: salePayload });
                 toastSuccess("Venta Actualizada", "La venta se ha modificado exitosamente.");
-                setLastSale(salePayload);
-                setIsReceiptOpen(true);
+                transactionId = `Venta a ${salePayload.clientName || 'cliente'} (DNI: ${salePayload.clientDni || 'N/A'}). Factura: ${salePayload.invoiceNumber || 'N/A'}`;
             } else {
                 await createSale(salePayload);
                 toastSuccess("Venta Registrada", "La venta se ha guardado exitosamente.");
-                setLastSale(salePayload);
-                setIsReceiptOpen(true);
+                transactionId = `Venta a ${salePayload.clientName || 'cliente'} (DNI: ${salePayload.clientDni || 'N/A'}). Factura: ${salePayload.invoiceNumber || 'N/A'}`;
             }
+            
+            setSelectedTransactionId(transactionId);
+            setIsReceiptOpen(true);
             triggerRefetch();
             resetForm();
             setIsHistoryOpen(false);
@@ -221,24 +223,7 @@ export default function SalesPage() {
     };
 
     const handleViewReceiptFromHistory = (sale: GroupedSale) => {
-        const productInfoMap = new Map(products.map(p => [p.name, p]));
-
-        const payload: SalePayload = {
-            date: sale.date,
-            clientName: sale.clientName,
-            clientDni: sale.clientDni !== 'N/A' ? sale.clientDni : '',
-            invoiceNumber: sale.invoiceNumber,
-            items: sale.movements.map(m => {
-                const product = productInfoMap.get(m.productName);
-                return {
-                    productId: product?.id || 0,
-                    quantity: m.quantity,
-                    unitPrice: m.unit_cost,
-                    tax_rate: product?.tax_rate || 0,
-                }
-            })
-        };
-        setLastSale(payload);
+        setSelectedTransactionId(sale.description);
         setIsReceiptOpen(true);
     };
 
@@ -414,7 +399,16 @@ export default function SalesPage() {
             </div>
         </div>
         <SalesHistoryDialog open={isHistoryOpen} onOpenChange={setIsHistoryOpen} onViewReceipt={handleViewReceiptFromHistory} onEditSale={handleEditSale} />
-        <SalesReceiptDialog open={isReceiptOpen} onOpenChange={setIsReceiptOpen} sale={lastSale} products={products} />
+        <SalesReceiptDialog 
+            open={isReceiptOpen} 
+            onOpenChange={(open) => {
+                if (!open) {
+                    setSelectedTransactionId(null);
+                }
+                setIsReceiptOpen(open);
+            }} 
+            transactionId={selectedTransactionId} 
+        />
         <SalesConfirmationDialog 
             open={isConfirmationOpen} 
             onOpenChange={setIsConfirmationOpen}
