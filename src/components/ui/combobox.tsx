@@ -33,6 +33,7 @@ interface ComboboxProps {
   renderHeader?: () => React.ReactNode;
   renderOption?: (option: ComboboxOption) => React.ReactNode;
   sideOffset?: number;
+  align?: "start" | "center" | "end";
 }
 
 export function Combobox({
@@ -50,6 +51,7 @@ export function Combobox({
   renderHeader,
   renderOption,
   sideOffset = 4,
+  align = "center",
 }: ComboboxProps) {
   const [internalOpen, setInternalOpen] = React.useState(false);
   const [searchValue, setSearchValue] = React.useState("");
@@ -91,6 +93,7 @@ export function Combobox({
       </PopoverTrigger>
       <PopoverContent 
         sideOffset={sideOffset}
+        align={align}
         className={cn("w-[--radix-popover-trigger-width] p-0", popoverClassName)}
       >
         <div className="p-2">

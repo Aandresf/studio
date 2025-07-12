@@ -275,8 +275,8 @@ export default function SalesPage() {
 
     const renderComboboxHeader = () => (
         <div className="grid grid-cols-12 gap-4 px-3 py-2 text-xs font-semibold text-muted-foreground bg-muted">
-            <div className="col-span-2">Código</div>
-            <div className="col-span-4">Producto</div>
+            <div className="col-span-2 text-center">Código</div>
+            <div className="col-span-4 text-center">Producto</div>
             <div className="col-span-2 text-right">Stock</div>
             <div className="col-span-2 text-right">Precio</div>
             <div className="col-span-2 text-right">IVA</div>
@@ -288,7 +288,7 @@ export default function SalesPage() {
         if (!product) return <div>{option.label}</div>;
         return (
             <div className="grid grid-cols-12 gap-4 w-full text-sm">
-                <div className="col-span-2 font-mono text-xs">{product.sku || 'N/A'}</div>
+                <div className="col-span-2 font-mono text-xs text-center">{product.sku || 'N/A'}</div>
                 <div className="col-span-4 truncate" title={product.name}>{product.name}</div>
                 <div className="col-span-2 text-right">{product.stock}</div>
                 <div className="col-span-2 text-right">${product.price.toFixed(2)}</div>
@@ -342,6 +342,7 @@ export default function SalesPage() {
                                                     emptyMessage="No hay productos." 
                                                     disabled={isLoadingProducts}
                                                     popoverClassName="w-[700px]"
+                                                    align="start"
                                                     sideOffset={10}
                                                     renderHeader={renderComboboxHeader}
                                                     renderOption={renderComboboxOption}
