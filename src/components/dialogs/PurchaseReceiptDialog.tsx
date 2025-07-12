@@ -7,7 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-  DialogClose,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -18,7 +18,7 @@ import { StoreSettings, PurchasePayload } from "@/lib/types";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Printer, X } from "lucide-react";
+import { Printer } from "lucide-react";
 
 
 interface PurchaseReceiptDialogProps {
@@ -113,6 +113,9 @@ export function PurchaseReceiptDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Recibo de Compra</DialogTitle>
+          <DialogDescription>
+            Detalles de la compra registrada. Puedes imprimir este recibo.
+          </DialogDescription>
         </DialogHeader>
         <ScrollArea className="max-h-[60vh]">
             <div ref={receiptRef} className="text-sm font-mono p-4">
@@ -169,18 +172,6 @@ export function PurchaseReceiptDialog({
               </TooltipTrigger>
               <TooltipContent>
                 <p>Imprimir</p>
-              </TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <DialogClose asChild>
-                  <Button type="button" variant="secondary" size="icon">
-                    <X className="h-4 w-4" />
-                  </Button>
-                </DialogClose>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Cerrar</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>

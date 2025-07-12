@@ -17,15 +17,17 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { getPurchaseHistory } from "@/lib/api";
+import { Badge } from "@/components/ui/badge";
+import { annulPurchase, getPurchaseHistory } from "@/lib/api";
 import { PurchaseHistoryMovement, GroupedPurchase } from "@/lib/types";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { FileText, Pencil } from "lucide-react";
-
+import { FileText, Pencil, Search, XCircle } from "lucide-react";
+import { toastSuccess } from "@/hooks/use-toast";
 
 interface PurchaseHistoryDialogProps {
   open: boolean;
@@ -38,7 +40,6 @@ const groupPurchases = (movements: PurchaseHistoryMovement[]): GroupedPurchase[]
     const purchaseMap = new Map<string, GroupedPurchase>();
 
     movements.forEach(move => {
-        // Clave de agrupación: descripción + fecha (solo día)
         const key = move.description + " | " + new Date(move.date).toISOString().substring(0, 10);
 
         if (!purchaseMap.has(key)) {
@@ -52,37 +53,62 @@ const groupPurchases = (movements: PurchaseHistoryMovement[]): GroupedPurchase[]
                 invoiceNumber: invoiceMatch ? invoiceMatch[1] : 'N/A',
                 total: 0,
                 movements: [],
+                status: move.status, // Carry over the status
             });
         }
 
         const purchase = purchaseMap.get(key)!;
         purchase.movements.push(move);
-        purchase.total += move.total_cost;
+        if (move.status === 'Activo') {
+            purchase.total += move.total_cost;
+        }
     });
 
     return Array.from(purchaseMap.values()).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 };
 
-
 export function PurchaseHistoryDialog({ open, onOpenChange, onViewReceipt, onEditPurchase }: PurchaseHistoryDialogProps) {
   const [history, setHistory] = React.useState<GroupedPurchase[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
+  const [searchQuery, setSearchQuery] = React.useState("");
+
+  const fetchHistory = React.useCallback(() => {
+    setIsLoading(true);
+    getPurchaseHistory()
+      .then(movements => {
+          const nonReplacedMovements = movements.filter(m => m.status !== 'Reemplazado');
+          const grouped = groupPurchases(nonReplacedMovements);
+          setHistory(grouped);
+      })
+      .catch(() => {
+        // Error handled by API layer
+      })
+      .finally(() => setIsLoading(false));
+  }, []);
 
   React.useEffect(() => {
     if (open) {
-      setIsLoading(true);
-      getPurchaseHistory()
-        .then(movements => {
-            const nonReversalMovements = movements.filter(m => m.description.indexOf('ANULACIÓN') === -1);
-            const grouped = groupPurchases(nonReversalMovements);
-            setHistory(grouped);
-        })
-        .catch(() => {
-          // El error ya se maneja en la capa de API
-        })
-        .finally(() => setIsLoading(false));
+      fetchHistory();
     }
-  }, [open]);
+  }, [open, fetchHistory]);
+
+  const handleAnnul = async (purchase: GroupedPurchase) => {
+    if (!window.confirm("¿Estás seguro de que quieres anular esta compra? Esta acción no se puede deshacer.")) return;
+
+    const movementIds = purchase.movements.map(m => m.id);
+    try {
+        await annulPurchase({ movementIds });
+        toastSuccess("Compra Anulada", "La compra ha sido anulada correctamente.");
+        fetchHistory(); // Refresh list
+    } catch (error) {
+        // Error handled by API layer
+    }
+  };
+
+  const filteredHistory = history.filter(p => {
+      const query = searchQuery.toLowerCase();
+      return p.supplier.toLowerCase().includes(query) || p.invoiceNumber.toLowerCase().includes(query);
+  });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -90,13 +116,23 @@ export function PurchaseHistoryDialog({ open, onOpenChange, onViewReceipt, onEdi
         <DialogHeader>
           <DialogTitle>Historial de Compras</DialogTitle>
           <DialogDescription>
-            Aquí puedes ver y editar todas las compras registradas.
+            Aquí puedes ver, editar y anular las compras registradas.
           </DialogDescription>
         </DialogHeader>
+        <div className="relative">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+                placeholder="Buscar por proveedor o factura..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-8"
+            />
+        </div>
         <ScrollArea className="h-[60vh] pr-6">
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Estado</TableHead>
                 <TableHead>Fecha</TableHead>
                 <TableHead>Proveedor</TableHead>
                 <TableHead>Factura Nº</TableHead>
@@ -108,53 +144,59 @@ export function PurchaseHistoryDialog({ open, onOpenChange, onViewReceipt, onEdi
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                     <TableRow key={i}>
-                        <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                        <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                        <TableCell><Skeleton className="h-5 w-20" /></TableCell>
-                        <TableCell><Skeleton className="h-5 w-16 ml-auto" /></TableCell>
-                        <TableCell className="text-center"><Skeleton className="h-8 w-48 mx-auto" /></TableCell>
+                        <TableCell colSpan={6}><Skeleton className="h-8 w-full" /></TableCell>
                     </TableRow>
                 ))
-              ) : history.length > 0 ? (
-                history.map((purchase) => (
-                  <TableRow key={purchase.key}>
-                    <TableCell>
-                      {format(new Date(purchase.date), "dd/MM/yyyy HH:mm", { locale: es })}
-                    </TableCell>
-                    <TableCell>{purchase.supplier}</TableCell>
-                    <TableCell>{purchase.invoiceNumber}</TableCell>
-                    <TableCell className="text-right">${purchase.total.toFixed(2)}</TableCell>
-                    <TableCell className="text-center">
-                      <TooltipProvider>
-                        <div className="flex justify-center items-center space-x-2">
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button variant="ghost" size="icon" onClick={() => onEditPurchase(purchase)}>
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Editar Compra</p>
-                            </TooltipContent>
-                          </Tooltip>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button variant="ghost" size="icon" onClick={() => onViewReceipt(purchase)}>
-                                <FileText className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Ver Recibo</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </div>
-                      </TooltipProvider>
-                    </TableCell>
-                  </TableRow>
-                ))
+              ) : filteredHistory.length > 0 ? (
+                filteredHistory.map((purchase) => {
+                  const isAnnulled = purchase.status === 'Anulado';
+                  return (
+                    <TableRow key={purchase.key} className={isAnnulled ? "opacity-50" : ""}>
+                      <TableCell>
+                        {isAnnulled && <Badge variant="destructive">Anulada</Badge>}
+                      </TableCell>
+                      <TableCell className={isAnnulled ? "line-through" : ""}>
+                        {format(new Date(purchase.date), "dd/MM/yyyy HH:mm", { locale: es })}
+                      </TableCell>
+                      <TableCell className={isAnnulled ? "line-through" : ""}>{purchase.supplier}</TableCell>
+                      <TableCell className={isAnnulled ? "line-through" : ""}>{purchase.invoiceNumber}</TableCell>
+                      <TableCell className={`text-right ${isAnnulled ? "line-through" : ""}`}>${purchase.total.toFixed(2)}</TableCell>
+                      <TableCell className="text-center">
+                        <TooltipProvider>
+                          <div className="flex justify-center items-center space-x-1">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button variant="ghost" size="icon" onClick={() => onViewReceipt(purchase)}>
+                                  <FileText className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent><p>Ver Recibo</p></TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button variant="ghost" size="icon" onClick={() => onEditPurchase(purchase)} disabled={isAnnulled}>
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent><p>Editar Compra</p></TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button variant="ghost" size="icon" onClick={() => handleAnnul(purchase)} disabled={isAnnulled} className="text-destructive hover:text-destructive">
+                                  <XCircle className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent><p>Anular Compra</p></TooltipContent>
+                            </Tooltip>
+                          </div>
+                        </TooltipProvider>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })
               ) : (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center">
+                  <TableCell colSpan={6} className="text-center">
                     No se encontraron compras.
                   </TableCell>
                 </TableRow>

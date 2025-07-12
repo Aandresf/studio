@@ -1,152 +1,79 @@
-import * as React from "react"
-import { useState } from "react"
-import { ClipboardCopyIcon, CheckCircle2, XCircle } from "lucide-react"
-import type { ToastActionElement, ToastProps } from "@/components/ui/toast"
-import { cn } from "@/lib/utils"
+"use client";
 
-const TOAST_LIMIT = 1
-const TOAST_REMOVE_DELAY = 5000 // Default remove delay
+import * as React from "react";
+import { CheckCircle2, XCircle, ClipboardCopyIcon } from "lucide-react";
+import type { ToastActionElement, ToastProps } from "@/components/ui/toast";
+import { cn } from "@/lib/utils";
 
+// --- Types ---
 type ToasterToast = ToastProps & {
-  id: string
-  title?: React.ReactNode
-  description?: React.ReactNode
-  action?: ToastActionElement
-  duration?: number // Duration in seconds
-}
+  id: string;
+  title?: React.ReactNode;
+  description?: React.ReactNode;
+  action?: ToastActionElement;
+  duration?: number; // in milliseconds
+  icon?: React.ReactNode;
+};
 
-const actionTypes = {
-  ADD_TOAST: "ADD_TOAST",
-  UPDATE_TOAST: "UPDATE_TOAST",
-  DISMISS_TOAST: "DISMISS_TOAST",
-  REMOVE_TOAST: "REMOVE_TOAST",
-} as const
+type Toast = Omit<ToasterToast, "id">;
 
-let count = 0
-
-function genId() {
-  count = (count + 1) % Number.MAX_SAFE_INTEGER
-  return count.toString()
-}
-
-type ActionType = typeof actionTypes
+// --- State Management ---
+const TOAST_LIMIT = 3;
 
 type Action =
-  | {
-      type: ActionType["ADD_TOAST"]
-      toast: ToasterToast
-    }
-  | {
-      type: ActionType["UPDATE_TOAST"]
-      toast: Partial<ToasterToast>
-    }
-  | {
-      type: ActionType["DISMISS_TOAST"]
-      toastId?: ToasterToast["id"]
-    }
-  | {
-      type: ActionType["REMOVE_TOAST"]
-      toastId?: ToasterToast["id"]
-    }
+  | { type: "ADD_TOAST"; toast: ToasterToast }
+  | { type: "UPDATE_TOAST"; toast: Partial<ToasterToast> }
+  | { type: "DISMISS_TOAST"; toastId?: string }
+  | { type: "REMOVE_TOAST"; toastId?: string };
 
 interface State {
-  toasts: ToasterToast[]
+  toasts: ToasterToast[];
 }
 
-const toastTimeouts = new Map<string, ReturnType<typeof setTimeout>>()
+const listeners: Array<(state: State) => void> = [];
+let memoryState: State = { toasts: [] };
 
-const addToRemoveQueue = (toastId: string, duration: number = TOAST_REMOVE_DELAY) => {
-  if (toastTimeouts.has(toastId)) {
-    return
-  }
-
-  const timeout = setTimeout(() => {
-    toastTimeouts.delete(toastId)
-    dispatch({
-      type: "REMOVE_TOAST",
-      toastId: toastId,
-    })
-  }, duration)
-
-  toastTimeouts.set(toastId, timeout)
+function dispatch(action: Action) {
+  memoryState = reducer(memoryState, action);
+  listeners.forEach((listener) => listener(memoryState));
 }
 
-export const reducer = (state: State, action: Action): State => {
+const reducer = (state: State, action: Action): State => {
   switch (action.type) {
     case "ADD_TOAST":
       return {
         ...state,
         toasts: [action.toast, ...state.toasts].slice(0, TOAST_LIMIT),
-      }
-
-    case "UPDATE_TOAST":
+      };
+    case "DISMISS_TOAST":
       return {
         ...state,
         toasts: state.toasts.map((t) =>
-          t.id === action.toast.id ? { ...t, ...action.toast } : t
-        ),
-      }
-
-    case "DISMISS_TOAST": {
-      const { toastId } = action
-      // We don't immediately remove the toast. Instead, we set its 'open' state to false,
-      // which triggers the exit animation. The toast is removed later.
-      if (toastId) {
-        addToRemoveQueue(toastId)
-      } else {
-        state.toasts.forEach((toast) => {
-          addToRemoveQueue(toast.id)
-        })
-      }
-
-      return {
-        ...state,
-        toasts: state.toasts.map((t) =>
-          t.id === toastId || toastId === undefined
-            ? {
-                ...t,
-                open: false,
-              }
+          t.id === action.toastId || action.toastId === undefined
+            ? { ...t, open: false }
             : t
         ),
-      }
-    }
+      };
     case "REMOVE_TOAST":
-      if (action.toastId === undefined) {
-        return {
-          ...state,
-          toasts: [],
-        }
-      }
       return {
         ...state,
         toasts: state.toasts.filter((t) => t.id !== action.toastId),
-      }
+      };
+    default:
+      return state;
   }
+};
+
+// --- Hook and Public Functions ---
+let count = 0;
+function genId() {
+  count = (count + 1) % Number.MAX_SAFE_INTEGER;
+  return count.toString();
 }
 
-const listeners: Array<(state: State) => void> = []
-
-let memoryState: State = { toasts: [] }
-
-function dispatch(action: Action) {
-  memoryState = reducer(memoryState, action)
-  listeners.forEach((listener) => {
-    listener(memoryState)
-  })
-}
-
-type Toast = Omit<ToasterToast, "id">
-
-function toast({ ...props }: Toast) {
-  const id = genId()
-
-  const update = (props: ToasterToast) =>
-    dispatch({
-      type: "UPDATE_TOAST",
-      toast: { ...props, id },
-    })
-  const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id })
+function toast(props: Toast) {
+  const id = genId();
+  const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id });
 
   dispatch({
     type: "ADD_TOAST",
@@ -155,79 +82,83 @@ function toast({ ...props }: Toast) {
       id,
       open: true,
       onOpenChange: (open) => {
-        if (!open) dismiss()
+        if (!open) dismiss();
       },
     },
-  })
+  });
 
-  return {
-    id: id,
-    dismiss,
-    update,
+  // Centralized timer logic
+  if (props.duration) {
+    setTimeout(() => {
+      dismiss();
+    }, props.duration);
   }
+
+  return { id, dismiss };
 }
 
-// Componente para la descripción del error con botón de copiar
-const ErrorToastDescription = ({ text }: { text: string }) => {
-  const [copied, setCopied] = useState(false)
+// --- Helper Components and Functions ---
 
+const CopyButton = ({ text }: { text: string }) => {
+  const [copied, setCopied] = React.useState(false);
   const handleCopy = () => {
-    navigator.clipboard.writeText(text)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000) // Reset after 2 seconds
-  }
-
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
   return (
-    <div className="flex items-start justify-between w-full">
-      <p className="text-sm font-medium break-all">{text}</p>
-      <button
-        onClick={handleCopy}
-        className="p-1 ml-4 text-gray-500 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
-      >
-        <ClipboardCopyIcon className={cn("h-5 w-5", copied && "text-green-500")} />
-      </button>
-    </div>
-  )
-}
+    <button onClick={handleCopy} className="p-1 ml-4 text-current rounded-md hover:bg-white/20 focus:outline-none">
+      <ClipboardCopyIcon className={cn("h-5 w-5", copied && "text-green-400")} />
+    </button>
+  );
+};
 
-// Función específica para mostrar toasts de error
-function toastError(title: string, description: string) {
-  return toast({
-    variant: "destructive",
-    title: <div className="flex items-center"><XCircle className="mr-2 h-5 w-5" /> {title}</div>,
-    description: <ErrorToastDescription text={description} />,
-    duration: 5,
-  })
-}
+const ErrorDescription = ({ text }: { text: string }) => (
+  <div className="flex items-center justify-between w-full">
+    <p className="text-sm font-medium break-all">{text}</p>
+    <CopyButton text={text} />
+  </div>
+);
 
-// Función específica para mostrar toasts de éxito
 function toastSuccess(title: string, description: string) {
   return toast({
-    title: <div className="flex items-center"><CheckCircle2 className="mr-2 h-5 w-5 text-green-500" /> {title}</div>,
+    title: title,
     description: description,
-    duration: 5,
-  })
+    duration: 5000,
+    variant: "default",
+    className: "bg-green-600 text-white border-green-700",
+    icon: <CheckCircle2 className="h-6 w-6" />,
+  });
 }
 
+function toastError(title: string, description: string) {
+  return toast({
+    title: title,
+    description: <ErrorDescription text={description} />,
+    duration: 5000,
+    variant: "destructive",
+    icon: <XCircle className="h-6 w-6" />,
+  });
+}
 
 function useToast() {
-  const [state, setState] = React.useState<State>(memoryState)
+  const [state, setState] = React.useState<State>(memoryState);
 
   React.useEffect(() => {
-    listeners.push(setState)
+    listeners.push(setState);
     return () => {
-      const index = listeners.indexOf(setState)
+      const index = listeners.indexOf(setState);
       if (index > -1) {
-        listeners.splice(index, 1)
+        listeners.splice(index, 1);
       }
-    }
-  }, [state])
+    };
+  }, []);
 
   return {
     ...state,
     toast,
     dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId }),
-  }
+  };
 }
 
-export { useToast, toast, toastError, toastSuccess }
+export { useToast, toast, toastSuccess, toastError };

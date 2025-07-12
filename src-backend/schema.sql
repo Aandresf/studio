@@ -24,12 +24,12 @@ CREATE TABLE IF NOT EXISTS products (
 CREATE TABLE IF NOT EXISTS inventory_movements (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   product_id INTEGER NOT NULL,
-  type TEXT CHECK(type IN ('ENTRADA', 'SALIDA', 'RETIRO', 'AUTO-CONSUMO', 'ANULACION_ENTRADA')) NOT NULL,
+  type TEXT CHECK(type IN ('ENTRADA', 'SALIDA', 'RETIRO', 'AUTO-CONSUMO')) NOT NULL,
   quantity REAL NOT NULL,
   unit_cost REAL, -- Costo unitario al momento de la entrada
   date TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now')),
   description TEXT,
-  status TEXT NOT NULL DEFAULT 'Activo', -- Puede ser 'Activo' o 'Anulado'
+  status TEXT NOT NULL DEFAULT 'Activo', -- Puede ser 'Activo', 'Anulado' o 'Reemplazado'
   FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE
 );
 

@@ -65,7 +65,7 @@ export default function PurchasesPage() {
             try {
                 setProducts(await getProducts());
             } catch (error) {
-                toastError("Error de Red", "No se pudieron cargar los productos.");
+                // Error is handled by the API layer
             } finally {
                 setIsLoadingProducts(false);
             }

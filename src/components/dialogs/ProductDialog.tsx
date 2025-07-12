@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -103,6 +103,9 @@ export function ProductDialog({ open, onOpenChange, product, onProductSaved, gen
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>{editingProduct?.id ? 'Editar Producto' : 'Añadir Nuevo Producto'}</DialogTitle>
+          <DialogDescription>
+            {editingProduct?.id ? 'Modifica los detalles del producto.' : 'Completa los detalles para crear un nuevo producto.'}
+          </DialogDescription>
         </DialogHeader>
         {editingProduct && (
           <div className="grid gap-4 py-4">

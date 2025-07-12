@@ -2,19 +2,19 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { MoreHorizontal, PlusCircle, Search } from 'lucide-react';
+import { PlusCircle, Search } from 'lucide-react';
 
 import { useBackendStatus } from '@/app/(app)/layout';
 import { getProducts, deleteProduct } from '@/lib/api';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Product } from '@/lib/types';
 import { ProductDialog } from '@/components/dialogs/ProductDialog';
+import { ProductDetailDialog } from '@/components/dialogs/ProductDetailDialog';
+import { toastSuccess } from '@/hooks/use-toast';
 
 function ProductTableSkeleton() {
     return (
@@ -28,9 +28,6 @@ function ProductTableSkeleton() {
                     <TableHead>Nombre</TableHead>
                     <TableHead className="hidden md:table-cell">Precio</TableHead>
                     <TableHead className="hidden md:table-cell">Stock</TableHead>
-                    <TableHead>
-                        <span className="sr-only">Acciones</span>
-                    </TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
@@ -43,9 +40,6 @@ function ProductTableSkeleton() {
                         <TableCell><Skeleton className="h-4 w-32" /></TableCell>
                         <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-16" /></TableCell>
                         <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-12" /></TableCell>
-                        <TableCell>
-                            <Skeleton className="h-8 w-8" />
-                        </TableCell>
                     </TableRow>
                 ))}
             </TableBody>
@@ -57,8 +51,9 @@ export default function ProductsPage() {
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [isDialogOpen, setIsDialogOpen] = useState(false);
-    const [editingProduct, setEditingProduct] = useState<Partial<Product> | null>(null);
+    const [isCreateOrEditDialogOpen, setIsCreateOrEditDialogOpen] = useState(false);
+    const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
+    const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
 
     const { isBackendReady, triggerRefetch, refetchKey } = useBackendStatus();
@@ -89,20 +84,15 @@ export default function ProductsPage() {
     const generateNextSku = () => {
         if (products.length === 0) return '1';
         const maxSku = products.reduce((max, p) => {
-            const skuNumber = parseInt(p.sku, 10);
+            const skuNumber = parseInt(p.sku || '0', 10);
             return !isNaN(skuNumber) && skuNumber > max ? skuNumber : max;
         }, 0);
         return (maxSku + 1).toString();
     };
 
     const handleAddNew = () => {
-        setEditingProduct({
-            name: '',
-            price: '',
-            stock: '',
-            status: 'Activo',
-        });
-        setIsDialogOpen(true);
+        setSelectedProduct(null); // Clear selection
+        setIsCreateOrEditDialogOpen(true);
     };
 
     const handleDelete = async (id: number) => {
@@ -110,6 +100,9 @@ export default function ProductsPage() {
 
         try {
             await deleteProduct(id);
+            toastSuccess("Producto Eliminado", "El producto ha sido eliminado correctamente.");
+            setIsDetailDialogOpen(false); // Close detail view
+            setSelectedProduct(null);
             triggerRefetch();
         } catch (e: any) {
             console.error("Error al eliminar el producto:", e);
@@ -117,18 +110,19 @@ export default function ProductsPage() {
     };
 
     const handleEdit = (product: Product) => {
-        const productForEditing = {
-            ...product,
-            stock: product.stock ?? 0,
-            price: product.price ?? 0,
-        };
-        setEditingProduct(productForEditing);
-        setIsDialogOpen(true);
+        setSelectedProduct(product);
+        setIsDetailDialogOpen(false); // Close detail view
+        setIsCreateOrEditDialogOpen(true); // Open edit view
+    };
+    
+    const handleRowClick = (product: Product) => {
+        setSelectedProduct(product);
+        setIsDetailDialogOpen(true);
     };
 
     const handleProductSaved = () => {
-        setIsDialogOpen(false);
-        setEditingProduct(null);
+        setIsCreateOrEditDialogOpen(false);
+        setSelectedProduct(null);
         triggerRefetch();
     };
 
@@ -181,12 +175,11 @@ export default function ProductsPage() {
                                         <TableHead>Nombre</TableHead>
                                         <TableHead className="hidden md:table-cell">Precio</TableHead>
                                         <TableHead className="hidden md:table-cell">Stock</TableHead>
-                                        <TableHead><span className="sr-only">Acciones</span></TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                     {filteredProducts.map(product => (
-                                        <TableRow key={product.id}>
+                                        <TableRow key={product.id} onClick={() => handleRowClick(product)} className="cursor-pointer">
                                             <TableCell className="hidden sm:table-cell">
                                                 <Image
                                                     alt={product.name}
@@ -200,21 +193,6 @@ export default function ProductsPage() {
                                             <TableCell className="font-medium">{product.name}</TableCell>
                                             <TableCell className="hidden md:table-cell">${product.price?.toFixed(2) ?? '0.00'}</TableCell>
                                             <TableCell className="hidden md:table-cell">{product.stock}</TableCell>
-                                            <TableCell>
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button aria-haspopup="true" size="icon" variant="ghost">
-                                                            <MoreHorizontal className="h-4 w-4" />
-                                                            <span className="sr-only">Toggle menu</span>
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end">
-                                                        <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                                                        <DropdownMenuItem onClick={() => handleEdit(product)}>Editar</DropdownMenuItem>
-                                                        <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(product.id)} >Eliminar</DropdownMenuItem>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
-                                            </TableCell>
                                         </TableRow>
                                     ))}
                                 </TableBody>
@@ -224,15 +202,22 @@ export default function ProductsPage() {
                 </Card>
             </div>
 
-            {isDialogOpen && (
-                <ProductDialog
-                    open={isDialogOpen}
-                    onOpenChange={setIsDialogOpen}
-                    product={editingProduct}
-                    onProductSaved={handleProductSaved}
-                    generateSku={generateNextSku}
-                />
-            )}
+            <ProductDialog
+                open={isCreateOrEditDialogOpen}
+                onOpenChange={setIsCreateOrEditDialogOpen}
+                product={selectedProduct || { name: '', price: 0, stock: 0, status: 'Activo' }}
+                onProductSaved={handleProductSaved}
+                generateSku={generateNextSku}
+            />
+
+            <ProductDetailDialog
+                open={isDetailDialogOpen}
+                onOpenChange={setIsDetailDialogOpen}
+                product={selectedProduct}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                onDataChange={triggerRefetch}
+            />
         </>
     );
 }

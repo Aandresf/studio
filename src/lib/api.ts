@@ -49,6 +49,7 @@ async function fetchAPI(endpoint: string, options: RequestInit = {}) {
 
 // Product API calls
 export const getProducts = (): Promise<Product[]> => fetchAPI('/products');
+export const getProductMovements = (productId: number): Promise<InventoryMovement[]> => fetchAPI(`/products/${productId}/movements`);
 
 export const createProduct = (product: Partial<Product>): Promise<Product> => {
     return fetchAPI('/products', {
@@ -85,6 +86,13 @@ export const getPurchaseHistory = (): Promise<PurchaseHistoryMovement[]> => fetc
 export const updatePurchase = (payload: { movementIdsToAnnul: number[], purchaseData: PurchasePayload }): Promise<{ message: string }> => {
     return fetchAPI('/purchases', {
         method: 'PUT',
+        body: JSON.stringify(payload),
+    });
+};
+
+export const annulPurchase = (payload: { movementIds: number[] }): Promise<{ message: string }> => {
+    return fetchAPI('/purchases', {
+        method: 'DELETE',
         body: JSON.stringify(payload),
     });
 };

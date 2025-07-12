@@ -184,6 +184,22 @@ app.delete('/api/products/:id', (req, res) => {
   });
 });
 
+app.get('/api/products/:id/movements', (req, res) => {
+  const { id } = req.params;
+  const sql = `
+    SELECT * 
+    FROM inventory_movements 
+    WHERE product_id = ? AND status = 'Activo'
+    ORDER BY date DESC
+  `;
+  db.all(sql, [id], (err, rows) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    res.json(rows);
+  });
+});
+
 // Helper to promisify db.run, db.get, db.all
 const util = require('util');
 
@@ -352,7 +368,7 @@ app.put('/api/purchases', async (req, res) => {
             }
 
             await run('UPDATE products SET current_stock = ?, average_cost = ? WHERE id = ?', [stock_before_entry, avg_cost_before_entry, move.product_id]);
-            await run("UPDATE inventory_movements SET status = 'Anulado' WHERE id = ?", [move.id]);
+            await run("UPDATE inventory_movements SET status = 'Reemplazado' WHERE id = ?", [move.id]);
         }
         console.log('Fase de anulación completada.');
 
@@ -394,6 +410,63 @@ app.put('/api/purchases', async (req, res) => {
     }
 });
 
+app.delete('/api/purchases', async (req, res) => {
+    console.log('--- INICIO DE PETICIÓN DELETE /api/purchases (ANULAR) ---');
+    const { movementIds } = req.body;
+
+    if (!movementIds || !Array.isArray(movementIds) || movementIds.length === 0) {
+        return res.status(400).json({ error: 'Se requiere un array de movementIds.' });
+    }
+
+    const run = util.promisify(db.run.bind(db));
+    const all = util.promisify(db.all.bind(db));
+    const get = util.promisify(db.get.bind(db));
+
+    try {
+        await run('BEGIN TRANSACTION');
+
+        const placeholders = movementIds.map(() => '?').join(',');
+        const movementsToAnnul = await all(
+            `SELECT * FROM inventory_movements WHERE id IN (${placeholders}) AND status = 'Activo'`,
+            movementIds
+        );
+
+        if (movementsToAnnul.length !== movementIds.length) {
+            throw new Error('No se encontraron todos los movimientos para anular, o algunos ya no estaban activos.');
+        }
+
+        for (const move of movementsToAnnul) {
+            const product = await get('SELECT current_stock, average_cost FROM products WHERE id = ?', [move.product_id]);
+            if (!product) throw new Error(`Producto con ID ${move.product_id} no encontrado durante la anulación.`);
+
+            const stock_before_entry = product.current_stock - move.quantity;
+            let avg_cost_before_entry = 0;
+
+            if (stock_before_entry > 0) {
+                const current_total_value = product.current_stock * product.average_cost;
+                const entry_value = move.quantity * move.unit_cost;
+                avg_cost_before_entry = (current_total_value - entry_value) / stock_before_entry;
+            }
+
+            await run('UPDATE products SET current_stock = ?, average_cost = ? WHERE id = ?', [stock_before_entry, avg_cost_before_entry, move.product_id]);
+            await run("UPDATE inventory_movements SET status = 'Anulado' WHERE id = ?", [move.id]);
+        }
+
+        await run('COMMIT');
+        res.status(200).json({ message: 'Compra anulada correctamente.' });
+
+    } catch (err) {
+        console.error('Error durante la anulación de la compra:', err.message);
+        try {
+            await run('ROLLBACK');
+            res.status(500).json({ error: `Error en la transacción: ${err.message}` });
+        } catch (rollbackErr) {
+            console.error('Fatal: Could not rollback transaction', rollbackErr);
+            res.status(500).json({ error: 'Error fatal durante el rollback.' });
+        }
+    }
+});
+
 // PURCHASES (ENTRADA)
 app.get('/api/purchases', (req, res) => {
     const query = `
@@ -403,10 +476,11 @@ app.get('/api/purchases', (req, res) => {
             p.name as productName,
             im.quantity,
             im.unit_cost,
-            im.description
+            im.description,
+            im.status
         FROM inventory_movements im
         JOIN products p ON im.product_id = p.id
-        WHERE im.type = 'ENTRADA' AND im.status = 'Activo'
+        WHERE im.type = 'ENTRADA'
         ORDER BY im.date DESC;
     `;
     db.all(query, [], (err, rows) => {
