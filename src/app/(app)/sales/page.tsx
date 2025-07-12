@@ -91,8 +91,14 @@ export default function SalesPage() {
         fetchProducts();
     }, [isBackendReady, refetchKey]);
 
-    const productOptions = React.useMemo(() => products.map(p => ({ value: String(p.id), label: `(${p.sku}) ${p.name} - Stock: ${p.stock}` })), [products]);
     const productMap = React.useMemo(() => new Map(products.map(p => [p.id, p])), [products]);
+    
+    const productOptions = React.useMemo(() => 
+        products.map(p => ({ 
+            value: String(p.id), 
+            label: `(${p.sku || 'N/A'}) ${p.name}`
+        })), 
+    [products]);
 
     const resetForm = () => {
         setDate(new Date());
@@ -267,6 +273,28 @@ export default function SalesPage() {
 
     const isSubmitDisabled = cart.some(item => !item.productId || item.quantity <= 0 || item.quantity > item.availableStock) || isLoading;
 
+    const renderComboboxHeader = () => (
+        <div className="grid grid-cols-12 gap-2 px-3 py-2 text-xs font-semibold text-muted-foreground">
+            <div className="col-span-5">Producto</div>
+            <div className="col-span-2 text-right">Stock</div>
+            <div className="col-span-2 text-right">Precio</div>
+            <div className="col-span-3 text-right">IVA</div>
+        </div>
+    );
+
+    const renderComboboxOption = (option: { value: string; label: string }) => {
+        const product = productMap.get(Number(option.value));
+        if (!product) return <div>{option.label}</div>;
+        return (
+            <div className="grid grid-cols-12 gap-2 w-full text-sm">
+                <div className="col-span-5 truncate" title={product.name}>{product.name}</div>
+                <div className="col-span-2 text-right">{product.stock}</div>
+                <div className="col-span-2 text-right">${product.price.toFixed(2)}</div>
+                <div className="col-span-3 text-right">{product.tax_rate.toFixed(2)}%</div>
+            </div>
+        );
+    };
+
     return (
         <TooltipProvider>
         <div className="flex flex-col gap-6">
@@ -291,14 +319,34 @@ export default function SalesPage() {
                                 <div className="grid gap-2"><Label htmlFor="clientDni">DNI Cliente</Label><Input id="clientDni" value={clientDni} onChange={e => setClientDni(e.target.value)} placeholder="Cédula o RIF" /></div>
                             </div>
                             <div>
-                                <Label>Productos</Label>
-                                <div className="mt-2 grid gap-4 border p-4 rounded-md">
+                                <div className="grid grid-cols-12 gap-2 items-center mb-2 px-1">
+                                    <div className="col-span-12 md:col-span-6"><Label className="text-sm font-medium">Producto</Label></div>
+                                    <div className="col-span-4 md:col-span-2"><Label className="text-sm font-medium">Cantidad</Label></div>
+                                    <div className="col-span-4 md:col-span-2"><Label className="text-sm font-medium">Precio Unit.</Label></div>
+                                    <div className="col-span-4 md:col-span-2"><Label className="text-sm font-medium text-right w-full pr-2">Acción</Label></div>
+                                </div>
+                                <div className="grid gap-4 border p-4 rounded-md">
                                     {cart.map((item, index) => (
-                                        <div key={item.id} className="grid grid-cols-10 gap-2 items-end">
-                                            <div className="col-span-10 sm:col-span-5"><Label>Producto</Label><Combobox open={openComboboxIndex === index} onOpenChange={(isOpen) => setOpenComboboxIndex(isOpen ? index : null)} options={productOptions} value={item.productId ? String(item.productId) : ''} onChange={(value) => { handleCartItemChange(index, 'productId', value); setOpenComboboxIndex(null); }} placeholder={isLoadingProducts ? "Cargando..." : "Seleccionar..."} searchPlaceholder="Buscar..." emptyMessage="No hay productos." disabled={isLoadingProducts} /></div>
-                                            <div className="col-span-5 sm:col-span-2"><Label>Cantidad</Label><Input type="number" value={item.quantity} onChange={(e) => handleCartItemChange(index, 'quantity', e.target.value)} min="1" max={item.availableStock > 0 ? item.availableStock : undefined} /></div>
-                                            <div className="col-span-5 sm:col-span-2"><Label>Precio Unit.</Label><Input type="number" value={item.price} onChange={(e) => handleCartItemChange(index, 'price', e.target.value)} min="0" /></div>
-                                            <div className="col-span-10 sm:col-span-1 flex justify-end"><Button variant="outline" size="icon" className="text-muted-foreground" onClick={() => removeCartItem(index)} disabled={cart.length <= 1}><Trash2 className="h-4 w-4"/></Button></div>
+                                        <div key={item.id} className="grid grid-cols-12 gap-2 items-end">
+                                            <div className="col-span-12 md:col-span-6">
+                                                <Combobox 
+                                                    open={openComboboxIndex === index} 
+                                                    onOpenChange={(isOpen) => setOpenComboboxIndex(isOpen ? index : null)} 
+                                                    options={productOptions} 
+                                                    value={item.productId ? String(item.productId) : ''} 
+                                                    onChange={(value) => { handleCartItemChange(index, 'productId', value); setOpenComboboxIndex(null); }} 
+                                                    placeholder={isLoadingProducts ? "Cargando..." : "Seleccionar..."} 
+                                                    searchPlaceholder="Buscar por código o nombre..." 
+                                                    emptyMessage="No hay productos." 
+                                                    disabled={isLoadingProducts}
+                                                    popoverClassName="w-[600px]"
+                                                    renderHeader={renderComboboxHeader}
+                                                    renderOption={renderComboboxOption}
+                                                />
+                                            </div>
+                                            <div className="col-span-4 md:col-span-2"><Input type="number" value={item.quantity} onChange={(e) => handleCartItemChange(index, 'quantity', e.target.value)} min="1" max={item.availableStock > 0 ? item.availableStock : undefined} /></div>
+                                            <div className="col-span-4 md:col-span-2"><Input type="number" value={item.price} onChange={(e) => handleCartItemChange(index, 'price', e.target.value)} min="0" /></div>
+                                            <div className="col-span-4 md:col-span-2 flex justify-end"><Button variant="outline" size="icon" className="text-muted-foreground" onClick={() => removeCartItem(index)} disabled={cart.length <= 1}><Trash2 className="h-4 w-4"/></Button></div>
                                         </div>
                                     ))}
                                 </div>

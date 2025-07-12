@@ -29,6 +29,9 @@ interface ComboboxProps {
   disabled?: boolean;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  popoverClassName?: string;
+  renderHeader?: () => React.ReactNode;
+  renderOption?: (option: ComboboxOption) => React.ReactNode;
 }
 
 export function Combobox({
@@ -42,6 +45,9 @@ export function Combobox({
   disabled = false,
   open: controlledOpen,
   onOpenChange: setControlledOpen,
+  popoverClassName,
+  renderHeader,
+  renderOption,
 }: ComboboxProps) {
   const [internalOpen, setInternalOpen] = React.useState(false);
   const [searchValue, setSearchValue] = React.useState("");
@@ -77,11 +83,11 @@ export function Combobox({
           className={cn("w-full justify-between", className)}
           disabled={disabled}
         >
-          {value ? selectedLabel : placeholder}
+          <span className="truncate">{value ? selectedLabel : placeholder}</span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+      <PopoverContent className={cn("w-[--radix-popover-trigger-width] p-0", popoverClassName)}>
         <div className="p-2">
             <Input
                 autoFocus
@@ -92,6 +98,7 @@ export function Combobox({
             />
         </div>
         <ScrollArea className="h-auto max-h-60">
+            {renderHeader && renderHeader()}
             <div className="p-2 pt-0">
                 {filteredOptions.length === 0 && (
                     <p className="py-4 text-center text-sm text-muted-foreground">
@@ -102,7 +109,7 @@ export function Combobox({
                 <Button
                     key={option.value}
                     variant="ghost"
-                    className="w-full justify-start font-normal"
+                    className="w-full justify-start font-normal h-auto"
                     onClick={() => {
                         onChange(option.value);
                         setOpen(false);
@@ -114,7 +121,7 @@ export function Combobox({
                         value === option.value ? "opacity-100" : "opacity-0"
                     )}
                     />
-                    {option.label}
+                    {renderOption ? renderOption(option) : option.label}
                 </Button>
                 ))}
             </div>
