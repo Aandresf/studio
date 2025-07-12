@@ -280,27 +280,25 @@ export default function SalesPage() {
                     Historial
                 </Button>
             </div>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-2">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+                <div className="lg:col-span-2 space-y-6">
                     <Card>
                         <CardHeader><CardTitle>{editingMovementIds ? "Editar Venta" : "Nueva Venta"}</CardTitle></CardHeader>
                         <CardContent>
                         <div className="grid gap-6">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="grid gap-2"><Label htmlFor="clientName">Cliente</Label><Input id="clientName" value={clientName} onChange={e => setClientName(e.target.value)} placeholder="Nombre del cliente" /></div>
                                 <div className="grid gap-2"><Label htmlFor="clientDni">DNI Cliente</Label><Input id="clientDni" value={clientDni} onChange={e => setClientDni(e.target.value)} placeholder="Cédula o RIF" /></div>
-                                <div className="grid gap-2"><Label>Fecha de Venta</Label><Popover><PopoverTrigger asChild><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{date ? format(date, "PPP", { locale: es }) : <span>Seleccione fecha</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={date} onSelect={(d) => setDate(d || new Date())} initialFocus /></PopoverContent></Popover></div>
-                                <div className="grid gap-2 md:col-span-2"><Label htmlFor="invoiceNumber">Nº de Factura</Label><Input id="invoiceNumber" value={invoiceNumber} onChange={e => setInvoiceNumber(e.target.value)} placeholder="Opcional" /></div>
                             </div>
                             <div>
                                 <Label>Productos</Label>
                                 <div className="mt-2 grid gap-4 border p-4 rounded-md">
                                     {cart.map((item, index) => (
-                                        <div key={item.id} className="flex items-end gap-2">
-                                            <div className="flex-1"><Label>Producto</Label><Combobox open={openComboboxIndex === index} onOpenChange={(isOpen) => setOpenComboboxIndex(isOpen ? index : null)} options={productOptions} value={item.productId ? String(item.productId) : ''} onChange={(value) => { handleCartItemChange(index, 'productId', value); setOpenComboboxIndex(null); }} placeholder={isLoadingProducts ? "Cargando..." : "Seleccionar..."} searchPlaceholder="Buscar..." emptyMessage="No hay productos." disabled={isLoadingProducts} /></div>
-                                            <div className="w-24"><Label>Cantidad</Label><Input type="number" value={item.quantity} onChange={(e) => handleCartItemChange(index, 'quantity', e.target.value)} min="1" max={item.availableStock > 0 ? item.availableStock : undefined} /></div>
-                                            <div className="w-32"><Label>Precio Unitario</Label><Input type="number" value={item.price} onChange={(e) => handleCartItemChange(index, 'price', e.target.value)} min="0" /></div>
-                                            <Button variant="outline" size="icon" className="text-muted-foreground" onClick={() => removeCartItem(index)} disabled={cart.length <= 1}><Trash2 className="h-4 w-4"/></Button>
+                                        <div key={item.id} className="grid grid-cols-10 gap-2 items-end">
+                                            <div className="col-span-10 sm:col-span-5"><Label>Producto</Label><Combobox open={openComboboxIndex === index} onOpenChange={(isOpen) => setOpenComboboxIndex(isOpen ? index : null)} options={productOptions} value={item.productId ? String(item.productId) : ''} onChange={(value) => { handleCartItemChange(index, 'productId', value); setOpenComboboxIndex(null); }} placeholder={isLoadingProducts ? "Cargando..." : "Seleccionar..."} searchPlaceholder="Buscar..." emptyMessage="No hay productos." disabled={isLoadingProducts} /></div>
+                                            <div className="col-span-5 sm:col-span-2"><Label>Cantidad</Label><Input type="number" value={item.quantity} onChange={(e) => handleCartItemChange(index, 'quantity', e.target.value)} min="1" max={item.availableStock > 0 ? item.availableStock : undefined} /></div>
+                                            <div className="col-span-5 sm:col-span-2"><Label>Precio Unit.</Label><Input type="number" value={item.price} onChange={(e) => handleCartItemChange(index, 'price', e.target.value)} min="0" /></div>
+                                            <div className="col-span-10 sm:col-span-1 flex justify-end"><Button variant="outline" size="icon" className="text-muted-foreground" onClick={() => removeCartItem(index)} disabled={cart.length <= 1}><Trash2 className="h-4 w-4"/></Button></div>
                                         </div>
                                     ))}
                                 </div>
@@ -310,18 +308,18 @@ export default function SalesPage() {
                             </div>
                         </div>
                         </CardContent>
-                        <CardFooter className="flex justify-end gap-2">
-                            {editingMovementIds && (<Button variant="ghost" onClick={resetForm}><XCircle className="mr-2 h-4 w-4" />Cancelar Edición</Button>)}
-                            <Button variant="secondary" onClick={handleHoldSale} disabled={editingMovementIds !== null}>Poner en Espera</Button>
-                            <Button onClick={handleOpenConfirmation} disabled={isSubmitDisabled}>
-                                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                {isLoading ? "Procesando..." : (editingMovementIds ? "Guardar Cambios" : "Crear Venta")}
-                            </Button>
-                        </CardFooter>
                     </Card>
                 </div>
 
-                <div className="space-y-8">
+                <div className="space-y-6">
+                    <Card>
+                        <CardHeader><CardTitle>Configuración</CardTitle></CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="grid gap-2"><Label>Fecha de Venta</Label><Popover><PopoverTrigger asChild><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{date ? format(date, "PPP", { locale: es }) : <span>Seleccione fecha</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={date} onSelect={(d) => setDate(d || new Date())} initialFocus /></PopoverContent></Popover></div>
+                            <div className="grid gap-2"><Label htmlFor="invoiceNumber">Nº de Factura</Label><Input id="invoiceNumber" value={invoiceNumber} onChange={e => setInvoiceNumber(e.target.value)} placeholder="Opcional" /></div>
+                        </CardContent>
+                    </Card>
+
                     <Card>
                         <CardHeader><CardTitle>Resumen</CardTitle></CardHeader>
                         <CardContent className="grid gap-4">
@@ -331,6 +329,15 @@ export default function SalesPage() {
                             <div className="flex justify-between font-semibold text-lg"><span>Total</span><span>${total.toFixed(2)}</span></div>
                         </CardContent>
                     </Card>
+
+                    <div className="flex flex-col gap-2">
+                         <Button onClick={handleOpenConfirmation} disabled={isSubmitDisabled} size="lg">
+                            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            {isLoading ? "Procesando..." : (editingMovementIds ? "Guardar Cambios" : "Registrar Venta")}
+                        </Button>
+                        {editingMovementIds && (<Button variant="ghost" onClick={resetForm}><XCircle className="mr-2 h-4 w-4" />Cancelar Edición</Button>)}
+                        <Button variant="secondary" onClick={handleHoldSale} disabled={editingMovementIds !== null}>Poner en Espera</Button>
+                    </div>
 
                     {pendingSales.length > 0 && (
                         <Card>
