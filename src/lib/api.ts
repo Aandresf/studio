@@ -97,6 +97,30 @@ export const annulPurchase = (payload: { movementIds: number[] }): Promise<{ mes
     });
 };
 
+// Sale API calls
+export const getSalesHistory = (): Promise<SalesHistoryMovement[]> => fetchAPI('/sales');
+
+export const createSale = (sale: SalePayload): Promise<{ message: string }> => {
+    return fetchAPI('/sales', {
+        method: 'POST',
+        body: JSON.stringify(sale),
+    });
+};
+
+export const updateSale = (payload: { movementIdsToAnnul: number[], saleData: SalePayload }): Promise<{ message: string }> => {
+    return fetchAPI('/sales', {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+    });
+};
+
+export const annulSale = (payload: { movementIds: number[] }): Promise<{ message: string }> => {
+    return fetchAPI('/sales', {
+        method: 'DELETE',
+        body: JSON.stringify(payload),
+    });
+};
+
 
 // Dashboard API calls
 export const getDashboardSummary = (): Promise<DashboardSummary> => fetchAPI('/dashboard/summary');

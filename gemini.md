@@ -123,4 +123,42 @@ Se ha realizado una revisión y refactorización exhaustiva de varios endpoints 
     3.  **Edición Segura:** Añadir la capacidad de editar ventas desde el historial. El backend (`PUT /api/sales`) debe seguir el patrón de **anulación y re-creación** para garantizar la integridad del inventario y mantener un rastro de auditoría.
     4.  **Interfaz de Usuario Pulida:** Reemplazar los botones de texto en los modales de historial y recibo por **botones de icono con tooltips** (para acciones como Editar, Ver Recibo, Imprimir, etc.), manteniendo la consistencia visual con la sección de Compras.
 
+---
+## Tareas Pendientes para la Página de Ventas (Replicar Funcionalidad de Compras)
 
+**Fecha:** 11 de Julio de 2025
+
+La sección de **Compras** ha sido refactorizada y mejorada significativamente. La sección de **Ventas** debe ser actualizada para incorporar las mismas funcionalidades y patrones de diseño, garantizando una experiencia de usuario consistente y una lógica de negocio robusta.
+
+### 1. Lógica de Backend y API
+
+*   **Endpoint de Lote (`POST /api/sales`):** Crear un endpoint que acepte un array de productos para procesar la venta completa en una única transacción atómica.
+*   **Endpoint de Edición (`PUT /api/sales`):** Implementar la edición de ventas. Debe seguir el patrón de **anulación y re-creación**, marcando los movimientos originales con `status = 'Reemplazado'`.
+*   **Endpoint de Anulación (`DELETE /api/sales`):** Crear un endpoint que reciba los IDs de los movimientos de una venta y los marque como `status = 'Anulado'`, revirtiendo su impacto en el inventario.
+
+### 2. Interfaz de Usuario (Página de Ventas)
+
+*   **Formulario de Venta:**
+    *   Implementar la consolidación de productos en el frontend *antes* de enviar los datos.
+    *   Añadir un diálogo de confirmación (`SalesConfirmationDialog`) que muestre la lista de productos consolidada antes de registrar la venta.
+    *   Permitir la creación de nuevos productos directamente desde el formulario de ventas, asegurando que el nuevo producto se añada correctamente a la línea de venta actual.
+
+### 3. Historial de Ventas
+
+*   **Crear `SalesHistoryDialog.tsx`:**
+    *   Debe mostrar una lista de todas las ventas (activas y anuladas).
+    *   **Buscador:** Incluir un campo de búsqueda único para filtrar por cliente o número de factura/recibo.
+    *   **Diferenciación Visual:** Las ventas anuladas deben aparecer visualmente distintas (atenuadas, tachadas) y con una `Badge` de "Anulada".
+    *   **Acciones por Fila:**
+        *   **Ver Recibo:** Botón para abrir un diálogo con los detalles de la venta.
+        *   **Editar:** Botón (habilitado solo para ventas activas) para cargar los datos de la venta en el formulario principal.
+        *   **Anular:** Botón (habilitado solo para ventas activas) que, tras confirmación, llame al endpoint `DELETE /api/sales`.
+
+### 4. Kardex de Producto
+
+*   **Integrar Vista de Detalle:** Desde la página de ventas, al seleccionar un producto, se debería poder acceder a su kardex (`ProductDetailDialog`) para ver su historial de movimientos, incluyendo las ventas.
+*   **Registrar Salidas:** Habilitar la opción de registrar "Retiros" y "Autoconsumo" desde el kardex, tal como se hizo en la sección de productos.
+
+### 5. Notificaciones
+
+*   Utilizar el sistema de notificaciones centralizado (`use-toast.tsx`) para todos los mensajes de éxito y error, asegurando consistencia visual y de comportamiento (temporizador de 5 segundos, iconos, etc.).

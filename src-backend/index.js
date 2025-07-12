@@ -504,8 +504,9 @@ app.get('/api/sales', (req, res) => {
             im.date,
             p.name as productName,
             im.quantity,
-            im.unit_cost, -- This might be the sale price
-            im.description
+            im.unit_cost, -- This is the sale price
+            im.description,
+            im.status -- Crucial for history management
         FROM inventory_movements im
         JOIN products p ON im.product_id = p.id
         WHERE im.type = 'SALIDA'
@@ -514,7 +515,6 @@ app.get('/api/sales', (req, res) => {
     db.all(query, [], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
 
-        // Calculate total_revenue in JS for clarity and consistency.
         const sales = rows.map(s => ({ 
             ...s, 
             total_revenue: (s.quantity || 0) * (s.unit_cost || 0) 
@@ -522,6 +522,153 @@ app.get('/api/sales', (req, res) => {
 
         res.json(sales);
     });
+});
+
+// SALES (BATCH - NEW)
+app.post('/api/sales', async (req, res) => {
+    console.log('--- INICIO DE PETICIÓN POST /api/sales ---');
+    console.log('Cuerpo de la petición (req.body):', JSON.stringify(req.body, null, 2));
+
+    const { date, clientName, clientDni, invoiceNumber, items } = req.body;
+
+    if (!date || !items || !Array.isArray(items) || items.length === 0) {
+        return res.status(400).json({ error: 'Faltan campos requeridos: date, items' });
+    }
+
+    const run = util.promisify(db.run.bind(db));
+    const get = util.promisify(db.get.bind(db));
+
+    try {
+        await run('BEGIN TRANSACTION');
+
+        for (const item of items) {
+            const { productId, quantity, unitPrice } = item;
+
+            if (!productId || !quantity || unitPrice === undefined) {
+                throw new Error('Cada item debe tener productId, quantity y unitPrice.');
+            }
+
+            const product = await get('SELECT current_stock, average_cost FROM products WHERE id = ?', [productId]);
+            if (!product) {
+                throw new Error(`Producto con ID ${productId} no encontrado.`);
+            }
+            if (product.current_stock < quantity) {
+                throw new Error(`Stock insuficiente para el producto ID ${productId}. Disponible: ${product.current_stock}, Requerido: ${quantity}`);
+            }
+
+            // El costo promedio del producto no cambia en una venta.
+            const new_stock = product.current_stock - quantity;
+
+            // Inserta el movimiento de inventario
+            const movementDate = date ? new Date(date).toISOString().slice(0, 19).replace('T', ' ') : new Date().toISOString().slice(0, 19).replace('T', ' ');
+            const description = `Venta a ${clientName || 'cliente'} (DNI: ${clientDni || 'N/A'}). Factura: ${invoiceNumber || 'N/A'}`;
+            // En una venta, 'unit_cost' representa el precio de venta.
+            const movementSql = `INSERT INTO inventory_movements (product_id, type, quantity, unit_cost, description, date, status) VALUES (?, ?, ?, ?, ?, ?, 'Activo')`;
+            await run(movementSql, [productId, 'SALIDA', quantity, unitPrice, description, movementDate]);
+
+            // Actualiza solo el stock del producto
+            const productSql = `UPDATE products SET current_stock = ?, updated_at = strftime('%Y-%m-%d %H:%M:%S', 'now') WHERE id = ?`;
+            await run(productSql, [new_stock, productId]);
+        }
+
+        await run('COMMIT');
+        res.status(201).json({ message: 'Sale registered successfully' });
+
+    } catch (err) {
+        console.error('Error durante la transacción de venta:', err.message);
+        try {
+            await run('ROLLBACK');
+            res.status(500).json({ error: `Error en la transacción: ${err.message}` });
+        } catch (rollbackErr) {
+            console.error('Fatal: Could not rollback transaction', rollbackErr);
+            res.status(500).json({ error: 'Error fatal en la base de datos durante el rollback.' });
+        }
+    }
+});
+
+app.put('/api/sales', async (req, res) => {
+    console.log('--- INICIO DE PETICIÓN PUT /api/sales (EDITAR) ---');
+    const { movementIdsToAnnul, saleData } = req.body;
+
+    if (!movementIdsToAnnul || !Array.isArray(movementIdsToAnnul) || movementIdsToAnnul.length === 0 || !saleData || !saleData.items) {
+        return res.status(400).json({ error: 'Faltan datos para la edición: movementIdsToAnnul y saleData son requeridos.' });
+    }
+
+    const run = util.promisify(db.run.bind(db));
+    const all = util.promisify(db.all.bind(db));
+    const get = util.promisify(db.get.bind(db));
+
+    try {
+        await run('BEGIN TRANSACTION');
+
+        // 1. ANULACIÓN: Revertir el stock de los movimientos originales
+        const placeholders = movementIdsToAnnul.map(() => '?').join(',');
+        const originalMovements = await all(`SELECT * FROM inventory_movements WHERE id IN (${placeholders}) AND status = 'Activo'`, movementIdsToAnnul);
+
+        if (originalMovements.length !== movementIdsToAnnul.length) throw new Error('No se encontraron todos los movimientos de la venta original para editar.');
+
+        for (const move of originalMovements) {
+            // Revertir el stock es sumar la cantidad que se vendió
+            await run('UPDATE products SET current_stock = current_stock + ? WHERE id = ?', [move.quantity, move.product_id]);
+            await run("UPDATE inventory_movements SET status = 'Reemplazado' WHERE id = ?", [move.id]);
+        }
+
+        // 2. RE-CREACIÓN: Crear los nuevos movimientos con los datos actualizados
+        const { date, clientName, clientDni, invoiceNumber, items } = saleData;
+        const newDescription = `Venta a ${clientName || 'cliente'} (DNI: ${clientDni || 'N/A'}). Factura: ${invoiceNumber || 'N/A'}`;
+
+        for (const item of items) {
+            const product = await get('SELECT current_stock FROM products WHERE id = ?', [item.productId]);
+            if (!product) throw new Error(`Producto con ID ${item.productId} no encontrado.`);
+            if (product.current_stock < item.quantity) throw new Error(`Stock insuficiente para el producto ID ${item.productId}.`);
+
+            await run("INSERT INTO inventory_movements (product_id, type, quantity, unit_cost, description, date, status) VALUES (?, 'SALIDA', ?, ?, ?, ?, 'Activo')", [item.productId, item.quantity, item.unitPrice, newDescription, new Date(date).toISOString()]);
+            await run('UPDATE products SET current_stock = current_stock - ? WHERE id = ?', [item.quantity, item.productId]);
+        }
+
+        await run('COMMIT');
+        res.status(200).json({ message: 'Sale updated successfully' });
+
+    } catch (err) {
+        console.error('Error durante la transacción de edición de venta:', err.message);
+        await run('ROLLBACK');
+        res.status(500).json({ error: `Error en la transacción: ${err.message}` });
+    }
+});
+
+app.delete('/api/sales', async (req, res) => {
+    console.log('--- INICIO DE PETICIÓN DELETE /api/sales (ANULAR) ---');
+    const { movementIds } = req.body;
+
+    if (!movementIds || !Array.isArray(movementIds) || movementIds.length === 0) {
+        return res.status(400).json({ error: 'Se requiere un array de movementIds.' });
+    }
+
+    const run = util.promisify(db.run.bind(db));
+    const all = util.promisify(db.all.bind(db));
+
+    try {
+        await run('BEGIN TRANSACTION');
+
+        const placeholders = movementIds.map(() => '?').join(',');
+        const movementsToAnnul = await all(`SELECT * FROM inventory_movements WHERE id IN (${placeholders}) AND status = 'Activo'`, movementIds);
+
+        if (movementsToAnnul.length !== movementIds.length) throw new Error('No se encontraron todos los movimientos para anular, o algunos ya no estaban activos.');
+
+        for (const move of movementsToAnnul) {
+            // Revertir el stock es sumar la cantidad que se vendió
+            await run('UPDATE products SET current_stock = current_stock + ? WHERE id = ?', [move.quantity, move.product_id]);
+            await run("UPDATE inventory_movements SET status = 'Anulado' WHERE id = ?", [move.id]);
+        }
+
+        await run('COMMIT');
+        res.status(200).json({ message: 'Venta anulada correctamente.' });
+
+    } catch (err) {
+        console.error('Error durante la anulación de la venta:', err.message);
+        await run('ROLLBACK');
+        res.status(500).json({ error: `Error en la transacción: ${err.message}` });
+    }
 });
 
 

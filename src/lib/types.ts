@@ -114,3 +114,39 @@ export interface GroupedPurchase {
     // Guardamos los items originales para poder reconstruir el recibo
     movements: PurchaseHistoryMovement[];
 }
+
+export interface SaleItemPayload {
+  productId: number;
+  quantity: number;
+  unitPrice: number;
+  tax_rate: number;
+}
+
+export interface SalePayload {
+  date: string;
+  clientName?: string;
+  clientDni?: string;
+  invoiceNumber?: string;
+  items: SaleItemPayload[];
+}
+
+export interface SalesHistoryMovement {
+  id: number;
+  date: string;
+  productName: string;
+  quantity: number;
+  unit_cost: number;
+  total_revenue: number;
+  description: string;
+  status: 'Activo' | 'Reemplazado' | 'Anulado';
+}
+
+export interface GroupedSale {
+  key: string; 
+  date: string;
+  clientName: string;
+  invoiceNumber: string;
+  total: number;
+  movements: SalesHistoryMovement[];
+  status: 'Activo' | 'Anulado' | 'Reemplazado';
+}
