@@ -7,7 +7,7 @@ import { Calendar as CalendarIcon, PlusCircle, Trash2, History, Loader2, ListRes
 
 import { useBackendStatus } from '@/app/(app)/layout';
 import { getProducts, createSale, updateSale, Product } from '@/lib/api';
-import { SalePayload, GroupedSale } from '@/lib/types';
+import { SalePayload, GroupedSale, SaleItemPayload } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { toastSuccess, toastError } from '@/hooks/use-toast';
 
@@ -22,6 +22,7 @@ import { Combobox } from '@/components/ui/combobox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { SalesHistoryDialog } from '@/components/dialogs/SalesHistoryDialog';
 import { SalesReceiptDialog } from '@/components/dialogs/SalesReceiptDialog';
+import { SalesConfirmationDialog } from '@/components/dialogs/SalesConfirmationDialog';
 
 interface CartItem {
   id: string;
@@ -69,6 +70,8 @@ export default function SalesPage() {
     const [pendingSales, setPendingSales] = React.useState<PendingSale[]>([]);
     const [isHistoryOpen, setIsHistoryOpen] = React.useState(false);
     const [isReceiptOpen, setIsReceiptOpen] = React.useState(false);
+    const [isConfirmationOpen, setIsConfirmationOpen] = React.useState(false);
+    const [consolidatedItems, setConsolidatedItems] = React.useState<(SaleItemPayload & { name: string })[]>([]);
     const [lastSale, setLastSale] = React.useState<SalePayload | null>(null);
     const [editingMovementIds, setEditingMovementIds] = React.useState<number[] | null>(null);
 
@@ -129,6 +132,32 @@ export default function SalesPage() {
         setCart(cart.filter((_, i) => i !== index));
     };
 
+    const handleOpenConfirmation = () => {
+        const itemMap = new Map<number, SaleItemPayload & { name: string }>();
+
+        cart
+            .filter(item => item.productId !== null)
+            .forEach(item => {
+                const productId = item.productId!;
+                if (itemMap.has(productId)) {
+                    const existing = itemMap.get(productId)!;
+                    existing.quantity += item.quantity;
+                } else {
+                    itemMap.set(productId, {
+                        productId: productId,
+                        name: item.name,
+                        quantity: item.quantity,
+                        unitPrice: item.price,
+                        tax_rate: item.tax_rate,
+                    });
+                }
+            });
+        
+        const finalItems = Array.from(itemMap.values());
+        setConsolidatedItems(finalItems);
+        setIsConfirmationOpen(true);
+    };
+
     const handleFormSubmit = async () => {
         setIsLoading(true);
         
@@ -137,14 +166,7 @@ export default function SalesPage() {
             clientName: clientName || undefined,
             clientDni: clientDni || undefined,
             invoiceNumber: invoiceNumber || undefined,
-            items: cart
-                .filter(item => item.productId !== null)
-                .map(item => ({
-                    productId: item.productId!,
-                    quantity: item.quantity,
-                    unitPrice: item.price,
-                    tax_rate: item.tax_rate,
-                })),
+            items: consolidatedItems,
         };
 
         try {
@@ -165,6 +187,7 @@ export default function SalesPage() {
         } catch (error) {
         } finally {
             setIsLoading(false);
+            setIsConfirmationOpen(false);
         }
     };
 
@@ -193,13 +216,11 @@ export default function SalesPage() {
 
     const handleViewReceiptFromHistory = (sale: GroupedSale) => {
         const productInfoMap = new Map(products.map(p => [p.name, p]));
-        const description = sale.movements[0]?.description || '';
-        const dniMatch = description.match(/DNI: (.*?)\)/);
 
         const payload: SalePayload = {
             date: sale.date,
             clientName: sale.clientName,
-            clientDni: dniMatch && dniMatch[1] !== 'N/A' ? dniMatch[1] : '',
+            clientDni: sale.clientDni !== 'N/A' ? sale.clientDni : '',
             invoiceNumber: sale.invoiceNumber,
             items: sale.movements.map(m => {
                 const product = productInfoMap.get(m.productName);
@@ -292,7 +313,7 @@ export default function SalesPage() {
                         <CardFooter className="flex justify-end gap-2">
                             {editingMovementIds && (<Button variant="ghost" onClick={resetForm}><XCircle className="mr-2 h-4 w-4" />Cancelar Edición</Button>)}
                             <Button variant="secondary" onClick={handleHoldSale} disabled={editingMovementIds !== null}>Poner en Espera</Button>
-                            <Button onClick={handleFormSubmit} disabled={isSubmitDisabled}>
+                            <Button onClick={handleOpenConfirmation} disabled={isSubmitDisabled}>
                                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                 {isLoading ? "Procesando..." : (editingMovementIds ? "Guardar Cambios" : "Crear Venta")}
                             </Button>
@@ -335,6 +356,13 @@ export default function SalesPage() {
         </div>
         <SalesHistoryDialog open={isHistoryOpen} onOpenChange={setIsHistoryOpen} onViewReceipt={handleViewReceiptFromHistory} onEditSale={handleEditSale} />
         <SalesReceiptDialog open={isReceiptOpen} onOpenChange={setIsReceiptOpen} sale={lastSale} products={products} />
+        <SalesConfirmationDialog 
+            open={isConfirmationOpen} 
+            onOpenChange={setIsConfirmationOpen}
+            saleItems={consolidatedItems}
+            onConfirm={handleFormSubmit}
+            isSaving={isLoading}
+        />
         </TooltipProvider>
     )
 }
