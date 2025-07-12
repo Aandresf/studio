@@ -19,10 +19,10 @@ type Toast = Omit<ToasterToast, "id">;
 
 // --- State Management ---
 const TOAST_LIMIT = 3;
+const TOAST_REMOVE_DELAY = 1000000;
 
 type Action =
   | { type: "ADD_TOAST"; toast: ToasterToast }
-  | { type: "UPDATE_TOAST"; toast: Partial<ToasterToast> }
   | { type: "DISMISS_TOAST"; toastId?: string }
   | { type: "REMOVE_TOAST"; toastId?: string };
 
@@ -46,10 +46,18 @@ const reducer = (state: State, action: Action): State => {
         toasts: [action.toast, ...state.toasts].slice(0, TOAST_LIMIT),
       };
     case "DISMISS_TOAST":
+      const { toastId } = action;
+      if (toastId) {
+        addToRemoveQueue(toastId);
+      } else {
+        state.toasts.forEach((toast) => {
+          addToRemoveQueue(toast.id);
+        });
+      }
       return {
         ...state,
         toasts: state.toasts.map((t) =>
-          t.id === action.toastId || action.toastId === undefined
+          t.id === toastId || toastId === undefined
             ? { ...t, open: false }
             : t
         ),
@@ -62,6 +70,16 @@ const reducer = (state: State, action: Action): State => {
     default:
       return state;
   }
+};
+
+const toastTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
+const addToRemoveQueue = (toastId: string) => {
+  if (toastTimeouts.has(toastId)) return;
+  const timeout = setTimeout(() => {
+    toastTimeouts.delete(toastId);
+    dispatch({ type: "REMOVE_TOAST", toastId: toastId });
+  }, TOAST_REMOVE_DELAY);
+  toastTimeouts.set(toastId, timeout);
 };
 
 // --- Hook and Public Functions ---
@@ -87,18 +105,17 @@ function toast(props: Toast) {
     },
   });
 
-  // Centralized timer logic
   if (props.duration) {
-    setTimeout(() => {
+    const timeout = setTimeout(() => {
       dismiss();
     }, props.duration);
+    toastTimeouts.set(id, timeout);
   }
 
   return { id, dismiss };
 }
 
 // --- Helper Components and Functions ---
-
 const CopyButton = ({ text }: { text: string }) => {
   const [copied, setCopied] = React.useState(false);
   const handleCopy = () => {
@@ -121,18 +138,17 @@ const ErrorDescription = ({ text }: { text: string }) => (
 );
 
 function toastSuccess(title: string, description: string) {
-  return toast({
+  toast({
     title: title,
     description: description,
     duration: 5000,
-    variant: "default",
-    className: "bg-green-600 text-white border-green-700",
+    variant: "success",
     icon: <CheckCircle2 className="h-6 w-6" />,
   });
 }
 
 function toastError(title: string, description: string) {
-  return toast({
+  toast({
     title: title,
     description: <ErrorDescription text={description} />,
     duration: 5000,

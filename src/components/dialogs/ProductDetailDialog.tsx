@@ -113,7 +113,7 @@ export function ProductDetailDialog({
                       <p><strong>Stock Actual:</strong> {product.stock}</p>
                       <p><strong>Costo Promedio:</strong> ${product.price.toFixed(2)}</p>
                       <p><strong>Tasa de Impuesto:</strong> {product.tax_rate}%</p>
-                      <p><strong>Estado:</strong> <Badge variant={product.status === 'Activo' ? 'default' : 'destructive'}>{product.status}</Badge></p>
+                      <div className="flex items-center gap-2"><strong>Estado:</strong> <Badge variant={product.status === 'Activo' ? 'default' : 'destructive'}>{product.status}</Badge></div>
                   </div>
               </div>
               <div className="md:col-span-2">
