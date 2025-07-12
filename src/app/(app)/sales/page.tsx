@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Calendar as CalendarIcon, PlusCircle, Trash2, History, Loader2, ListRestart, Trash, X, XCircle } from 'lucide-react';
+import { Calendar as CalendarIcon, PlusCircle, Trash2, History, Loader2, ListRestart, Trash, XCircle } from 'lucide-react';
 
 import { useBackendStatus } from '@/app/(app)/layout';
 import { getProducts, createSale, updateSale, Product } from '@/lib/api';
@@ -21,9 +21,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Combobox } from '@/components/ui/combobox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { SalesHistoryDialog } from '@/components/dialogs/SalesHistoryDialog';
-// Placeholder para los otros dialogos que se crearán después
-// import { SalesReceiptDialog } from '@/components/dialogs/SalesReceiptDialog';
-// import { SalesConfirmationDialog } from '@/components/dialogs/SalesConfirmationDialog';
+import { SalesReceiptDialog } from '@/components/dialogs/SalesReceiptDialog';
 
 interface CartItem {
   id: string;
@@ -70,6 +68,8 @@ export default function SalesPage() {
 
     const [pendingSales, setPendingSales] = React.useState<PendingSale[]>([]);
     const [isHistoryOpen, setIsHistoryOpen] = React.useState(false);
+    const [isReceiptOpen, setIsReceiptOpen] = React.useState(false);
+    const [lastSale, setLastSale] = React.useState<SalePayload | null>(null);
     const [editingMovementIds, setEditingMovementIds] = React.useState<number[] | null>(null);
 
     const { isBackendReady, refetchKey, triggerRefetch } = useBackendStatus();
@@ -154,10 +154,12 @@ export default function SalesPage() {
             } else {
                 await createSale(salePayload);
                 toastSuccess("Venta Registrada", "La venta se ha guardado exitosamente.");
+                setLastSale(salePayload);
+                setIsReceiptOpen(true);
             }
             triggerRefetch();
             resetForm();
-            setIsHistoryOpen(false); // Cierra el historial si estaba abierto
+            setIsHistoryOpen(false);
         } catch (error) {
         } finally {
             setIsLoading(false);
@@ -166,11 +168,12 @@ export default function SalesPage() {
 
     const handleEditSale = (sale: GroupedSale) => {
         const productInfoMap = new Map(products.map(p => [p.name, p]));
-        const dniMatch = sale.description.match(/DNI: (.*?)\)/);
+        const description = sale.movements[0]?.description || '';
+        const dniMatch = description.match(/DNI: (.*?)\)/);
 
         setDate(new Date(sale.date));
         setClientName(sale.clientName);
-        setClientDni(dniMatch ? dniMatch[1] : '');
+        setClientDni(dniMatch && dniMatch[1] !== 'N/A' ? dniMatch[1] : '');
         setInvoiceNumber(sale.invoiceNumber);
         setCart(sale.movements.map(m => {
             const product = productInfoMap.get(m.productName);
@@ -181,11 +184,35 @@ export default function SalesPage() {
                 quantity: m.quantity,
                 price: m.unit_cost,
                 tax_rate: product?.tax_rate || 0,
-                availableStock: product?.stock || 0,
+                availableStock: (product?.stock || 0) + m.quantity,
             };
         }));
         setEditingMovementIds(sale.movements.map(m => m.id));
         setIsHistoryOpen(false);
+    };
+
+    const handleViewReceiptFromHistory = (sale: GroupedSale) => {
+        const productInfoMap = new Map(products.map(p => [p.name, p]));
+        const description = sale.movements[0]?.description || '';
+        const dniMatch = description.match(/DNI: (.*?)\)/);
+
+        const payload: SalePayload = {
+            date: sale.date,
+            clientName: sale.clientName,
+            clientDni: dniMatch && dniMatch[1] !== 'N/A' ? dniMatch[1] : '',
+            invoiceNumber: sale.invoiceNumber,
+            items: sale.movements.map(m => {
+                const product = productInfoMap.get(m.productName);
+                return {
+                    productId: product?.id || 0,
+                    quantity: m.quantity,
+                    unitPrice: m.unit_cost,
+                    tax_rate: product?.tax_rate || 0,
+                }
+            })
+        };
+        setLastSale(payload);
+        setIsReceiptOpen(true);
     };
 
     const handleHoldSale = () => {
@@ -292,9 +319,7 @@ export default function SalesPage() {
                                     <div key={sale.id} className="flex items-center justify-between p-2 border rounded-lg">
                                         <div>
                                             <p className="font-medium">{sale.clientName || "Cliente General"}</p>
-                                            <p className="text-sm text-muted-foreground">
-                                                {sale.cart.length} producto(s) - {format(sale.createdAt, "p", { locale: es })}
-                                            </p>
+                                            <p className="text-sm text-muted-foreground">{sale.cart.length} producto(s) - {format(sale.createdAt, "p", { locale: es })}</p>
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <Tooltip><TooltipTrigger asChild><Button variant="outline" size="icon" onClick={() => handleRestoreSale(sale)}><ListRestart className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent><p>Restaurar</p></TooltipContent></Tooltip>
@@ -308,7 +333,8 @@ export default function SalesPage() {
                 </div>
             </div>
         </div>
-        <SalesHistoryDialog open={isHistoryOpen} onOpenChange={setIsHistoryOpen} onViewReceipt={() => { /* Placeholder */ }} onEditSale={handleEditSale} />
+        <SalesHistoryDialog open={isHistoryOpen} onOpenChange={setIsHistoryOpen} onViewReceipt={handleViewReceiptFromHistory} onEditSale={handleEditSale} />
+        <SalesReceiptDialog open={isReceiptOpen} onOpenChange={setIsReceiptOpen} sale={lastSale} products={products} />
         </TooltipProvider>
     )
 }
