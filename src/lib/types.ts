@@ -139,13 +139,19 @@ export interface SalesHistoryMovement {
   total_revenue: number;
   description: string;
   status: 'Activo' | 'Reemplazado' | 'Anulado';
+  // Parsed from description in the backend
+  clientName: string;
+  clientDni: string;
+  invoiceNumber: string;
 }
 
 export interface GroupedSale {
   key: string; 
   date: string;
   clientName: string;
+  clientDni: string;
   invoiceNumber: string;
+  description: string;
   total: number;
   movements: SalesHistoryMovement[];
   status: 'Activo' | 'Anulado' | 'Reemplazado';

@@ -44,7 +44,7 @@ const groupPurchases = (movements: PurchaseHistoryMovement[]): GroupedPurchase[]
 
         if (!purchaseMap.has(key)) {
             const supplierMatch = move.description.match(/Compra a (.*?)\. Factura:/);
-            const invoiceMatch = move.description.match(/Factura: (.*)/);
+            const invoiceMatch = move.description.match(/Factura: (.*?)$/);
 
             purchaseMap.set(key, {
                 key,

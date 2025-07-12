@@ -151,6 +151,8 @@ export default function SalesPage() {
             if (editingMovementIds) {
                 await updateSale({ movementIdsToAnnul: editingMovementIds, saleData: salePayload });
                 toastSuccess("Venta Actualizada", "La venta se ha modificado exitosamente.");
+                setLastSale(salePayload);
+                setIsReceiptOpen(true);
             } else {
                 await createSale(salePayload);
                 toastSuccess("Venta Registrada", "La venta se ha guardado exitosamente.");
@@ -168,12 +170,10 @@ export default function SalesPage() {
 
     const handleEditSale = (sale: GroupedSale) => {
         const productInfoMap = new Map(products.map(p => [p.name, p]));
-        const description = sale.movements[0]?.description || '';
-        const dniMatch = description.match(/DNI: (.*?)\)/);
 
         setDate(new Date(sale.date));
         setClientName(sale.clientName);
-        setClientDni(dniMatch && dniMatch[1] !== 'N/A' ? dniMatch[1] : '');
+        setClientDni(sale.clientDni !== 'N/A' ? sale.clientDni : '');
         setInvoiceNumber(sale.invoiceNumber);
         setCart(sale.movements.map(m => {
             const product = productInfoMap.get(m.productName);

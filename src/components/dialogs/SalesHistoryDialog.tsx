@@ -40,17 +40,17 @@ const groupSales = (movements: SalesHistoryMovement[]): GroupedSale[] => {
     const saleMap = new Map<string, GroupedSale>();
 
     movements.forEach(move => {
-        const key = move.description + " | " + new Date(move.date).toISOString().substring(0, 10);
+        // Use a more reliable key, like the description and a precise date
+        const key = move.description + " | " + new Date(move.date).toISOString();
 
         if (!saleMap.has(key)) {
-            const clientMatch = move.description.match(/Venta a (.*?)\. Factura:/);
-            const invoiceMatch = move.description.match(/Factura: (.*)/);
-
             saleMap.set(key, {
                 key,
                 date: move.date,
-                clientName: clientMatch ? clientMatch[1] : 'N/A',
-                invoiceNumber: invoiceMatch ? invoiceMatch[1] : 'N/A',
+                clientName: move.clientName,
+                clientDni: move.clientDni,
+                invoiceNumber: move.invoiceNumber,
+                description: move.description, // Keep for reference
                 total: 0,
                 movements: [],
                 status: move.status,

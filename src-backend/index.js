@@ -515,10 +515,18 @@ app.get('/api/sales', (req, res) => {
     db.all(query, [], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
 
-        const sales = rows.map(s => ({ 
-            ...s, 
-            total_revenue: (s.quantity || 0) * (s.unit_cost || 0) 
-        }));
+        const sales = rows.map(s => {
+            const match = s.description.match(/Venta a (?<clientName>.*?) \(DNI: (?<clientDni>.*?)\)\. Factura: (?<invoiceNumber>.*)/);
+            
+            return {
+                ...s,
+                total_revenue: (s.quantity || 0) * (s.unit_cost || 0),
+                // Provide parsed fields for the frontend
+                clientName: match?.groups.clientName.trim() || 'N/A',
+                clientDni: match?.groups.clientDni.trim() || 'N/A',
+                invoiceNumber: match?.groups.invoiceNumber.trim() || 'N/A',
+            };
+        });
 
         res.json(sales);
     });
