@@ -11,37 +11,65 @@ async function fetchAPI(endpoint: string, options: RequestInit = {}) {
         'Content-Type': 'application/json',
         ...options.headers,
     };
-    const config = {
+    const config: RequestInit = {
         ...options,
         headers,
     };
 
+    console.log(`--- API Request ---
+    URL: ${url}
+    Method: ${config.method || 'GET'}
+    Body: ${config.body ? config.body : 'No Body'}
+    -------------------`);
+
     try {
         const response = await fetch(url, config);
+        const responseBody = await response.text();
 
         if (!response.ok) {
-            const errorData = await response.json().catch(() => ({ error: 'El servidor respondió con un error inesperado.' }));
+            let errorData;
+            try {
+                errorData = JSON.parse(responseBody);
+            } catch {
+                errorData = { error: 'El servidor respondió con un error inesperado.', details: responseBody };
+            }
             const errorMessage = errorData.error || `Error HTTP: ${response.status}`;
             
-            // Usamos el nuevo toast para mostrar el error
+            console.error(`--- API Error Response ---
+            URL: ${url}
+            Status: ${response.status}
+            Body: ${responseBody}
+            ------------------------`);
+            
             toastError("Error de API", errorMessage);
-
-            // Relanzamos el error para que el componente que llama a la API pueda manejarlo
             throw new Error(errorMessage);
         }
 
-        if (response.status === 204) { // No Content
+        if (response.status === 204 || responseBody.length === 0) {
+            console.log(`--- API Success Response (No Content) ---
+            URL: ${url}
+            Status: 204
+            ---------------------------------------`);
             return null;
         }
 
-        return response.json();
+        const jsonData = JSON.parse(responseBody);
+        console.log(`--- API Success Response ---
+        URL: ${url}
+        Status: ${response.status}
+        Response Body:`, jsonData,
+        `\n----------------------------`);
+
+        return jsonData;
     } catch (error) {
-        // Si el error no fue lanzado por nosotros (ej. error de red), lo mostramos también.
         if (!(error instanceof Error && error.message.includes('Error de API'))) {
             const message = error instanceof Error ? error.message : 'Ocurrió un error de red o de conexión.';
+            console.error(`--- Network or Parsing Error ---
+            URL: ${url}
+            Error: ${message}
+            --------------------------------`);
             toastError("Error de Conexión", message);
         }
-        // Relanzamos el error para que la lógica de la UI pueda reaccionar.
         throw error;
     }
 }
@@ -95,6 +123,10 @@ export const annulPurchase = (payload: { movementIds: number[] }): Promise<{ mes
         method: 'DELETE',
         body: JSON.stringify(payload),
     });
+};
+
+export const getPurchaseDetails = (transactionId: string): Promise<PurchasePayload> => {
+    return fetchAPI(`/purchases/details?id=${encodeURIComponent(transactionId)}`);
 };
 
 // Sale API calls

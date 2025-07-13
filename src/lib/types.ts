@@ -90,6 +90,7 @@ export interface PurchaseItemPayload {
 export interface PurchasePayload {
   date: string;
   supplier?: string;
+  supplierRif?: string;
   invoiceNumber?: string;
   items: PurchaseItemPayload[];
 }
@@ -105,14 +106,13 @@ export interface PurchaseHistoryMovement {
 }
 
 export interface GroupedPurchase {
-    // Usamos la descripción como clave única para agrupar
-    key: string; 
-    date: string;
-    supplier: string;
-    invoiceNumber: string;
-    total: number;
-    // Guardamos los items originales para poder reconstruir el recibo
-    movements: PurchaseHistoryMovement[];
+  description: string; // This is the transaction ID
+  date: string;
+  supplier: string;
+  supplierRif: string;
+  invoiceNumber: string;
+  movements: PurchaseHistoryMovement[];
+  status: 'Activo' | 'Anulado' | 'Reemplazado';
 }
 
 export interface SaleItemPayload {

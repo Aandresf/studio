@@ -43,17 +43,18 @@ const groupPurchases = (movements: PurchaseHistoryMovement[]): GroupedPurchase[]
         const key = move.description + " | " + new Date(move.date).toISOString().substring(0, 10);
 
         if (!purchaseMap.has(key)) {
-            const supplierMatch = move.description.match(/Compra a (.*?)\. Factura:/);
-            const invoiceMatch = move.description.match(/Factura: (.*?)$/);
-
+            const match = move.description.match(/Compra a (.*?) \(RIF: (.*?)\)\. Factura: (.*)/);
+            
             purchaseMap.set(key, {
                 key,
+                description: move.description,
                 date: move.date,
-                supplier: supplierMatch ? supplierMatch[1] : 'N/A',
-                invoiceNumber: invoiceMatch ? invoiceMatch[1] : 'N/A',
+                supplier: match?.[1].trim() || 'N/A',
+                supplierRif: match?.[2].trim() || 'N/A',
+                invoiceNumber: match?.[3].trim() || 'N/A',
                 total: 0,
                 movements: [],
-                status: move.status, // Carry over the status
+                status: move.status,
             });
         }
 
@@ -107,7 +108,7 @@ export function PurchaseHistoryDialog({ open, onOpenChange, onViewReceipt, onEdi
 
   const filteredHistory = history.filter(p => {
       const query = searchQuery.toLowerCase();
-      return p.supplier.toLowerCase().includes(query) || p.invoiceNumber.toLowerCase().includes(query);
+      return p.supplier.toLowerCase().includes(query) || p.invoiceNumber.toLowerCase().includes(query) || (p.supplierRif && p.supplierRif.toLowerCase().includes(query));
   });
 
   return (
@@ -122,7 +123,7 @@ export function PurchaseHistoryDialog({ open, onOpenChange, onViewReceipt, onEdi
         <div className="relative">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
-                placeholder="Buscar por proveedor o factura..."
+                placeholder="Buscar por proveedor, RIF o factura..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-8"
@@ -135,6 +136,7 @@ export function PurchaseHistoryDialog({ open, onOpenChange, onViewReceipt, onEdi
                 <TableHead>Estado</TableHead>
                 <TableHead>Fecha</TableHead>
                 <TableHead>Proveedor</TableHead>
+                <TableHead>RIF</TableHead>
                 <TableHead>Factura Nº</TableHead>
                 <TableHead className="text-right">Total</TableHead>
                 <TableHead className="text-center">Acciones</TableHead>
@@ -144,7 +146,7 @@ export function PurchaseHistoryDialog({ open, onOpenChange, onViewReceipt, onEdi
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                     <TableRow key={i}>
-                        <TableCell colSpan={6}><Skeleton className="h-8 w-full" /></TableCell>
+                        <TableCell colSpan={7}><Skeleton className="h-8 w-full" /></TableCell>
                     </TableRow>
                 ))
               ) : filteredHistory.length > 0 ? (
@@ -159,6 +161,7 @@ export function PurchaseHistoryDialog({ open, onOpenChange, onViewReceipt, onEdi
                         {format(new Date(purchase.date), "dd/MM/yyyy HH:mm", { locale: es })}
                       </TableCell>
                       <TableCell className={isAnnulled ? "line-through" : ""}>{purchase.supplier}</TableCell>
+                      <TableCell className={isAnnulled ? "line-through" : ""}>{purchase.supplierRif}</TableCell>
                       <TableCell className={isAnnulled ? "line-through" : ""}>{purchase.invoiceNumber}</TableCell>
                       <TableCell className={`text-right ${isAnnulled ? "line-through" : ""}`}>${purchase.total.toFixed(2)}</TableCell>
                       <TableCell className="text-center">
@@ -196,7 +199,7 @@ export function PurchaseHistoryDialog({ open, onOpenChange, onViewReceipt, onEdi
                 })
               ) : (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center">
+                  <TableCell colSpan={7} className="text-center">
                     No se encontraron compras.
                   </TableCell>
                 </TableRow>

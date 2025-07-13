@@ -1,4 +1,3 @@
-
 const express = require('express');
 const cors = require('cors');
 const fs = require('fs');
@@ -272,7 +271,7 @@ app.post('/api/purchases', async (req, res) => {
     console.log('--- INICIO DE PETICIÓN POST /api/purchases ---');
     console.log('Cuerpo de la petición (req.body):', JSON.stringify(req.body, null, 2));
 
-    const { date, supplier, invoiceNumber, items } = req.body;
+    const { date, supplier, supplierRif, invoiceNumber, items } = req.body;
 
     if (!date || !items || !Array.isArray(items) || items.length === 0) {
         return res.status(400).json({ error: 'Missing required fields: date, items' });
@@ -305,7 +304,7 @@ app.post('/api/purchases', async (req, res) => {
 
             // Inserta el movimiento de inventario
             const movementDate = date ? new Date(date).toISOString().slice(0, 19).replace('T', ' ') : new Date().toISOString().slice(0, 19).replace('T', ' ');
-            const description = `Compra a ${supplier || 'proveedor'}. Factura: ${invoiceNumber || 'N/A'}`;
+            const description = `Compra a ${supplier || 'proveedor'} (RIF: ${supplierRif || 'N/A'}). Factura: ${invoiceNumber || 'N/A'}`;
             const movementSql = `INSERT INTO inventory_movements (product_id, type, quantity, unit_cost, description, date, status) VALUES (?, ?, ?, ?, ?, ?, 'Activo')`;
             await run(movementSql, [productId, 'ENTRADA', quantity, unitCost, description, movementDate]);
 
@@ -377,8 +376,8 @@ app.put('/api/purchases', async (req, res) => {
         console.log('Fase de anulación completada.');
 
         // 2. RE-CREACIÓN: Crear los nuevos movimientos con los datos actualizados
-        const { date, supplier, invoiceNumber, items } = purchaseData;
-        const newDescription = `Compra a ${supplier || 'proveedor'}. Factura: ${invoiceNumber || 'N/A'}`;
+        const { date, supplier, supplierRif, invoiceNumber, items } = purchaseData;
+        const newDescription = `Compra a ${supplier || 'proveedor'} (RIF: ${supplierRif || 'N/A'}). Factura: ${invoiceNumber || 'N/A'}`;
 
         for (const item of items) {
             const product = await get('SELECT current_stock, average_cost FROM products WHERE id = ?', [item.productId]);
@@ -490,15 +489,146 @@ app.get('/api/purchases', (req, res) => {
     db.all(query, [], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
         
-        // Calculate total_cost in JS for clarity and consistency.
-        const purchases = rows.map(p => ({ 
-            ...p, 
-            total_cost: (p.quantity || 0) * (p.unit_cost || 0) 
-        }));
+        const purchases = rows.map(p => {
+            const match = p.description.match(/Compra a (.*?) \(RIF: (.*?)\)\. Factura: (.*)/);
+            return {
+                ...p,
+                total_cost: (p.quantity || 0) * (p.unit_cost || 0),
+                supplier: match?.[1].trim() || 'N/A',
+                supplierRif: match?.[2].trim() || 'N/A',
+                invoiceNumber: match?.[3].trim() || 'N/A',
+            };
+        });
 
         res.json(purchases);
     });
 });
+
+// GET PURCHASE DETAILS BY TRANSACTION ID
+app.get('/api/purchases/details', (req, res) => {
+    const transactionId = req.query.id;
+    if (!transactionId) {
+        return res.status(400).json({ error: 'Transaction ID is required' });
+    }
+
+    const sql = `
+        SELECT
+            im.product_id as productId,
+            p.name as productName,
+            im.quantity,
+            im.unit_cost as unitCost,
+            p.tax_rate,
+            im.date,
+            im.description,
+            im.status
+        FROM inventory_movements im
+        JOIN products p ON im.product_id = p.id
+        WHERE im.description = ? AND im.type = 'ENTRADA'
+    `;
+    db.all(sql, [transactionId], (err, allItems) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (allItems.length === 0) return res.status(404).json({ error: 'Purchase not found' });
+
+        let itemsToShow;
+        const activeItems = allItems.filter(item => item.status === 'Activo');
+        const annulledItems = allItems.filter(item => item.status === 'Anulado');
+
+        if (activeItems.length > 0) {
+            itemsToShow = activeItems;
+        } else if (annulledItems.length > 0) {
+            itemsToShow = annulledItems;
+        } else {
+            itemsToShow = allItems.filter(item => item.status === 'Reemplazado');
+        }
+        
+        if (itemsToShow.length === 0) {
+             const lastDate = allItems.reduce((max, i) => i.date > max ? i.date : max, allItems[0].date);
+             itemsToShow = allItems.filter(i => i.date === lastDate);
+        }
+
+        const firstItem = itemsToShow[0];
+        const match = firstItem.description.match(/Compra a (.*?) \(RIF: (.*?)\)\. Factura: (.*)/);
+        
+        const purchasePayload = {
+            date: firstItem.date,
+            supplier: match?.[1].trim() || 'N/A',
+            supplierRif: match?.[2].trim() || 'N/A',
+            invoiceNumber: match?.[3].trim() || 'N/A',
+            items: itemsToShow.map(i => ({
+                productId: i.productId,
+                quantity: i.quantity,
+                unitCost: i.unitCost,
+                tax_rate: i.tax_rate
+            }))
+        };
+
+        res.json(purchasePayload);
+    });
+});
+
+
+// GET PURCHASE DETAILS BY TRANSACTION ID
+app.get('/api/purchases/details', (req, res) => {
+    const transactionId = req.query.id;
+    if (!transactionId) {
+        return res.status(400).json({ error: 'Transaction ID is required' });
+    }
+
+    const sql = `
+        SELECT
+            im.product_id as productId,
+            p.name as productName,
+            im.quantity,
+            im.unit_cost as unitCost,
+            p.tax_rate,
+            im.date,
+            im.description,
+            im.status
+        FROM inventory_movements im
+        JOIN products p ON im.product_id = p.id
+        WHERE im.description = ? AND im.type = 'ENTRADA'
+    `;
+    db.all(sql, [transactionId], (err, allItems) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (allItems.length === 0) return res.status(404).json({ error: 'Purchase not found' });
+
+        let itemsToShow;
+        const activeItems = allItems.filter(item => item.status === 'Activo');
+        const annulledItems = allItems.filter(item => item.status === 'Anulado');
+
+        if (activeItems.length > 0) {
+            itemsToShow = activeItems;
+        } else if (annulledItems.length > 0) {
+            itemsToShow = annulledItems;
+        } else {
+            itemsToShow = allItems.filter(item => item.status === 'Reemplazado');
+        }
+        
+        if (itemsToShow.length === 0) {
+             const lastDate = allItems.reduce((max, i) => i.date > max ? i.date : max, allItems[0].date);
+             itemsToShow = allItems.filter(i => i.date === lastDate);
+        }
+
+        const firstItem = itemsToShow[0];
+        const match = firstItem.description.match(/Compra a (.*?) \(RIF: (.*?)\)\. Factura: (.*)/);
+        
+        const purchasePayload = {
+            date: firstItem.date,
+            supplier: match?.[1].trim() || 'N/A',
+            supplierRif: match?.[2].trim() || 'N/A',
+            invoiceNumber: match?.[3].trim() || 'N/A',
+            items: itemsToShow.map(i => ({
+                productId: i.productId,
+                quantity: i.quantity,
+                unitCost: i.unitCost,
+                tax_rate: i.tax_rate
+            }))
+        };
+
+        res.json(purchasePayload);
+    });
+});
+
 
 // SALES (SALIDA)
 app.get('/api/sales', (req, res) => {
@@ -983,4 +1113,3 @@ process.on('SIGINT', () => shutdown('SIGINT'));
 startServer();
 
 module.exports = { app, db, startServer, shutdown };
-

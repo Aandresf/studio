@@ -39,6 +39,7 @@ interface PendingPurchase {
     cart: CartItem[];
     date: Date;
     supplier: string;
+    supplierRif: string;
     invoiceNumber: string;
     createdAt: Date;
 }
@@ -55,6 +56,7 @@ const createEmptyCartItem = (): CartItem => ({
 export default function PurchasesPage() {
     const [date, setDate] = React.useState<Date>(new Date());
     const [supplier, setSupplier] = React.useState('');
+    const [supplierRif, setSupplierRif] = React.useState('');
     const [invoiceNumber, setInvoiceNumber] = React.useState('');
     
     const [products, setProducts] = React.useState<Product[]>([]);
@@ -69,7 +71,7 @@ export default function PurchasesPage() {
     const [isReceiptOpen, setIsReceiptOpen] = React.useState(false);
     const [isConfirmationOpen, setIsConfirmationOpen] = React.useState(false);
     const [consolidatedItems, setConsolidatedItems] = React.useState<(PurchaseItemPayload & { productName: string })[]>([]);
-    const [lastPurchase, setLastPurchase] = React.useState<PurchasePayload | null>(null);
+    const [selectedTransactionId, setSelectedTransactionId] = React.useState<string | null>(null);
     const [editingMovementIds, setEditingMovementIds] = React.useState<number[] | null>(null);
     const [isProductDialogOpen, setIsProductDialogOpen] = React.useState(false);
     const [productDialogInitialData, setProductDialogInitialData] = React.useState<Partial<Product> | null>(null);
@@ -101,6 +103,7 @@ export default function PurchasesPage() {
     const resetForm = () => {
         setDate(new Date());
         setSupplier('');
+        setSupplierRif('');
         setInvoiceNumber('');
         setCart([createEmptyCartItem()]);
         setOpenComboboxIndex(null);
@@ -165,11 +168,13 @@ export default function PurchasesPage() {
         const purchasePayload: PurchasePayload = {
             date: date.toISOString(),
             supplier: supplier || undefined,
+            supplierRif: supplierRif || undefined,
             invoiceNumber: invoiceNumber || undefined,
             items: consolidatedItems.map(({ productName, ...item }) => item),
         };
 
         try {
+            let transactionId;
             if (editingMovementIds) {
                 await updatePurchase({ movementIdsToAnnul: editingMovementIds, purchaseData: purchasePayload });
                 toastSuccess("Compra Actualizada", "La compra se ha modificado exitosamente.");
@@ -177,7 +182,9 @@ export default function PurchasesPage() {
                 await createPurchase(purchasePayload);
                 toastSuccess("Compra Registrada", "La compra se ha guardado exitosamente.");
             }
-            setLastPurchase(purchasePayload);
+            
+            transactionId = `Compra a ${purchasePayload.supplier || 'proveedor'} (RIF: ${purchasePayload.supplierRif || 'N/A'}). Factura: ${purchasePayload.invoiceNumber || 'N/A'}`;
+            setSelectedTransactionId(transactionId);
             setIsReceiptOpen(true);
             triggerRefetch();
             resetForm();
@@ -191,9 +198,10 @@ export default function PurchasesPage() {
 
     const handleEditPurchase = (purchase: GroupedPurchase) => {
         const productInfoMap = new Map(products.map(p => [p.name, p]));
-
+        
         setDate(new Date(purchase.date));
         setSupplier(purchase.supplier);
+        setSupplierRif(purchase.supplierRif !== 'N/A' ? purchase.supplierRif : '');
         setInvoiceNumber(purchase.invoiceNumber);
         setCart(purchase.movements.map(m => {
             const product = productInfoMap.get(m.productName);
@@ -211,18 +219,8 @@ export default function PurchasesPage() {
     };
 
     const handleViewReceiptFromHistory = (purchase: GroupedPurchase) => {
-        const productInfoMap = new Map(products.map(p => [p.name, p]));
-        const payload: PurchasePayload = {
-            date: purchase.date,
-            supplier: purchase.supplier,
-            invoiceNumber: purchase.invoiceNumber,
-            items: purchase.movements.map(m => ({ 
-                productId: productInfoMap.get(m.productName) || 0, 
-                quantity: m.quantity, 
-                unitCost: m.unit_cost 
-            }))
-        };
-        setLastPurchase(payload);
+        console.log("Handling view receipt for purchase:", purchase);
+        setSelectedTransactionId(purchase.description);
         setIsReceiptOpen(true);
     };
 
@@ -231,7 +229,7 @@ export default function PurchasesPage() {
             toastError("Compra Vacía", "No puedes poner en espera una compra sin productos.");
             return;
         }
-        const newPendingPurchase: PendingPurchase = { id: `pending-${Date.now()}`, cart, date, supplier, invoiceNumber, createdAt: new Date() };
+        const newPendingPurchase: PendingPurchase = { id: `pending-${Date.now()}`, cart, date, supplier, supplierRif, invoiceNumber, createdAt: new Date() };
         setPendingPurchases(prev => [...prev, newPendingPurchase]);
         toastSuccess("Compra en Espera", "La compra actual se ha movido a la lista de espera.");
         resetForm();
@@ -241,6 +239,7 @@ export default function PurchasesPage() {
         setCart(purchaseToRestore.cart);
         setDate(purchaseToRestore.date);
         setSupplier(purchaseToRestore.supplier);
+        setSupplierRif(purchaseToRestore.supplierRif);
         setInvoiceNumber(purchaseToRestore.invoiceNumber);
         setPendingPurchases(prev => prev.filter(p => p.id !== purchaseToRestore.id));
         toastSuccess("Compra Restaurada", "La compra ha sido cargada en el formulario.");
@@ -343,6 +342,7 @@ export default function PurchasesPage() {
                         <div className="grid gap-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="grid gap-2"><Label htmlFor="supplier">Proveedor</Label><Input id="supplier" value={supplier} onChange={e => setSupplier(e.target.value)} placeholder="Nombre del proveedor" /></div>
+                                <div className="grid gap-2"><Label htmlFor="supplierRif">RIF Proveedor</Label><Input id="supplierRif" value={supplierRif} onChange={e => setSupplierRif(e.target.value)} placeholder="Ej: J-12345678" /></div>
                             </div>
                             <div>
                                 <div className="grid grid-cols-12 gap-2 items-center mb-2 px-1">
@@ -445,7 +445,18 @@ export default function PurchasesPage() {
             onProductSaved={handleProductSaved} 
         />
         <PurchaseHistoryDialog open={isHistoryOpen} onOpenChange={setIsHistoryOpen} onViewReceipt={handleViewReceiptFromHistory} onEditPurchase={handleEditPurchase} />
-        <PurchaseReceiptDialog open={isReceiptOpen} onOpenChange={setIsReceiptOpen} purchase={lastPurchase} products={products} />
+        <PurchaseReceiptDialog 
+            open={isReceiptOpen} 
+            onOpenChange={(open) => {
+                console.log("Receipt dialog, open:", open);
+                console.log("Selected transaction ID:", selectedTransactionId);
+                if (!open) {
+                    setSelectedTransactionId(null);
+                }
+                setIsReceiptOpen(open);
+            }} 
+            transactionId={selectedTransactionId} 
+        />
         <PurchaseConfirmationDialog 
             open={isConfirmationOpen} 
             onOpenChange={setIsConfirmationOpen}
