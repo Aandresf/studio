@@ -195,3 +195,39 @@ La sección de **Compras** ha sido refactorizada y mejorada significativamente. 
     *   Obtener los detalles de la tienda desde la tabla `store_settings`.
     *   Para cada producto, calcular los valores requeridos (existencia anterior, entradas, salidas, etc.) consultando la tabla `inventory_movements` dentro del rango de fechas especificado.
     *   Poblar el archivo Excel con los datos dinámicos obtenidos.
+---
+## Anexo: Lógica de Valoración de Inventario (Costo Promedio Ponderado)
+
+### 1. ¿Cómo funciona el Costo Promedio Ponderado?
+
+Este método recalcula el costo unitario promedio de un artículo cada vez que se realiza una nueva compra (una entrada al inventario). La fórmula es:
+
+$$
+\text{Nuevo Costo Promedio} = \frac{(\text{Unidades Actuales} \times \text{Costo Promedio Actual}) + (\text{Unidades de la Nueva Compra} \times \text{Costo de la Nueva Compra})}{(\text{Unidades Actuales} + \text{Unidades de la Nueva Compra})}
+$$
+
+**Ejemplo práctico:**
+
+1.  **Inventario Inicial:** Tienes 10 unidades a un costo de 100 Bs. cada una.
+    * *Valor Total:* 1,000 Bs.
+    * *Costo Promedio:* 100 Bs.
+2.  **Haces una Compra:** Adquieres 15 unidades más, pero esta vez a 120 Bs. cada una.
+    * *Valor de la Compra:* 1,800 Bs.
+3.  **Cálculo del Nuevo Promedio:**
+    * *Nuevo Valor Total:* 1,000 Bs. (inicial) + 1,800 Bs. (compra) = 2,800 Bs.
+    * *Nuevas Unidades Totales:* 10 (inicial) + 15 (compra) = 25 unidades.
+    * **Nuevo Costo Promedio Ponderado:** 2,800 Bs. / 25 unidades = **112 Bs. por unidad**.
+
+A partir de este momento, **todas las salidas** de inventario (ventas, retiros) se valorarán a este nuevo costo de 112 Bs., hasta que una nueva compra obligue a recalcularlo.
+
+### 2. ¿Qué valor (Anterior, Actual, Promedio) se usa para cada columna?
+
+Esta es la parte crucial para llenar el reporte correctamente. Cada columna de la sección de valores monetarios se calcula usando un costo unitario específico. Igual que las salidas por ventas, se valoran utilizando el **`VALOR PROMEDIO UNITARIO EN BS`**. Son egresos de inventario y deben registrarse a su costo.
+    * **Fórmula:** `Retiros (Unidades)` x `Valor Promedio Unitario (Bs)`.
+
+* **Existencia Actual (en Valor):**
+    * Este es el resultado final. Se puede obtener de dos maneras que deben coincidir:
+        1.  **Por cálculo aritmético:** `Existencia Anterior (Valor) + Entradas (Valor) - Salidas (Valor) - Retiros (Valor) - Auto-consumo (Valor)`.
+        2.  **Por valoración final:** `Existencia Actual (Unidades)` x `Valor Promedio Unitario ACTUAL (Bs)`. El `Valor Promedio Actual` será el último costo promedio que se calculó en el período.
+
+En resumen, la clave es: **las salidas de inventario, sin importar su motivo (venta, retiro, etc.), siempre se valoran al costo promedio ponderado que esté vigente en ese preciso momento.** Este es el método que la administración tributaria venezolana (SENIAT) verifica para validar el costo de ventas declarado.
