@@ -70,7 +70,6 @@ export function Combobox({
     return options.find((option) => option.value === value)?.label;
   }, [options, value]);
 
-  // Reset search value when popover closes
   React.useEffect(() => {
     if (!open) {
       setSearchValue("");
@@ -94,9 +93,9 @@ export function Combobox({
       <PopoverContent 
         sideOffset={sideOffset}
         align={align}
-        className={cn("w-[--radix-popover-trigger-width] p-0", popoverClassName)}
+        className={cn("w-[--radix-popover-trigger-width] max-h-96 p-0 flex flex-col", popoverClassName)}
       >
-        <div className="p-2">
+        <div className="p-2 flex-shrink-0">
             <Input
                 autoFocus
                 placeholder={searchPlaceholder}
@@ -105,35 +104,37 @@ export function Combobox({
                 className="h-9"
             />
         </div>
-        <ScrollArea className="h-auto max-h-60">
-            {renderHeader && renderHeader()}
-            <div className="p-2 pt-0">
-                {filteredOptions.length === 0 && (
-                    <p className="py-4 text-center text-sm text-muted-foreground">
-                        {emptyMessage}
-                    </p>
-                )}
-                {filteredOptions.map((option) => (
-                <Button
-                    key={option.value}
-                    variant="ghost"
-                    className="w-full justify-start font-normal h-auto"
-                    onClick={() => {
-                        onChange(option.value);
-                        setOpen(false);
-                    }}
-                >
-                    <Check
-                    className={cn(
-                        "mr-2 h-4 w-4",
-                        value === option.value ? "opacity-100" : "opacity-0"
+        <div className="flex-grow overflow-y-auto">
+            <ScrollArea className="h-full">
+                {renderHeader && renderHeader()}
+                <div className="p-2 pt-0">
+                    {filteredOptions.length === 0 && (
+                        <p className="py-4 text-center text-sm text-muted-foreground">
+                            {emptyMessage}
+                        </p>
                     )}
-                    />
-                    {renderOption ? renderOption(option) : option.label}
-                </Button>
-                ))}
-            </div>
-        </ScrollArea>
+                    {filteredOptions.map((option) => (
+                    <Button
+                        key={option.value}
+                        variant="ghost"
+                        className="w-full justify-start font-normal h-auto"
+                        onClick={() => {
+                            onChange(option.value);
+                            setOpen(false);
+                        }}
+                    >
+                        <Check
+                        className={cn(
+                            "mr-2 h-4 w-4",
+                            value === option.value ? "opacity-100" : "opacity-0"
+                        )}
+                        />
+                        {renderOption ? renderOption(option) : option.label}
+                    </Button>
+                    ))}
+                </div>
+            </ScrollArea>
+        </div>
       </PopoverContent>
     </Popover>
   );

@@ -94,10 +94,12 @@ export default function SalesPage() {
     const productMap = React.useMemo(() => new Map(products.map(p => [p.id, p])), [products]);
     
     const productOptions = React.useMemo(() => 
-        products.map(p => ({ 
-            value: String(p.id), 
-            label: `(${p.sku || 'N/A'}) ${p.name}`
-        })), 
+        products
+            .filter(p => p.stock > 0)
+            .map(p => ({ 
+                value: String(p.id), 
+                label: `(${p.sku || 'N/A'}) ${p.name}`
+            })), 
     [products]);
 
     const resetForm = () => {

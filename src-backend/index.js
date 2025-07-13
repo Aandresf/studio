@@ -551,16 +551,38 @@ app.get('/api/sales/details', (req, res) => {
             im.unit_cost as unitPrice,
             p.tax_rate,
             im.date,
-            im.description
+            im.description,
+            im.status
         FROM inventory_movements im
         JOIN products p ON im.product_id = p.id
-        WHERE im.description = ? AND im.type = 'SALIDA' AND im.status = 'Activo'
+        WHERE im.description = ? AND im.type = 'SALIDA'
     `;
-    db.all(sql, [transactionId], (err, items) => {
+    db.all(sql, [transactionId], (err, allItems) => {
         if (err) return res.status(500).json({ error: err.message });
-        if (items.length === 0) return res.status(404).json({ error: 'Sale not found' });
+        if (allItems.length === 0) return res.status(404).json({ error: 'Sale not found' });
 
-        const firstItem = items[0];
+        let itemsToShow;
+        const activeItems = allItems.filter(item => item.status === 'Activo');
+        const annulledItems = allItems.filter(item => item.status === 'Anulado');
+
+        if (activeItems.length > 0) {
+            itemsToShow = activeItems;
+        } else if (annulledItems.length > 0) {
+            itemsToShow = annulledItems;
+        } else {
+            // Fallback to replaced or any other state if no active/annulled found
+            itemsToShow = allItems.filter(item => item.status === 'Reemplazado');
+        }
+        
+        if (itemsToShow.length === 0) {
+             // If all else fails (e.g. only replaced items exist but we filtered them out)
+             // show the most recent group by date. This is a safe fallback.
+             const lastDate = allItems.reduce((max, i) => i.date > max ? i.date : max, allItems[0].date);
+             itemsToShow = allItems.filter(i => i.date === lastDate);
+        }
+
+
+        const firstItem = itemsToShow[0];
         const match = firstItem.description.match(/Venta a (?<clientName>.*?) \(DNI: (?<clientDni>.*?)\)\. Factura: (?<invoiceNumber>.*)/);
 
         const salePayload = {
@@ -568,7 +590,7 @@ app.get('/api/sales/details', (req, res) => {
             clientName: match?.groups.clientName.trim() || 'N/A',
             clientDni: match?.groups.clientDni.trim() || 'N/A',
             invoiceNumber: match?.groups.invoiceNumber.trim() || 'N/A',
-            items: items.map(i => ({
+            items: itemsToShow.map(i => ({
                 productId: i.productId,
                 quantity: i.quantity,
                 unitPrice: i.unitPrice,
