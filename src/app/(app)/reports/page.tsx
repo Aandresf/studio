@@ -18,7 +18,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 
 import { ReportMetadata, ReportType, FullReport } from '@/lib/types';
 import { useBackendStatus } from '@/app/(app)/layout';
-import { getReports, createReport, getReportById } from '@/lib/api';
+import { getReports, createReport, getReportById, exportInventoryToExcel } from '@/lib/api';
 
 type OutputFormat = 'excel' | 'pdf';
 
@@ -33,6 +33,7 @@ export default function ReportsPage() {
     const [reports, setReports] = useState<ReportMetadata[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isExporting, setIsExporting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     
     const [selectedReportType, setSelectedReportType] = useState<ReportType | null>(null);
@@ -76,16 +77,28 @@ export default function ReportsPage() {
             toastError("Error de Validación", "Por favor, seleccione un tipo de informe y un rango de fechas.");
             return;
         }
-        
-        console.log(`Simulando generación de informe:
-        - Tipo: ${selectedReportType}
-        - Fechas: ${format(date.from, 'yyyy-MM-dd')} a ${format(date.to, 'yyyy-MM-dd')}
-        - Formato: ${outputFormat}`);
 
+        const startDate = format(date.from, 'yyyy-MM-dd');
+        const endDate = format(date.to, 'yyyy-MM-dd');
+
+        // Condición para la nueva funcionalidad de exportación
+        if (selectedReportType === 'INVENTORY' && outputFormat === 'excel') {
+            setIsExporting(true);
+            try {
+                await exportInventoryToExcel(startDate, endDate);
+                toastSuccess("Éxito", "La exportación a Excel ha comenzado. El archivo se descargará en breve.");
+                setIsGenerateModalOpen(false);
+            } catch (err) {
+                // El toast de error ya se maneja en la capa de API
+            } finally {
+                setIsExporting(false);
+            }
+            return; // Salir de la función después de exportar
+        }
+        
+        // Lógica existente para generar otros informes
         setIsSubmitting(true);
         try {
-            const startDate = format(date.from, 'yyyy-MM-dd');
-            const endDate = format(date.to, 'yyyy-MM-dd');
             await createReport(selectedReportType, startDate, endDate);
             toastSuccess("Éxito", "El informe se ha generado correctamente.");
             fetchReports(); // Refresh the list
@@ -221,8 +234,8 @@ export default function ReportsPage() {
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setIsGenerateModalOpen(false)}>Cancelar</Button>
-                        <Button onClick={handleGenerateReport} disabled={isSubmitting}>
-                            {isSubmitting ? 'Generando...' : 'Generar Informe'}
+                        <Button onClick={handleGenerateReport} disabled={isSubmitting || isExporting}>
+                            {isSubmitting ? 'Generando...' : isExporting ? 'Exportando...' : 'Generar Informe'}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

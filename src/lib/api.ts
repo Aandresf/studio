@@ -180,6 +180,64 @@ export const createReport = (type: ReportType, startDate: string, endDate: strin
     });
 };
 
+export const exportInventoryToExcel = async (startDate: string, endDate: string): Promise<void> => {
+    const url = `${API_BASE_URL}/reports/inventory-excel`;
+    console.log(`--- API Request (Excel Export) ---
+    URL: ${url}
+    Method: POST
+    Body: ${{ startDate, endDate }}
+    -------------------`);
+
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ startDate, endDate }),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            let errorData;
+            try {
+                errorData = JSON.parse(errorText);
+            } catch {
+                errorData = { error: 'El servidor respondió con un error inesperado durante la exportación.', details: errorText };
+            }
+            const errorMessage = errorData.error || `Error HTTP: ${response.status}`;
+            toastError("Error de Exportación", errorMessage);
+            throw new Error(errorMessage);
+        }
+
+        const blob = await response.blob();
+        const downloadUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        // Extraer el nombre del archivo de la cabecera Content-Disposition si existe, si não, usar uno por defecto.
+        const disposition = response.headers.get('content-disposition');
+        let filename = `reporte-inventario-${startDate}-a-${endDate}.xlsx`;
+        if (disposition && disposition.indexOf('attachment') !== -1) {
+            const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+            const matches = filenameRegex.exec(disposition);
+            if (matches != null && matches[1]) {
+                filename = matches[1].replace(/['"]/g, '');
+            }
+        }
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(downloadUrl);
+
+    } catch (error) {
+        if (!(error instanceof Error && error.message.includes('Error de Exportación'))) {
+            const message = error instanceof Error ? error.message : 'Ocurrió un error de red o de conexión.';
+            toastError("Error de Conexión", message);
+        }
+        throw error;
+    }
+};
+
+
 export const getReportById = (id: number): Promise<FullReport> => fetchAPI(`/reports/${id}`);
 
 // Settings API calls

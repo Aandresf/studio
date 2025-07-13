@@ -3,6 +3,7 @@ const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
 const sqlite3 = require('sqlite3').verbose();
+const { generateInventoryExcel } = require('./excel-generator.js');
 const { subDays, formatISO } = require('date-fns');
 
 const isTestEnv = process.env.NODE_ENV === 'test';
@@ -882,6 +883,88 @@ app.delete('/api/sales', async (req, res) => {
 
 
 // REPORTS
+app.post('/api/reports/inventory-excel', async (req, res) => {
+    const { startDate, endDate } = req.body;
+    console.log(`--- Solicitud de Reporte Excel de Inventario para ${startDate} a ${endDate} ---`);
+
+    const get = util.promisify(db.get.bind(db));
+    const all = util.promisify(db.all.bind(db));
+
+    try {
+        // 1. Obtener detalles de la tienda
+        const storeDetails = await new Promise((resolve, reject) => {
+            fs.readFile(path.join(__dirname, 'settings.json'), 'utf8', (err, data) => {
+                if (err) {
+                    if (err.code === 'ENOENT') return resolve({ name: "MI TIENDA", rif: "J-000000000" });
+                    return reject(err);
+                }
+                resolve(JSON.parse(data));
+            });
+        });
+
+        // 2. Obtener todos los productos
+        const products = await all("SELECT id, name, sku FROM products");
+
+        let inventoryData = [];
+
+        // 3. Para cada producto, calcular los datos del reporte
+        for (const product of products) {
+            // Existencia al inicio del período
+            const initialStockResult = await get(
+                `SELECT 
+                    SUM(CASE WHEN type = 'ENTRADA' THEN quantity ELSE -quantity END) as stock
+                 FROM inventory_movements 
+                 WHERE product_id = ? AND date(date) < ?`,
+                [product.id, startDate]
+            );
+            const existenciaAnterior = initialStockResult?.stock || 0;
+
+            // Movimientos dentro del período
+            const movements = await all(
+                `SELECT type, quantity, unit_cost FROM inventory_movements WHERE product_id = ? AND date(date) BETWEEN ? AND ?`,
+                [product.id, startDate, endDate]
+            );
+
+            const entradas = movements.filter(m => m.type === 'ENTRADA').reduce((sum, m) => sum + m.quantity, 0);
+            const salidas = movements.filter(m => m.type === 'SALIDA').reduce((sum, m) => sum + m.quantity, 0);
+            const retiros = movements.filter(m => m.type === 'RETIRO').reduce((sum, m) => sum + m.quantity, 0);
+            const autoconsumo = movements.filter(m => m.type === 'AUTO-CONSUMO').reduce((sum, m) => sum + m.quantity, 0);
+            
+            const existenciaActual = existenciaAnterior + entradas - salidas - retiros - autoconsumo;
+
+            // TODO: La lógica de valoración (costos) es compleja y se puede añadir después.
+            // Por ahora, usamos placeholders.
+            const valorUnitarioAnterior = 0;
+            const valorUnitarioActual = 0;
+            const valorPromedio = 0;
+
+            inventoryData.push({
+                code: product.sku || `P-${product.id}`,
+                description: product.name,
+                existenciaAnterior,
+                entradas,
+                salidas,
+                retiros,
+                autoconsumo,
+                existenciaActual,
+                valorUnitarioAnterior,
+                valorUnitarioActual,
+                valorPromedio
+            });
+        }
+
+        // 4. Llamar al generador de Excel
+        await generateInventoryExcel(res, storeDetails, inventoryData, startDate, endDate);
+
+    } catch (error) {
+        console.error('Error durante la obtención de datos para el reporte de Excel:', error);
+        if (!res.headersSent) {
+            res.status(500).json({ error: 'Error interno al obtener los datos para el reporte.' });
+        }
+    }
+});
+
+
 app.post('/api/reports/:type', (req, res) => {
     const { type } = req.params;
     const { startDate, endDate } = req.body;

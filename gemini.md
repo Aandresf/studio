@@ -162,3 +162,36 @@ La sección de **Compras** ha sido refactorizada y mejorada significativamente. 
 ### 5. Notificaciones
 
 *   Utilizar el sistema de notificaciones centralizado (`use-toast.tsx`) para todos los mensajes de éxito y error, asegurando consistencia visual y de comportamiento (temporizador de 5 segundos, iconos, etc.).
+---
+## Tarea Actual: Reporte de Inventario en Excel (Formato Fiscal)
+
+**Fecha:** 13 de Julio de 2025
+
+**Objetivo:** Implementar la capacidad de exportar el reporte de inventario a un archivo de Excel (`.xlsx`) con un formato específico que cumple con normativas fiscales, incluyendo encabezados de la empresa, estructura de tabla detallada y valores calculados.
+
+### Plan de Implementación por Fases
+
+1.  **Fase 1: Habilitar la Interfaz de Usuario (Frontend)**
+    *   Añadir un botón "Exportar a Excel" en la página de reportes.
+    *   Crear el estado de carga y las funciones controladoras (`handler`) necesarias para la nueva acción.
+    *   Implementar la función de llamada a la API en `lib/api.ts`.
+
+2.  **Fase 2: Crear Endpoint de Marcador de Posición (Backend)**
+    *   Instalar la dependencia `exceljs` en `src-backend`.
+    *   Crear el endpoint `POST /api/reports/inventory-excel`.
+    *   Inicialmente, este endpoint solo registrará en consola las fechas recibidas y devolverá un mensaje de éxito (`200 OK`) para verificar la conexión.
+
+3.  **Fase 3: Generación del Archivo Excel con Formato y Datos Estáticos (Backend)**
+    *   Modificar el endpoint para que utilice `exceljs`.
+    *   Construir la estructura del archivo Excel:
+        *   Añadir y fusionar celdas para el encabezado (Nombre de la empresa, RIF, Título del reporte).
+        *   Crear la fila de cabeceras de la tabla.
+        *   Aplicar estilos básicos (negrita, alineación).
+    *   Poblar la tabla con **datos estáticos (dummy data)** para simular el resultado final.
+    *   Configurar las cabeceras HTTP de la respuesta para que el navegador descargue el archivo `.xlsx` generado.
+
+4.  **Fase 4: Integración de Datos Reales (Backend)**
+    *   Reemplazar los datos estáticos con consultas reales a la base de datos.
+    *   Obtener los detalles de la tienda desde la tabla `store_settings`.
+    *   Para cada producto, calcular los valores requeridos (existencia anterior, entradas, salidas, etc.) consultando la tabla `inventory_movements` dentro del rango de fechas especificado.
+    *   Poblar el archivo Excel con los datos dinámicos obtenidos.
