@@ -1,61 +1,78 @@
-"use client";
+'use client';
 
 import * as React from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Calendar as CalendarIcon, PlusCircle, Trash2, History, XCircle } from 'lucide-react';
+import { Calendar as CalendarIcon, PlusCircle, Trash2, History, Loader2, ListRestart, Trash, XCircle } from 'lucide-react';
 
 import { useBackendStatus } from '@/app/(app)/layout';
+import { getProducts, createPurchase, updatePurchase, Product } from '@/lib/api';
+import { PurchasePayload, GroupedPurchase, PurchaseItemPayload } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { toastSuccess, toastError } from '@/hooks/use-toast';
+
+import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Combobox } from '@/components/ui/combobox';
-import { ProductDialog } from '@/components/dialogs/ProductDialog';
-import { PurchaseReceiptDialog } from '@/components/dialogs/PurchaseReceiptDialog';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { PurchaseHistoryDialog } from '@/components/dialogs/PurchaseHistoryDialog';
+import { PurchaseReceiptDialog } from '@/components/dialogs/PurchaseReceiptDialog';
 import { PurchaseConfirmationDialog } from '@/components/dialogs/PurchaseConfirmationDialog';
-import { Product, PurchasePayload, GroupedPurchase, PurchaseItemPayload } from '@/lib/types';
-import { createPurchase, getProducts, updatePurchase } from '@/lib/api';
-import { toastSuccess, toastError } from '@/hooks/use-toast';
+import { ProductDialog } from '@/components/dialogs/ProductDialog';
 
-interface PurchaseItem {
-  id: string; 
-  productId: string | null;
+interface CartItem {
+  id: string;
+  productId: number | null;
+  name: string;
   quantity: number;
   unitCost: number;
+  tax_rate: number;
 }
 
-const createEmptyItem = (): PurchaseItem => ({
+interface PendingPurchase {
+    id: string;
+    cart: CartItem[];
+    date: Date;
+    supplier: string;
+    invoiceNumber: string;
+    createdAt: Date;
+}
+
+const createEmptyCartItem = (): CartItem => ({
     id: `temp-${Date.now()}-${Math.random()}`,
     productId: null,
+    name: '',
     quantity: 1,
-    unitCost: 0
+    unitCost: 0,
+    tax_rate: 0,
 });
 
 export default function PurchasesPage() {
     const [date, setDate] = React.useState<Date>(new Date());
     const [supplier, setSupplier] = React.useState('');
     const [invoiceNumber, setInvoiceNumber] = React.useState('');
+    
     const [products, setProducts] = React.useState<Product[]>([]);
-    const [purchaseItems, setPurchaseItems] = React.useState<PurchaseItem[]>([createEmptyItem()]);
+    const [cart, setCart] = React.useState<CartItem[]>([createEmptyCartItem()]);
     
     const [isLoading, setIsLoading] = React.useState(false);
     const [isLoadingProducts, setIsLoadingProducts] = React.useState(true);
-    const [isProductDialogOpen, setIsProductDialogOpen] = React.useState(false);
-    const [productDialogInitialData, setProductDialogInitialData] = React.useState<Partial<Product> | null>(null);
     const [openComboboxIndex, setOpenComboboxIndex] = React.useState<number | null>(null);
 
-    const [isReceiptOpen, setIsReceiptOpen] = React.useState(false);
+    const [pendingPurchases, setPendingPurchases] = React.useState<PendingPurchase[]>([]);
     const [isHistoryOpen, setIsHistoryOpen] = React.useState(false);
+    const [isReceiptOpen, setIsReceiptOpen] = React.useState(false);
     const [isConfirmationOpen, setIsConfirmationOpen] = React.useState(false);
-    const [lastPurchase, setLastPurchase] = React.useState<PurchasePayload | null>(null);
     const [consolidatedItems, setConsolidatedItems] = React.useState<(PurchaseItemPayload & { productName: string })[]>([]);
-    
+    const [lastPurchase, setLastPurchase] = React.useState<PurchasePayload | null>(null);
     const [editingMovementIds, setEditingMovementIds] = React.useState<number[] | null>(null);
+    const [isProductDialogOpen, setIsProductDialogOpen] = React.useState(false);
+    const [productDialogInitialData, setProductDialogInitialData] = React.useState<Partial<Product> | null>(null);
 
     const { isBackendReady, refetchKey, triggerRefetch } = useBackendStatus();
 
@@ -65,87 +82,72 @@ export default function PurchasesPage() {
             setIsLoadingProducts(true);
             try {
                 setProducts(await getProducts());
-            } catch (error) {
-                // Error is handled by the API layer
-            } finally {
+            } catch (error) {} finally {
                 setIsLoadingProducts(false);
             }
         };
         fetchProducts();
     }, [isBackendReady, refetchKey]);
 
-    const generateNextSku = () => {
-        if (products.length === 0) return '1';
-        const maxSku = products.reduce((max, p) => {
-            const skuNumber = parseInt(p.sku || '0', 10);
-            return !isNaN(skuNumber) && skuNumber > max ? skuNumber : max;
-        }, 0);
-        return (maxSku + 1).toString();
-    };
-
-    const productOptions = React.useMemo(() => products.map(p => ({ value: String(p.id), label: `(${p.sku}) ${p.name}` })), [products]);
-
-    const handleItemChange = (index: number, field: keyof Omit<PurchaseItem, 'id'>, value: any) => {
-        const newItems = [...purchaseItems];
-        const item = newItems[index];
-        
-        if (field === 'productId') {
-            const selectedProduct = products.find(p => String(p.id) === value);
-            item.productId = value;
-            item.unitCost = selectedProduct?.price ?? 0;
-        } else {
-            item[field as 'quantity' | 'unitCost'] = Number(value);
-        }
-        setPurchaseItems(newItems);
-    };
-
-    const addPurchaseItem = () => {
-        setPurchaseItems(prevItems => [...prevItems, createEmptyItem()]);
-        setOpenComboboxIndex(purchaseItems.length);
-    };
-
-    const removePurchaseItem = (index: number) => {
-        setPurchaseItems(purchaseItems.filter((_, i) => i !== index));
-    };
+    const productMap = React.useMemo(() => new Map(products.map(p => [p.id, p])), [products]);
+    
+    const productOptions = React.useMemo(() => 
+        products.map(p => ({ 
+            value: String(p.id), 
+            label: `(${p.sku || 'N/A'}) ${p.name}`
+        })), 
+    [products]);
 
     const resetForm = () => {
         setDate(new Date());
         setSupplier('');
         setInvoiceNumber('');
-        setPurchaseItems([createEmptyItem()]);
+        setCart([createEmptyCartItem()]);
         setOpenComboboxIndex(null);
         setEditingMovementIds(null);
     };
 
-    const handleOpenNewProductDialog = () => {
-        setProductDialogInitialData({
-            name: '',
-            price: 0,
-            stock: 0,
-            status: 'Activo',
-            sku: generateNextSku(),
-        });
-        setIsProductDialogOpen(true);
+    const handleCartItemChange = (index: number, field: keyof Omit<CartItem, 'id' | 'name' | 'tax_rate'>, value: any) => {
+        const newItems = [...cart];
+        const item = newItems[index];
+        
+        if (field === 'productId') {
+            const selectedProduct = productMap.get(Number(value));
+            if (selectedProduct) {
+                item.productId = selectedProduct.id;
+                item.name = selectedProduct.name;
+                item.unitCost = selectedProduct.price;
+                item.tax_rate = selectedProduct.tax_rate;
+            }
+        } else {
+            item[field as 'quantity' | 'unitCost'] = Number(value);
+        }
+        setCart(newItems);
+    };
+
+    const addCartItem = () => {
+        setCart(prevItems => [...prevItems, createEmptyCartItem()]);
+        setOpenComboboxIndex(cart.length);
+    };
+
+    const removeCartItem = (index: number) => {
+        setCart(cart.filter((_, i) => i !== index));
     };
 
     const handleOpenConfirmation = () => {
-        // 1. Consolidate items
-        const itemMap = new Map<string, PurchaseItemPayload & { productName: string }>();
-        const productInfoMap = new Map(products.map(p => [String(p.id), p]));
+        const itemMap = new Map<number, PurchaseItemPayload & { productName: string }>();
 
-        purchaseItems
+        cart
             .filter(item => item.productId !== null)
             .forEach(item => {
-                const productIdStr = item.productId!;
-                if (itemMap.has(productIdStr)) {
-                    const existing = itemMap.get(productIdStr)!;
+                const productId = item.productId!;
+                if (itemMap.has(productId)) {
+                    const existing = itemMap.get(productId)!;
                     existing.quantity += item.quantity;
-                    // NOTE: We keep the unitCost of the *first* item encountered.
                 } else {
-                    const product = productInfoMap.get(productIdStr);
-                    itemMap.set(productIdStr, {
-                        productId: Number(productIdStr),
-                        productName: product?.name || 'Desconocido',
+                    itemMap.set(productId, {
+                        productId: productId,
+                        productName: item.name,
                         quantity: item.quantity,
                         unitCost: item.unitCost,
                     });
@@ -157,13 +159,14 @@ export default function PurchasesPage() {
         setIsConfirmationOpen(true);
     };
 
-    const handleConfirmPurchase = async () => {
+    const handleFormSubmit = async () => {
         setIsLoading(true);
+        
         const purchasePayload: PurchasePayload = {
             date: date.toISOString(),
             supplier: supplier || undefined,
             invoiceNumber: invoiceNumber || undefined,
-            items: consolidatedItems.map(({ productName, ...item }) => item), // Remove productName before sending
+            items: consolidatedItems.map(({ productName, ...item }) => item),
         };
 
         try {
@@ -178,8 +181,8 @@ export default function PurchasesPage() {
             setIsReceiptOpen(true);
             triggerRefetch();
             resetForm();
+            setIsHistoryOpen(false);
         } catch (error) {
-            // API layer handles toast, so no need to call toastError here
         } finally {
             setIsLoading(false);
             setIsConfirmationOpen(false);
@@ -187,126 +190,269 @@ export default function PurchasesPage() {
     };
 
     const handleEditPurchase = (purchase: GroupedPurchase) => {
-        const productMap = new Map(products.map(p => [p.name, p.id]));
-        
+        const productInfoMap = new Map(products.map(p => [p.name, p]));
+
         setDate(new Date(purchase.date));
         setSupplier(purchase.supplier);
         setInvoiceNumber(purchase.invoiceNumber);
-        setPurchaseItems(purchase.movements.map(m => ({
-            id: `edit-${m.id}`,
-            productId: String(productMap.get(m.productName) || 0),
-            quantity: m.quantity,
-            unitCost: m.unit_cost,
-        })));
+        setCart(purchase.movements.map(m => {
+            const product = productInfoMap.get(m.productName);
+            return {
+                id: `edit-${m.id}`,
+                productId: product?.id || null,
+                name: m.productName,
+                quantity: m.quantity,
+                unitCost: m.unit_cost,
+                tax_rate: product?.tax_rate || 0,
+            };
+        }));
         setEditingMovementIds(purchase.movements.map(m => m.id));
         setIsHistoryOpen(false);
     };
 
     const handleViewReceiptFromHistory = (purchase: GroupedPurchase) => {
-        const productMap = new Map(products.map(p => [p.name, p.id]));
+        const productInfoMap = new Map(products.map(p => [p.name, p]));
         const payload: PurchasePayload = {
             date: purchase.date,
             supplier: purchase.supplier,
             invoiceNumber: purchase.invoiceNumber,
-            items: purchase.movements.map(m => ({ productId: productMap.get(m.productName) || 0, quantity: m.quantity, unitCost: m.unit_cost }))
+            items: purchase.movements.map(m => ({ 
+                productId: productInfoMap.get(m.productName) || 0, 
+                quantity: m.quantity, 
+                unitCost: m.unit_cost 
+            }))
         };
         setLastPurchase(payload);
         setIsReceiptOpen(true);
     };
 
+    const handleHoldPurchase = () => {
+        if (cart.every(item => item.productId === null)) {
+            toastError("Compra Vacía", "No puedes poner en espera una compra sin productos.");
+            return;
+        }
+        const newPendingPurchase: PendingPurchase = { id: `pending-${Date.now()}`, cart, date, supplier, invoiceNumber, createdAt: new Date() };
+        setPendingPurchases(prev => [...prev, newPendingPurchase]);
+        toastSuccess("Compra en Espera", "La compra actual se ha movido a la lista de espera.");
+        resetForm();
+    };
+
+    const handleRestorePurchase = (purchaseToRestore: PendingPurchase) => {
+        setCart(purchaseToRestore.cart);
+        setDate(purchaseToRestore.date);
+        setSupplier(purchaseToRestore.supplier);
+        setInvoiceNumber(purchaseToRestore.invoiceNumber);
+        setPendingPurchases(prev => prev.filter(p => p.id !== purchaseToRestore.id));
+        toastSuccess("Compra Restaurada", "La compra ha sido cargada en el formulario.");
+    };
+
+    const handleRemovePendingPurchase = (id: string) => {
+        setPendingPurchases(prev => prev.filter(p => p.id !== id));
+    };
+
+    const handleOpenNewProductDialog = () => {
+        const generateNextSku = () => {
+            if (products.length === 0) return '1';
+            const maxSku = products.reduce((max, p) => {
+                const skuNumber = parseInt(p.sku || '0', 10);
+                return !isNaN(skuNumber) && skuNumber > max ? skuNumber : max;
+            }, 0);
+            return (maxSku + 1).toString();
+        };
+        setProductDialogInitialData({
+            name: '',
+            price: 0,
+            stock: 0,
+            status: 'Activo',
+            sku: generateNextSku(),
+        });
+        setIsProductDialogOpen(true);
+    };
+
     const handleProductSaved = (savedProduct: Product) => {
-        // First, add the new product to the local state to avoid race conditions
         setProducts(currentProducts => [...currentProducts, savedProduct]);
-
-        // Now, update the purchase items list
-        const newItems = [...purchaseItems];
+        const newItems = [...cart];
         const firstEmptyIndex = newItems.findIndex(item => item.productId === null);
-
         const newItemLine = {
             id: `temp-${Date.now()}`,
-            productId: String(savedProduct.id),
-            quantity: 1, // Default to 1
+            productId: savedProduct.id,
+            name: savedProduct.name,
+            quantity: 1,
             unitCost: savedProduct.price ?? 0,
+            tax_rate: savedProduct.tax_rate ?? 0,
         };
-
         if (firstEmptyIndex !== -1) {
             newItems[firstEmptyIndex] = newItemLine;
-            setPurchaseItems(newItems);
+            setCart(newItems);
         } else {
-            setPurchaseItems(prev => [...prev, newItemLine]);
+            setCart(prev => [...prev, newItemLine]);
         }
-        
         toastSuccess("Producto Guardado", `El producto "${savedProduct.name}" ha sido añadido a la compra.`);
         setIsProductDialogOpen(false);
-        // We can still trigger a refetch for long-term consistency if needed, but it's not critical for the UI
         triggerRefetch(); 
     };
 
-    const isSubmitDisabled = purchaseItems.some(item => !item.productId || item.quantity <= 0) || isLoading;
+    const subtotal = cart.reduce((acc, item) => acc + item.quantity * item.unitCost, 0);
+    const totalTaxes = cart.reduce((acc, item) => acc + (item.quantity * item.unitCost * (item.tax_rate / 100)), 0);
+    const total = subtotal + totalTaxes;
+
+    const isSubmitDisabled = cart.some(item => !item.productId || item.quantity <= 0) || isLoading;
+
+    const renderComboboxHeader = () => (
+        <div className="grid grid-cols-12 gap-4 px-3 py-2 text-xs font-semibold text-muted-foreground bg-muted">
+            <div className="col-span-2 text-center">Código</div>
+            <div className="col-span-4 text-center">Producto</div>
+            <div className="col-span-2 text-right">Stock</div>
+            <div className="col-span-2 text-right">Costo</div>
+            <div className="col-span-2 text-right">IVA</div>
+        </div>
+    );
+
+    const renderComboboxOption = (option: { value: string; label: string }) => {
+        const product = productMap.get(Number(option.value));
+        if (!product) return <div>{option.label}</div>;
+        return (
+            <div className="grid grid-cols-12 gap-4 w-full text-sm">
+                <div className="col-span-2 font-mono text-xs text-center">{product.sku || 'N/A'}</div>
+                <div className="col-span-4 truncate" title={product.name}>{product.name}</div>
+                <div className="col-span-2 text-right">{product.stock}</div>
+                <div className="col-span-2 text-right">${product.price.toFixed(2)}</div>
+                <div className="col-span-2 text-right">{product.tax_rate.toFixed(2)}%</div>
+            </div>
+        );
+    };
 
     return (
-        <>
-            <div className="flex flex-col gap-6">
-                <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                        <h1 className="font-semibold text-lg md:text-2xl">Compras</h1>
-                        <p className="text-sm text-muted-foreground">{editingMovementIds ? `Editando compra de ${supplier}` : "Registra nuevas órdenes de compra."}</p>
-                    </div>
-                    <Button variant="outline" onClick={() => setIsHistoryOpen(true)} disabled={editingMovementIds !== null}>
-                        <History className="mr-2 h-4 w-4" />
-                        Historial
-                    </Button>
+        <TooltipProvider>
+        <div className="flex flex-col gap-6">
+            <div className="flex items-center justify-between">
+                <div className="flex-1">
+                    <h1 className="font-semibold text-lg md:text-2xl">Compras</h1>
+                    <p className="text-sm text-muted-foreground">{editingMovementIds ? `Editando compra a ${supplier}` : "Registra nuevas órdenes de compra."}</p>
                 </div>
-                <Card>
-                    <CardHeader>
-                        <CardTitle>{editingMovementIds ? "Editar Orden de Compra" : "Nueva Orden de Compra"}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                    <div className="grid gap-6 md:grid-cols-3">
-                        <div className="grid gap-3"><Label htmlFor="supplier">Proveedor</Label><Input id="supplier" value={supplier} onChange={e => setSupplier(e.target.value)} /></div>
-                        <div className="grid gap-3"><Label htmlFor="invoice-number">Nº de Factura</Label><Input id="invoice-number" value={invoiceNumber} onChange={e => setInvoiceNumber(e.target.value)} /></div>
-                        <div className="grid gap-3"><Label>Fecha de Compra</Label><Popover><PopoverTrigger asChild><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{date ? format(date, "PPP", { locale: es }) : <span>Seleccione una fecha</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={date} onSelect={(d) => setDate(d || new Date())} initialFocus /></PopoverContent></Popover></div>
-                    </div>
-                    <div className="mt-6">
-                        <Label>Productos</Label>
-                        <div className="mt-2 grid gap-4 border p-4 rounded-md">
-                            {purchaseItems.map((item, index) => (
-                                <div key={item.id} className="flex items-end gap-4">
-                                    <div className="flex-1"><Label htmlFor={`product-${index}`}>Producto</Label><Combobox open={openComboboxIndex === index} onOpenChange={(isOpen) => setOpenComboboxIndex(isOpen ? index : null)} options={productOptions} value={item.productId ?? ''} onChange={(value) => { handleItemChange(index, 'productId', value); setOpenComboboxIndex(null); }} placeholder={isLoadingProducts ? "Cargando..." : "Seleccionar..."} searchPlaceholder="Buscar..." emptyMessage="No hay productos." disabled={isLoadingProducts} /></div>
-                                    <div className="w-24"><Label htmlFor={`quantity-${index}`}>Cantidad</Label><Input id={`quantity-${index}`} type="number" value={item.quantity} onChange={(e) => handleItemChange(index, 'quantity', e.target.value)} min="1" /></div>
-                                    <div className="w-32"><Label htmlFor={`cost-${index}`}>Costo Unitario</Label><Input id={`cost-${index}`} type="number" value={item.unitCost} onChange={(e) => handleItemChange(index, 'unitCost', e.target.value)} min="0" /></div>
-                                    <Button variant="outline" size="icon" className="text-muted-foreground" onClick={() => removePurchaseItem(index)} disabled={purchaseItems.length <= 1}><Trash2 className="h-4 w-4"/></Button>
-                                </div>
-                            ))}
-                        </div>
-                        <div className="flex items-center gap-2 mt-4">
-                            <Button size="sm" className="gap-1" onClick={addPurchaseItem}><PlusCircle className="h-3.5 w-3.5" />Añadir Producto</Button>
-                            <Button variant="outline" size="sm" className="gap-1" onClick={handleOpenNewProductDialog}><PlusCircle className="h-3.5 w-3.5" />Crear Producto</Button>
-                        </div>
-                    </div>
-                    <div className="mt-6 flex justify-end gap-2">
-                        {editingMovementIds && (<Button variant="ghost" onClick={resetForm}><XCircle className="mr-2 h-4 w-4" />Cancelar Edición</Button>)}
-                        <Button onClick={handleOpenConfirmation} disabled={isSubmitDisabled}>{isLoading ? (editingMovementIds ? "Guardando..." : "Registrando...") : (editingMovementIds ? "Guardar Cambios" : "Registrar Compra")}</Button>
-                    </div>
-                    </CardContent>
-                </Card>
+                <Button variant="outline" onClick={() => setIsHistoryOpen(true)} disabled={editingMovementIds !== null}>
+                    <History className="mr-2 h-4 w-4" />
+                    Historial
+                </Button>
             </div>
-            <ProductDialog 
-                open={isProductDialogOpen} 
-                onOpenChange={setIsProductDialogOpen} 
-                product={productDialogInitialData} 
-                onProductSaved={handleProductSaved} 
-                generateSku={generateNextSku}
-            />
-            <PurchaseHistoryDialog open={isHistoryOpen} onOpenChange={setIsHistoryOpen} onViewReceipt={handleViewReceiptFromHistory} onEditPurchase={handleEditPurchase} />
-            <PurchaseReceiptDialog open={isReceiptOpen} onOpenChange={setIsReceiptOpen} purchase={lastPurchase} products={products} />
-            <PurchaseConfirmationDialog 
-                open={isConfirmationOpen} 
-                onOpenChange={setIsConfirmationOpen}
-                purchaseItems={consolidatedItems}
-                onConfirm={handleConfirmPurchase}
-                isSaving={isLoading}
-            />
-        </>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+                <div className="lg:col-span-2 space-y-6">
+                    <Card>
+                        <CardHeader><CardTitle>{editingMovementIds ? "Editar Orden de Compra" : "Nueva Orden de Compra"}</CardTitle></CardHeader>
+                        <CardContent>
+                        <div className="grid gap-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="grid gap-2"><Label htmlFor="supplier">Proveedor</Label><Input id="supplier" value={supplier} onChange={e => setSupplier(e.target.value)} placeholder="Nombre del proveedor" /></div>
+                            </div>
+                            <div>
+                                <div className="grid grid-cols-12 gap-2 items-center mb-2 px-1">
+                                    <div className="col-span-12 md:col-span-6"><Label className="text-sm font-medium">Producto</Label></div>
+                                    <div className="col-span-4 md:col-span-2"><Label className="text-sm font-medium">Cantidad</Label></div>
+                                    <div className="col-span-4 md:col-span-2"><Label className="text-sm font-medium">Costo Unit.</Label></div>
+                                    <div className="col-span-4 md:col-span-2"><Label className="text-sm font-medium text-right w-full pr-2">Acción</Label></div>
+                                </div>
+                                <div className="grid gap-4 border p-4 rounded-md">
+                                    {cart.map((item, index) => (
+                                        <div key={item.id} className="grid grid-cols-12 gap-2 items-end">
+                                            <div className="col-span-12 md:col-span-6">
+                                                <Combobox 
+                                                    open={openComboboxIndex === index} 
+                                                    onOpenChange={(isOpen) => setOpenComboboxIndex(isOpen ? index : null)} 
+                                                    options={productOptions} 
+                                                    value={item.productId ? String(item.productId) : ''} 
+                                                    onChange={(value) => { handleCartItemChange(index, 'productId', value); setOpenComboboxIndex(null); }} 
+                                                    placeholder={isLoadingProducts ? "Cargando..." : "Seleccionar..."} 
+                                                    searchPlaceholder="Buscar por código o nombre..." 
+                                                    emptyMessage="No hay productos." 
+                                                    disabled={isLoadingProducts}
+                                                    popoverClassName="w-[700px]"
+                                                    align="start"
+                                                    sideOffset={10}
+                                                    renderHeader={renderComboboxHeader}
+                                                    renderOption={renderComboboxOption}
+                                                />
+                                            </div>
+                                            <div className="col-span-4 md:col-span-2"><Input type="number" value={item.quantity} onChange={(e) => handleCartItemChange(index, 'quantity', e.target.value)} min="1" /></div>
+                                            <div className="col-span-4 md:col-span-2"><Input type="number" value={item.unitCost} onChange={(e) => handleCartItemChange(index, 'unitCost', e.target.value)} min="0" /></div>
+                                            <div className="col-span-4 md:col-span-2 flex justify-end"><Button variant="outline" size="icon" className="text-muted-foreground" onClick={() => removeCartItem(index)} disabled={cart.length <= 1}><Trash2 className="h-4 w-4"/></Button></div>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="flex items-center gap-2 mt-4">
+                                    <Button size="sm" className="gap-1" onClick={addCartItem}><PlusCircle className="h-3.5 w-3.5" />Añadir Producto</Button>
+                                    <Button variant="outline" size="sm" className="gap-1" onClick={handleOpenNewProductDialog}><PlusCircle className="h-3.5 w-3.5" />Crear Producto</Button>
+                                </div>
+                            </div>
+                        </div>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                <div className="space-y-6">
+                    <Card>
+                        <CardHeader><CardTitle>Configuración</CardTitle></CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="grid gap-2"><Label>Fecha de Compra</Label><Popover><PopoverTrigger asChild><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{date ? format(date, "PPP", { locale: es }) : <span>Seleccione fecha</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={date} onSelect={(d) => setDate(d || new Date())} initialFocus /></PopoverContent></Popover></div>
+                            <div className="grid gap-2"><Label htmlFor="invoiceNumber">Nº de Factura</Label><Input id="invoiceNumber" value={invoiceNumber} onChange={e => setInvoiceNumber(e.target.value)} placeholder="Opcional" /></div>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader><CardTitle>Resumen de Compra</CardTitle></CardHeader>
+                        <CardContent className="grid gap-4">
+                            <div className="flex justify-between"><span>Subtotal</span><span>${subtotal.toFixed(2)}</span></div>
+                            <div className="flex justify-between"><span>Impuestos</span><span>${totalTaxes.toFixed(2)}</span></div>
+                            <Separator />
+                            <div className="flex justify-between font-semibold text-lg"><span>Total</span><span>${total.toFixed(2)}</span></div>
+                        </CardContent>
+                    </Card>
+
+                    <div className="flex flex-col gap-2">
+                         <Button onClick={handleOpenConfirmation} disabled={isSubmitDisabled} size="lg">
+                            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            {isLoading ? "Procesando..." : (editingMovementIds ? "Guardar Cambios" : "Registrar Compra")}
+                        </Button>
+                        {editingMovementIds && (<Button variant="ghost" onClick={resetForm}><XCircle className="mr-2 h-4 w-4" />Cancelar Edición</Button>)}
+                        <Button variant="secondary" onClick={handleHoldPurchase} disabled={editingMovementIds !== null}>Poner en Espera</Button>
+                    </div>
+
+                    {pendingPurchases.length > 0 && (
+                        <Card>
+                            <CardHeader><CardTitle>Compras en Espera</CardTitle><CardDescription>Restaura o elimina las compras pendientes.</CardDescription></CardHeader>
+                            <CardContent className="space-y-4">
+                                {pendingPurchases.map((purchase) => (
+                                    <div key={purchase.id} className="flex items-center justify-between p-2 border rounded-lg">
+                                        <div>
+                                            <p className="font-medium">{purchase.supplier || "Proveedor General"}</p>
+                                            <p className="text-sm text-muted-foreground">{purchase.cart.length} producto(s) - {format(purchase.createdAt, "p", { locale: es })}</p>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Tooltip><TooltipTrigger asChild><Button variant="outline" size="icon" onClick={() => handleRestorePurchase(purchase)}><ListRestart className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent><p>Restaurar</p></TooltipContent></Tooltip>
+                                            <Tooltip><TooltipTrigger asChild><Button variant="destructive" size="icon" onClick={() => handleRemovePendingPurchase(purchase.id)}><Trash className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent><p>Eliminar</p></TooltipContent></Tooltip>
+                                        </div>
+                                    </div>
+                                ))}
+                            </CardContent>
+                        </Card>
+                    )}
+                </div>
+            </div>
+        </div>
+        <ProductDialog 
+            open={isProductDialogOpen} 
+            onOpenChange={setIsProductDialogOpen} 
+            product={productDialogInitialData} 
+            onProductSaved={handleProductSaved} 
+        />
+        <PurchaseHistoryDialog open={isHistoryOpen} onOpenChange={setIsHistoryOpen} onViewReceipt={handleViewReceiptFromHistory} onEditPurchase={handleEditPurchase} />
+        <PurchaseReceiptDialog open={isReceiptOpen} onOpenChange={setIsReceiptOpen} purchase={lastPurchase} products={products} />
+        <PurchaseConfirmationDialog 
+            open={isConfirmationOpen} 
+            onOpenChange={setIsConfirmationOpen}
+            purchaseItems={consolidatedItems}
+            onConfirm={handleFormSubmit}
+            isSaving={isLoading}
+        />
+        </TooltipProvider>
     )
 }
