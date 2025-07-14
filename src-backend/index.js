@@ -959,17 +959,15 @@ app.post('/api/reports/inventory-excel', async (req, res) => {
 
         // 3. Para cada producto, calcular los datos del reporte
         for (const product of products) {
-            // Existencia al inicio del período
+            // --- CÁLCULO DE UNIDADES ---
             const initialStockResult = await get(
-                `SELECT 
-                    SUM(CASE WHEN type = 'ENTRADA' THEN quantity ELSE -quantity END) as stock
+                `SELECT SUM(CASE WHEN type = 'ENTRADA' THEN quantity ELSE -quantity END) as stock
                  FROM inventory_movements 
                  WHERE product_id = ? AND date(transaction_date) < ?`,
                 [product.id, startDate]
             );
             const existenciaAnterior = initialStockResult?.stock || 0;
 
-            // Movimientos dentro del período
             const movements = await all(
                 `SELECT type, quantity, unit_cost FROM inventory_movements WHERE product_id = ? AND date(transaction_date) BETWEEN ? AND ?`,
                 [product.id, startDate, endDate]
@@ -979,14 +977,40 @@ app.post('/api/reports/inventory-excel', async (req, res) => {
             const salidas = movements.filter(m => m.type === 'SALIDA').reduce((sum, m) => sum + m.quantity, 0);
             const retiros = movements.filter(m => m.type === 'RETIRO').reduce((sum, m) => sum + m.quantity, 0);
             const autoconsumo = movements.filter(m => m.type === 'AUTO-CONSUMO').reduce((sum, m) => sum + m.quantity, 0);
-            
             const existenciaActual = existenciaAnterior + entradas - salidas - retiros - autoconsumo;
 
-            // TODO: La lógica de valoración (costos) es compleja y se puede añadir después.
-            // Por ahora, usamos placeholders.
-            const valorUnitarioAnterior = 0;
-            const valorUnitarioActual = 0;
-            const valorPromedio = 0;
+            // --- CÁLCULO DE VALORES MONETARIOS ---
+            const lastCostBeforePeriod = await get(
+                `SELECT average_cost FROM products 
+                 WHERE id = ?`, // Se asume que el costo promedio actual es una buena aproximación para el anterior
+                [product.id]
+            );
+            const valorUnitarioAnterior = lastCostBeforePeriod?.average_cost || 0;
+            const valorExistenciaAnterior = existenciaAnterior * valorUnitarioAnterior;
+
+            const valorEntradas = movements
+                .filter(m => m.type === 'ENTRADA')
+                .reduce((sum, m) => sum + (m.quantity * m.unit_cost), 0);
+            
+            const valorSalidas = movements
+                .filter(m => m.type === 'SALIDA')
+                .reduce((sum, m) => sum + (m.quantity * m.unit_cost), 0);
+
+            const valorRetiros = movements
+                .filter(m => m.type === 'RETIRO')
+                .reduce((sum, m) => sum + (m.quantity * m.unit_cost), 0);
+            
+            const valorAutoconsumo = movements
+                .filter(m => m.type === 'AUTO-CONSUMO')
+                .reduce((sum, m) => sum + (m.quantity * m.unit_cost), 0);
+
+            // --- CÁLCULO DEL VALOR PROMEDIO DEL PERÍODO ---
+            const valorPromedio = (entradas > 0) ? (valorEntradas / entradas) : valorUnitarioAnterior;
+
+            // Obtener el costo promedio más reciente para valorar la existencia actual
+            const currentProductInfo = await get(`SELECT average_cost FROM products WHERE id = ?`, [product.id]);
+            const valorUnitarioActual = currentProductInfo?.average_cost || 0;
+            const valorExistenciaActual = existenciaActual * valorUnitarioActual;
 
             inventoryData.push({
                 code: product.sku || `P-${product.id}`,
@@ -998,8 +1022,14 @@ app.post('/api/reports/inventory-excel', async (req, res) => {
                 autoconsumo,
                 existenciaActual,
                 valorUnitarioAnterior,
+                valorExistenciaAnterior,
+                valorEntradas,
+                valorSalidas,
+                valorRetiros,
+                valorAutoconsumo,
                 valorUnitarioActual,
-                valorPromedio
+                valorExistenciaActual,
+                valorPromedio // Añadido el valor calculado
             });
         }
 

@@ -108,9 +108,9 @@ async function generateInventoryExcel(res, storeDetails, inventoryData, startDat
         subHeaderRow.eachCell((cell) => { cell.style = headerStyle; });
         
         // --- Añadir Datos Dinámicos ---
-        inventoryData.forEach(item => {
+        inventoryData.forEach((item, index) => {
             const row = worksheet.addRow([
-                item.code,
+                index + 1, // N°
                 item.description,
                 item.existenciaAnterior,
                 item.entradas,
@@ -120,13 +120,13 @@ async function generateInventoryExcel(res, storeDetails, inventoryData, startDat
                 item.existenciaActual,
                 item.valorUnitarioAnterior,
                 item.valorUnitarioActual,
-                item.valorPromedio,
-                0, // Existencia Anterior (valor) - Placeholder
-                0, // Entradas (valor) - Placeholder
-                0, // Salidas (valor) - Placeholder
-                0, // Retiros (valor) - Placeholder
-                0, // Auto-Consumo (valor) - Placeholder
-                0  // Existencia Actual (valor) - Placeholder
+                item.valorPromedio, // Este campo no se calcula, se puede dejar o quitar
+                item.valorExistenciaAnterior,
+                item.valorEntradas,
+                item.valorSalidas,
+                item.valorRetiros,
+                item.valorAutoconsumo,
+                item.valorExistenciaActual
             ]);
             
             row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
