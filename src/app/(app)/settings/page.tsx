@@ -5,16 +5,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTheme } from "@/components/theme-provider";
-import { Download, Upload, PlusCircle, Trash2 } from "lucide-react";
+import { Download, Upload, Trash2 } from "lucide-react";
 import { useBackendStatus } from '@/app/(app)/layout';
-import { getStores, createStore, setActiveStore, getStoreDetails, updateStoreDetails, deleteStore } from '@/lib/api';
+import { getStores, getStoreDetails, updateStoreDetails, deleteStore } from '@/lib/api';
 import { toastSuccess, toastError } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 
 interface Store {
   id: string;
@@ -26,6 +26,11 @@ interface StoreDetails {
   name?: string;
   rif?: string;
   address?: string;
+  advanced?: {
+    allowNegativeStock?: boolean;
+    allowSellBelowCost?: boolean;
+    showOutOfStockProducts?: boolean;
+  }
 }
 
 function DangerZone({ activeStoreId, stores, onStoreDeleted }: { activeStoreId: string, stores: Store[], onStoreDeleted: () => void }) {
@@ -148,6 +153,16 @@ export default function SettingsPage() {
     setStoreDetails(prev => ({ ...prev, [id]: value }));
   };
 
+  const handleAdvancedChange = (id: keyof NonNullable<StoreDetails['advanced']>, checked: boolean) => {
+    setStoreDetails(prev => ({
+        ...prev,
+        advanced: {
+            ...prev.advanced,
+            [id]: checked
+        }
+    }));
+  };
+
   const handleSaveChanges = async () => {
     if (!activeStoreId) return;
     setIsSaving(true);
@@ -177,6 +192,7 @@ export default function SettingsPage() {
         <TabsList>
           <TabsTrigger value="stores">Tiendas</TabsTrigger>
           <TabsTrigger value="appearance">Apariencia</TabsTrigger>
+          <TabsTrigger value="advanced">Avanzados</TabsTrigger>
           <TabsTrigger value="miscellaneous">Misceláneos</TabsTrigger>
         </TabsList>
         <TabsContent value="stores">
@@ -231,6 +247,73 @@ export default function SettingsPage() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+        <TabsContent value="advanced">
+            <Card>
+                <CardHeader>
+                    <CardTitle>Configuraciones Avanzadas</CardTitle>
+                    <CardDescription>
+                        Modifica las reglas y restricciones de la aplicación. Usar con precaución.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    <div className="flex items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                            <Label htmlFor="allowNegativeStock" className="text-base">Permitir Stock Negativo</Label>
+                            <p className="text-sm text-muted-foreground">
+                                Permite completar ventas aunque el stock del producto sea insuficiente.
+                            </p>
+                        </div>
+                        <Switch
+                            id="allowNegativeStock"
+                            checked={storeDetails.advanced?.allowNegativeStock || false}
+                            onCheckedChange={(checked) => handleAdvancedChange('allowNegativeStock', checked)}
+                        />
+                    </div>
+                    <div className="flex items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                            <Label htmlFor="allowSellBelowCost" className="text-base">Permitir Vender Bajo Costo</Label>
+                            <p className="text-sm text-muted-foreground">
+                                Permite registrar ventas con un precio inferior al costo promedio del producto.
+                            </p>
+                        </div>
+                        <Switch
+                            id="allowSellBelowCost"
+                            checked={storeDetails.advanced?.allowSellBelowCost || false}
+                            onCheckedChange={(checked) => handleAdvancedChange('allowSellBelowCost', checked)}
+                        />
+                    </div>
+                    <div className="flex items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                            <Label htmlFor="showOutOfStockProducts" className="text-base">Mostrar Productos Sin Stock</Label>
+                            <p className="text-sm text-muted-foreground">
+                                Muestra todos los productos en la página de ventas, incluso los que no tienen stock.
+                            </p>
+                        </div>
+                        <Switch
+                            id="showOutOfStockProducts"
+                            checked={storeDetails.advanced?.showOutOfStockProducts || false}
+                            onCheckedChange={(checked) => handleAdvancedChange('showOutOfStockProducts', checked)}
+                        />
+                    </div>
+                    <div className="flex items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                            <Label htmlFor="showInactiveProducts" className="text-base">Mostrar Productos Inactivos</Label>
+                            <p className="text-sm text-muted-foreground">
+                                Muestra productos marcados como 'Inactivo' en las listas de selección.
+                            </p>
+                        </div>
+                        <Switch
+                            id="showInactiveProducts"
+                            checked={storeDetails.advanced?.showInactiveProducts || false}
+                            onCheckedChange={(checked) => handleAdvancedChange('showInactiveProducts', checked)}
+                        />
+                    </div>
+                    <Button onClick={handleSaveChanges} disabled={isSaving}>
+                        {isSaving ? 'Guardando...' : 'Guardar Cambios Avanzados'}
+                    </Button>
+                </CardContent>
+            </Card>
         </TabsContent>
         <TabsContent value="miscellaneous">
            <div className="grid gap-6">

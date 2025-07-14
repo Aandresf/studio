@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { PlusCircle, Search } from 'lucide-react';
 
 import { useBackendStatus } from '@/app/(app)/layout';
-import { getProducts, deleteProduct } from '@/lib/api';
+import { getProducts, deleteProduct, getStoreDetails } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -49,6 +49,7 @@ function ProductTableSkeleton() {
 
 export default function ProductsPage() {
     const [products, setProducts] = useState<Product[]>([]);
+    const [storeSettings, setStoreSettings] = useState<any>({});
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [isCreateOrEditDialogOpen, setIsCreateOrEditDialogOpen] = useState(false);
@@ -65,12 +66,17 @@ export default function ProductsPage() {
             return;
         }
 
-        const fetchProducts = async () => {
+        const fetchInitialData = async () => {
             setLoading(true);
             setError(null);
             try {
-                const data = await getProducts();
-                setProducts(data);
+                const { activeStoreId } = await getStores();
+                const [productsData, settingsData] = await Promise.all([
+                    getProducts(),
+                    getStoreDetails(activeStoreId)
+                ]);
+                setProducts(productsData);
+                setStoreSettings(settingsData || {});
             } catch (e: any) {
                 console.error(e);
             } finally {
@@ -78,7 +84,7 @@ export default function ProductsPage() {
             }
         };
 
-        fetchProducts();
+        fetchInitialData();
     }, [isBackendReady, refetchKey]);
 
     const generateNextSku = () => {
@@ -127,6 +133,10 @@ export default function ProductsPage() {
     };
 
     const filteredProducts = products.filter(product => {
+        const showInactive = storeSettings.advanced?.showInactiveProducts || false;
+        if (!showInactive && product.status === 'Inactivo') {
+            return false;
+        }
         const query = searchQuery.toLowerCase();
         const nameMatch = product.name.toLowerCase().includes(query);
         const skuMatch = product.sku?.toLowerCase().includes(query) ?? false;

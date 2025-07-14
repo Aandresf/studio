@@ -75,30 +75,40 @@ export default function SalesPage() {
     const [selectedTransactionId, setSelectedTransactionId] = React.useState<string | null>(null);
     const [editingTransactionId, setEditingTransactionId] = React.useState<string | null>(null);
 
+    const [storeSettings, setStoreSettings] = React.useState<any>({});
+
     const { isBackendReady, refetchKey, triggerRefetch } = useBackendStatus();
 
     React.useEffect(() => {
         if (!isBackendReady) return;
-        const fetchProducts = async () => {
+        const fetchInitialData = async () => {
             setIsLoadingProducts(true);
             try {
-                const data = await getProducts();
-                setProducts(data.filter((p: any) => p.status === 'Activo'));
+                const { activeStoreId } = await getStores();
+                const [productsData, settingsData] = await Promise.all([
+                    getProducts(),
+                    getStoreDetails(activeStoreId)
+                ]);
+                
+                setProducts(productsData.filter((p: any) => p.status === 'Activo'));
+                setStoreSettings(settingsData || {});
+
             } catch (error) {} finally {
                 setIsLoadingProducts(false);
             }
         };
-        fetchProducts();
+        fetchInitialData();
     }, [isBackendReady, refetchKey]);
 
     const productMap = React.useMemo(() => new Map(products.map(p => [p.id, p])), [products]);
     
     const productOptions = React.useMemo(() => {
         const optionsMap = new Map<string, { value: string; label: string }>();
+        const showOutOfStock = storeSettings.advanced?.showOutOfStockProducts || false;
 
-        // Add all products with stock
+        // Add products based on stock and settings
         products
-            .filter(p => p.stock > 0)
+            .filter(p => showOutOfStock || p.stock > 0)
             .forEach(p => optionsMap.set(String(p.id), {
                 value: String(p.id),
                 label: `(${p.sku || 'N/A'}) ${p.name}`
@@ -118,7 +128,7 @@ export default function SalesPage() {
         });
 
         return Array.from(optionsMap.values());
-    }, [products, cart, productMap]);
+    }, [products, cart, productMap, storeSettings]);
 
     const resetForm = () => {
         setDate(new Date());

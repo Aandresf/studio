@@ -76,29 +76,40 @@ export default function PurchasesPage() {
     const [isProductDialogOpen, setIsProductDialogOpen] = React.useState(false);
     const [productDialogInitialData, setProductDialogInitialData] = React.useState<Partial<Product> | null>(null);
 
+    const [storeSettings, setStoreSettings] = React.useState<any>({});
+
     const { isBackendReady, refetchKey, triggerRefetch } = useBackendStatus();
 
     React.useEffect(() => {
         if (!isBackendReady) return;
-        const fetchProducts = async () => {
+        const fetchInitialData = async () => {
             setIsLoadingProducts(true);
             try {
-                setProducts(await getProducts());
+                const { activeStoreId } = await getStores();
+                const [productsData, settingsData] = await Promise.all([
+                    getProducts(),
+                    getStoreDetails(activeStoreId)
+                ]);
+                setProducts(productsData);
+                setStoreSettings(settingsData || {});
             } catch (error) {} finally {
                 setIsLoadingProducts(false);
             }
         };
-        fetchProducts();
+        fetchInitialData();
     }, [isBackendReady, refetchKey]);
 
     const productMap = React.useMemo(() => new Map(products.map(p => [p.id, p])), [products]);
     
-    const productOptions = React.useMemo(() => 
-        products.map(p => ({ 
-            value: String(p.id), 
-            label: `(${p.sku || 'N/A'}) ${p.name}`
-        })), 
-    [products]);
+    const productOptions = React.useMemo(() => {
+        const showInactive = storeSettings.advanced?.showInactiveProducts || false;
+        return products
+            .filter(p => showInactive || p.status === 'Activo')
+            .map(p => ({ 
+                value: String(p.id), 
+                label: `(${p.sku || 'N/A'}) ${p.name}`
+            }));
+    }, [products, storeSettings]);
 
     const resetForm = () => {
         setDate(new Date());

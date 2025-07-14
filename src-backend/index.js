@@ -926,6 +926,15 @@ app.post('/api/sales', async (req, res) => {
     const transactionId = nanoid();
 
     try {
+        // --- Obtener configuración de la tienda ---
+        const activeStoreId = databaseManager.getStoresConfig().activeStoreId;
+        const settingsPath = path.join(__dirname, `database_${activeStoreId}_settings.json`);
+        let settings = { advanced: {} }; // Default settings
+        if (fs.existsSync(settingsPath)) {
+            settings = { ...settings, ...JSON.parse(fs.readFileSync(settingsPath, 'utf8')) };
+        }
+        // --- Fin de obtener configuración ---
+
         if (!document_number) {
             document_number = await getNextDocumentNumber('AUTO_SALE');
         }
@@ -943,12 +952,15 @@ app.post('/api/sales', async (req, res) => {
             if (!product) {
                 throw new Error(`Producto con ID ${productId} no encontrado.`);
             }
-            if (product.current_stock < quantity) {
+
+            // --- Validaciones Condicionales ---
+            if (!settings.advanced?.allowNegativeStock && product.current_stock < quantity) {
                 throw new Error(`Stock insuficiente para el producto ID ${productId}. Disponible: ${product.current_stock}, Requerido: ${quantity}`);
             }
-            if (unitPrice < product.average_cost) {
+            if (!settings.advanced?.allowSellBelowCost && unitPrice < product.average_cost) {
                 throw new Error(`El precio de venta del producto ID ${productId} (${unitPrice}) no puede ser inferior a su costo (${product.average_cost}).`);
             }
+            // --- Fin de Validaciones ---
 
             const new_stock = product.current_stock - quantity;
 
@@ -993,6 +1005,16 @@ app.put('/api/sales', async (req, res) => {
     try {
         await run('BEGIN TRANSACTION');
 
+        // --- Obtener configuración de la tienda ---
+        const activeStoreId = databaseManager.getStoresConfig().activeStoreId;
+        const settingsPath = path.join(__dirname, `database_${activeStoreId}_settings.json`);
+        let settings = { advanced: {} }; // Default settings
+        if (fs.existsSync(settingsPath)) {
+            settings = { ...settings, ...JSON.parse(fs.readFileSync(settingsPath, 'utf8')) };
+        }
+        // --- Fin de obtener configuración ---
+
+        // 1. ANULACIÓN: Revertir el stock de los movimientos originales
         const originalMovements = await all(`SELECT * FROM inventory_movements WHERE transaction_id = ? AND status = 'Activo'`, [transaction_id]);
 
         if (originalMovements.length === 0) {
@@ -1004,15 +1026,21 @@ app.put('/api/sales', async (req, res) => {
             await run("UPDATE inventory_movements SET status = 'Reemplazado' WHERE id = ?", [move.id]);
         }
 
+        // 2. RE-CREACIÓN: Crear los nuevos movimientos con el mismo transaction_id
         const { transaction_date, entity_name, entity_document, document_number, items } = saleData;
 
         for (const item of items) {
             const product = await get('SELECT current_stock, average_cost FROM products WHERE id = ?', [item.productId]);
             if (!product) throw new Error(`Producto con ID ${item.productId} no encontrado.`);
-            if (product.current_stock < item.quantity) throw new Error(`Stock insuficiente para el producto ID ${item.productId}.`);
-            if (item.unitPrice < product.average_cost) {
+            
+            // --- Validaciones Condicionales ---
+            if (!settings.advanced?.allowNegativeStock && product.current_stock < item.quantity) {
+                throw new Error(`Stock insuficiente para el producto ID ${item.productId}.`);
+            }
+            if (!settings.advanced?.allowSellBelowCost && item.unitPrice < product.average_cost) {
                 throw new Error(`El precio de venta del producto ID ${item.productId} (${item.unitPrice}) no puede ser inferior a su costo (${product.average_cost}).`);
             }
+            // --- Fin de Validaciones ---
 
             await run(
                 `INSERT INTO inventory_movements 
