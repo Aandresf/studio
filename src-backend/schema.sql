@@ -49,3 +49,15 @@ CREATE TABLE IF NOT EXISTS inventory_reports (
   generated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now')),
   report_data TEXT -- Almacenará el reporte en formato JSON
 );
+
+-- -----------------------------------------------------
+-- Tabla `document_counters`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS document_counters (
+  counter_type TEXT PRIMARY KEY,
+  last_number INTEGER NOT NULL DEFAULT 0
+);
+
+-- Inicializar los contadores si no existen
+INSERT OR IGNORE INTO document_counters (counter_type, last_number) VALUES ('AUTO_PURCHASE', 0);
+INSERT OR IGNORE INTO document_counters (counter_type, last_number) VALUES ('AUTO_SALE', 0);

@@ -187,6 +187,34 @@ app.get('/api/products/:id/movements', (req, res) => {
 // Helper to promisify db.run, db.get, db.all
 const util = require('util');
 
+// Helper para generar números de documento automáticos
+async function getNextDocumentNumber(type) {
+    const run = util.promisify(db.run.bind(db));
+    const get = util.promisify(db.get.bind(db));
+    
+    await run('BEGIN TRANSACTION');
+    try {
+        let counter = await get('SELECT last_number FROM document_counters WHERE counter_type = ?', [type]);
+        
+        // Si el contador no existe, lo inicializa.
+        if (!counter) {
+            await run('INSERT INTO document_counters (counter_type, last_number) VALUES (?, 0)', [type]);
+            counter = { last_number: 0 };
+        }
+
+        const newNumber = counter.last_number + 1;
+        await run('UPDATE document_counters SET last_number = ? WHERE counter_type = ?', [newNumber, type]);
+        await run('COMMIT');
+        
+        // Formatear el número a 5 dígitos con ceros a la izquierda
+        return `FAC-AUTO-${String(newNumber).padStart(5, '0')}`;
+    } catch (error) {
+        await run('ROLLBACK');
+        throw error; // Propagar el error para que el endpoint principal lo maneje
+    }
+}
+
+
 // INVENTORY MOVEMENTS
 app.post('/api/inventory/movements', async (req, res) => {
     console.log('--- INICIO DE PETICIÓN POST /api/inventory/movements ---');
@@ -255,7 +283,8 @@ app.post('/api/purchases', async (req, res) => {
     console.log('--- INICIO DE PETICIÓN POST /api/purchases (NUEVA LÓGICA) ---');
     console.log('Cuerpo de la petición:', JSON.stringify(req.body, null, 2));
 
-    const { transaction_date, entity_name, entity_document, document_number, items } = req.body;
+    const { transaction_date, entity_name, entity_document, items } = req.body;
+    let { document_number } = req.body;
 
     if (!transaction_date || !items || !Array.isArray(items) || items.length === 0) {
         return res.status(400).json({ error: 'Faltan campos requeridos: transaction_date, items' });
@@ -266,6 +295,11 @@ app.post('/api/purchases', async (req, res) => {
     const transactionId = nanoid(); // Genera un ID único para toda la transacción
 
     try {
+        // Generar número de documento si no se proporciona
+        if (!document_number) {
+            document_number = await getNextDocumentNumber('AUTO_PURCHASE');
+        }
+
         await run('BEGIN TRANSACTION');
 
         for (const item of items) {
@@ -736,7 +770,8 @@ app.post('/api/sales', async (req, res) => {
     console.log('--- INICIO DE PETICIÓN POST /api/sales (NUEVA LÓGICA) ---');
     console.log('Cuerpo de la petición:', JSON.stringify(req.body, null, 2));
 
-    const { transaction_date, entity_name, entity_document, document_number, items } = req.body;
+    const { transaction_date, entity_name, entity_document, items } = req.body;
+    let { document_number } = req.body;
 
     if (!transaction_date || !items || !Array.isArray(items) || items.length === 0) {
         return res.status(400).json({ error: 'Faltan campos requeridos: transaction_date, items' });
@@ -747,6 +782,11 @@ app.post('/api/sales', async (req, res) => {
     const transactionId = nanoid();
 
     try {
+        // Generar número de documento si no se proporciona
+        if (!document_number) {
+            document_number = await getNextDocumentNumber('AUTO_SALE');
+        }
+
         await run('BEGIN TRANSACTION');
 
         for (const item of items) {
@@ -1161,14 +1201,34 @@ const startServer = () => {
   server = app.listen(PORT, () => {
     if (!isTestEnv) {
       console.log(`Backend server listening on http://localhost:${PORT}`);
-      const SQL_SETUP_FILE = path.join(__dirname, 'schema.sql');
-      const sql = fs.readFileSync(SQL_SETUP_FILE, 'utf8');
-      db.exec(sql, (err) => {
-        if (err && !err.message.includes('already exists')) {
-          console.error('Error executing schema.sql:', err.message);
-        } else if (!isTestEnv) {
-          console.log('Database initialized successfully.');
-        }
+      
+      db.serialize(() => {
+        // Crear tablas principales si no existen
+        const sqlSetup = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
+        db.exec(sqlSetup, (err) => {
+          if (err && !err.message.includes('already exists')) {
+            console.error('Error ejecutando schema.sql:', err.message);
+          } else if (!isTestEnv) {
+            console.log('Esquema de base de datos verificado/inicializado.');
+          }
+        });
+
+        // Asegurarse de que la tabla de contadores y sus valores iniciales existan.
+        // Esto actúa como una mini-migración segura.
+        db.run(`
+          CREATE TABLE IF NOT EXISTS document_counters (
+            counter_type TEXT PRIMARY KEY,
+            last_number INTEGER NOT NULL DEFAULT 0
+          );
+        `, (err) => {
+          if (err) {
+            console.error("Error creando la tabla document_counters:", err.message);
+            return;
+          }
+          // Usar INSERT OR IGNORE para evitar errores si las filas ya existen.
+          db.run("INSERT OR IGNORE INTO document_counters (counter_type, last_number) VALUES ('AUTO_PURCHASE', 0);");
+          db.run("INSERT OR IGNORE INTO document_counters (counter_type, last_number) VALUES ('AUTO_SALE', 0);");
+        });
       });
     }
   });
