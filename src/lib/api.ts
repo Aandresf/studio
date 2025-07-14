@@ -253,3 +253,13 @@ export const updateStoreSettings = (settings: StoreSettings): Promise<{ message:
 };
 
 export const backupDatabase = (): Promise<{ message: string }> => fetchAPI('/database/backup', { method: 'POST' });
+
+// Store Management API calls
+export const getStores = (): Promise<{ stores: any[], activeStoreId: string }> => fetchAPI('/stores');
+export const createStore = (name: string): Promise<any> => fetchAPI('/stores', { method: 'POST', body: JSON.stringify({ name }) });
+export const setActiveStore = (storeId: string): Promise<{ message: string }> => fetchAPI('/stores/active', { method: 'POST', body: JSON.stringify({ storeId }) });
+export const getStoreDetails = (storeId: string): Promise<any> => fetchAPI(`/stores/${storeId}/details`);
+export const updateStoreDetails = (storeId: string, details: any): Promise<{ message: string }> => fetchAPI(`/stores/${storeId}/details`, { method: 'PUT', body: JSON.stringify(details) });
+export const deleteStore = (storeId: string): Promise<{ message: string }> => fetchAPI(`/stores/${storeId}`, { method: 'DELETE' });
+export const quitApplication = (): Promise<void> => fetchAPI('/app/quit', { method: 'POST' });
+

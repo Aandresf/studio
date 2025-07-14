@@ -19,34 +19,177 @@ app.use(express.urlencoded({ extended: true }));
 
 
 
-// Database setup
-const DB_FILE = path.join(__dirname, 'database.db');
-const db = new sqlite3.Database(DB_FILE, (err) => {
-  if (err) {
-    console.error('Error opening database', err.message);
-  } else {
-    console.log(`Connected to the SQLite database: ${DB_FILE}`);
-    // La inicialización del esquema base se maneja en el script de inicio del servidor.
-    // Las migraciones complejas se manejarán con scripts dedicados.
-  }
+const databaseManager = require('./database-manager');
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// --- API de Gestión de Tiendas ---
+
+app.get('/api/stores', (req, res) => {
+    try {
+        const config = databaseManager.getStoresConfig();
+        // Filtrar para devolver solo las tiendas activas (o las que no tienen status, por retrocompatibilidad)
+        const activeStores = config.stores.filter(s => s.status === 'active' || s.status === undefined);
+        res.json({ ...config, stores: activeStores });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });
 
-// --- API Endpoints ---
+app.delete('/api/stores/:id', (req, res) => {
+    const { id } = req.params;
+    try {
+        const config = databaseManager.getStoresConfig();
+        const storeIndex = config.stores.findIndex(s => s.id === id);
+
+        if (storeIndex === -1) {
+            return res.status(404).json({ error: 'Tienda no encontrada.' });
+        }
+        if (config.stores.filter(s => s.status === 'active').length <= 1) {
+            return res.status(400).json({ error: 'No puedes eliminar la única tienda activa.' });
+        }
+
+        config.stores[storeIndex].status = 'deleted';
+        config.stores[storeIndex].deletion_date = new Date().toISOString();
+
+        // Si la tienda eliminada era la activa, cambiar a otra
+        if (config.activeStoreId === id) {
+            const nextActiveStore = config.stores.find(s => s.status === 'active');
+            config.activeStoreId = nextActiveStore.id;
+        }
+
+        databaseManager.saveStoresConfig(config);
+        res.json({ message: 'Tienda marcada para eliminación.' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+
+app.post('/api/stores/active', (req, res) => {
+    const { storeId } = req.body;
+    if (!storeId) {
+        return res.status(400).json({ error: 'Se requiere el ID de la tienda (storeId).' });
+    }
+    try {
+        databaseManager.setActiveStore(storeId);
+        res.json({ message: `Tienda activa cambiada a ${storeId}` });
+    } catch (error) {
+        res.status(404).json({ error: error.message });
+    }
+});
+
+app.post('/api/stores', async (req, res) => {
+    console.log('[Debug] Endpoint POST /api/stores alcanzado.');
+    const { name } = req.body;
+    if (!name) {
+        console.log('[Debug] Error: Nombre de tienda no proporcionado.');
+        return res.status(400).json({ error: 'Se requiere un nombre para la nueva tienda.' });
+    }
+
+    const newId = name.toLowerCase().replace(/\s+/g, '_') + `_${nanoid(4)}`;
+    const newDbPath = path.join(__dirname, `database_${newId}.db`);
+    console.log(`[Debug] Nueva tienda: ID=${newId}, Path=${newDbPath}`);
+
+    try {
+        console.log('[Debug] Iniciando la creación de la base de datos...');
+        await new Promise((resolve, reject) => {
+            const newDb = new sqlite3.Database(newDbPath, (err) => {
+                if (err) return reject(new Error(`Error al crear el archivo de la BD: ${err.message}`));
+                console.log('[Debug] Archivo .db creado. Ejecutando esquema...');
+                
+                const sqlSetup = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
+                newDb.exec(sqlSetup, (execErr) => {
+                    if (execErr) {
+                        console.log('[Debug] Error al ejecutar schema.sql.');
+                        newDb.close();
+                        return reject(new Error(`Error al ejecutar el esquema en la nueva BD: ${execErr.message}`));
+                    }
+                    console.log('[Debug] Esquema ejecutado. Cerrando nueva BD...');
+                    newDb.close((closeErr) => {
+                        if (closeErr) return reject(new Error(`Error al cerrar la nueva BD: ${closeErr.message}`));
+                        console.log('[Debug] Nueva BD cerrada exitosamente.');
+                        resolve();
+                    });
+                });
+            });
+        });
+
+        const newStore = { 
+            id: newId, 
+            name, 
+            dbPath: `database_${newId}.db`,
+            status: 'active', 
+            deletion_date: null 
+        };
+        console.log('[Debug] Añadiendo nueva tienda a la configuración...');
+        databaseManager.addStore(newStore);
+        console.log('[Debug] Tienda añadida. Enviando respuesta 201.');
+        
+        res.status(201).json(newStore);
+
+    } catch (error) {
+        console.error("[Debug] Error CRÍTICO en el bloque catch:", error);
+        if (fs.existsSync(newDbPath)) {
+            console.log('[Debug] Limpiando archivo de BD fallido...');
+            fs.unlinkSync(newDbPath);
+        }
+        res.status(500).json({ error: `Error al crear la tienda: ${error.message}` });
+    }
+});
+
+app.get('/api/stores/:id/details', (req, res) => {
+    const { id } = req.params;
+    const settingsPath = path.join(__dirname, `database_${id}_settings.json`);
+    if (fs.existsSync(settingsPath)) {
+        const settings = fs.readFileSync(settingsPath, 'utf8');
+        res.json(JSON.parse(settings));
+    } else {
+        // Si no hay un archivo de configuración, devuelve un objeto vacío
+        res.json({});
+    }
+});
+
+app.put('/api/stores/:id/details', (req, res) => {
+    const { id } = req.params;
+    const settingsPath = path.join(__dirname, `database_${id}_settings.json`);
+    try {
+        fs.writeFileSync(settingsPath, JSON.stringify(req.body, null, 2));
+        res.json({ message: 'Detalles de la tienda actualizados correctamente.' });
+    } catch (error) {
+        res.status(500).json({ error: `Error al guardar los detalles: ${error.message}` });
+    }
+});
+
+
+// --- API Endpoints (Refactorizados) ---
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 
-// PRODUCTS
-app.get('/api/products', (req, res) => {
-  console.log('--- INICIO DE PETICIÓN GET /api/products ---');
-  console.log('Query params:', req.query);
-  // 1. Obtenemos los datos con los nombres de columna originales.
-  const sql = "SELECT id, name, sku, status, image, current_stock, average_cost, tax_rate FROM products ORDER BY id DESC";
-  
-  db.all(sql, [], (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
+app.post('/api/app/quit', (req, res) => {
+    console.log('Solicitud de cierre de la aplicación recibida. Terminando proceso...');
+    res.status(200).json({ message: 'Cerrando el servidor.' });
+    // Da un pequeño margen para que la respuesta se envíe antes de cerrar.
+    setTimeout(() => {
+        process.exit(0);
+    }, 500);
+});
 
-    // 2. Transformamos manualmente los datos para asegurar que el frontend reciba 'stock' y 'price'.
-    // Esto elimina la dependencia en el comportamiento del alias del driver de la BD.
+
+
+// PRODUCTS
+app.get('/api/products', async (req, res) => {
+  console.log('--- INICIO DE PETICIÓN GET /api/products ---');
+  try {
+    const db = databaseManager.getActiveDb();
+    const dbAll = util.promisify(db.all.bind(db));
+    
+    const sql = "SELECT id, name, sku, status, image, current_stock, average_cost, tax_rate FROM products ORDER BY id DESC";
+    const rows = await dbAll(sql, []);
+
     const products = rows.map(p => ({
       id: p.id,
       name: p.name,
@@ -54,16 +197,17 @@ app.get('/api/products', (req, res) => {
       status: p.status,
       image: p.image,
       tax_rate: p.tax_rate,
-      stock: p.current_stock, // Mapeo explícito
-      price: p.average_cost   // Mapeo explícito
+      stock: p.current_stock,
+      price: p.average_cost
     }));
     
     res.json(products);
-  });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
-app.post('/api/products', (req, res) => {
-  // Frontend envía 'stock' y 'price'. Los mapeamos a las columnas de la BD.
+app.post('/api/products', async (req, res) => {
   const { name, sku, stock = 0, price = 0, tax_rate = 16.00 } = req.body;
   const status = req.body.status === 'Inactivo' ? 'Inactivo' : 'Activo';
 
@@ -71,14 +215,15 @@ app.post('/api/products', (req, res) => {
     return res.status(400).json({ error: 'Product name is required.' });
   }
 
-  const sql = `INSERT INTO products (name, sku, status, current_stock, average_cost, tax_rate) VALUES (?, ?, ?, ?, ?, ?)`;
-  // Usamos los valores de 'stock' y 'price' para las columnas correctas.
-  db.run(sql, [name, sku, status, stock, price, tax_rate], function (err) {
-    if (err) return res.status(500).json({ error: err.message });
+  try {
+    const db = databaseManager.getActiveDb();
+    const dbRun = util.promisify(db.run.bind(db));
+
+    const sql = `INSERT INTO products (name, sku, status, current_stock, average_cost, tax_rate) VALUES (?, ?, ?, ?, ?, ?)`;
+    const result = await dbRun(sql, [name, sku, status, stock, price, tax_rate]);
     
-    // Devolvemos el objeto creado con la misma estructura que espera el frontend.
     res.status(201).json({ 
-      id: this.lastID, 
+      id: result.lastID, 
       name,
       sku,
       status,
@@ -86,12 +231,15 @@ app.post('/api/products', (req, res) => {
       price,
       tax_rate
     });
-  });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
-app.get('/api/products/:id', (req, res) => {
-  console.log('--- INICIO DE PETICIÓN GET /api/products/:id ---');
-  console.log('ID del producto:', req.params.id);
+app.get('/api/products/:id', async (req, res) => {
+  try {
+    const db = databaseManager.getActiveDb();
+    const dbGet = util.promisify(db.get.bind(db));
     const sql = `
       SELECT
         id, name, sku, status, image, tax_rate,
@@ -100,20 +248,15 @@ app.get('/api/products/:id', (req, res) => {
       FROM products
       WHERE id = ?
     `;
-    db.get(sql, [req.params.id], (err, row) => {
-        if (err) return res.status(500).json({ error: err.message });
-        if (!row) return res.status(404).json({ error: 'Product not found' });
-        res.json(row);
-    });
+    const row = await dbGet(sql, [req.params.id]);
+    if (!row) return res.status(404).json({ error: 'Product not found' });
+    res.json(row);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
-app.put('/api/products/:id', (req, res) => {
-
-  console.log('--- INICIO DE PETICIÓN PUT /api/products/:id ---');
-  console.log('ID del producto:', req.params.id);
-  console.log('Cuerpo de la petición (req.body):', JSON.stringify(req.body, null, 2));
-
-  // Frontend envía 'stock' y 'price'. Los mapeamos a las columnas de la BD.
+app.put('/api/products/:id', async (req, res) => {
   const { name, sku, stock, price, tax_rate } = req.body;
   const status = req.body.status === 'Inactivo' ? 'Inactivo' : 'Activo';
   
@@ -121,67 +264,62 @@ app.put('/api/products/:id', (req, res) => {
     return res.status(400).json({ error: 'Product name is required.' });
   }
 
-  const sql = `
-    UPDATE products 
-    SET 
-      name = ?, 
-      sku = ?, 
-      status = ?, 
-      current_stock = ?, 
-      average_cost = ?, 
-      tax_rate = ?,
-      updated_at = strftime('%Y-%m-%d %H:%M:%S', 'now') 
-    WHERE id = ?
-  `;
-  
-  // Usamos los valores de 'stock' y 'price' y nos aseguramos de que no sean nulos.
-  const params = [
-    name, 
-    sku, 
-    status, 
-    stock ?? 0, 
-    price ?? 0, 
-    tax_rate ?? 16.00,
-    req.params.id
-  ];
+  try {
+    const db = databaseManager.getActiveDb();
+    const dbRun = util.promisify(db.run.bind(db));
+    const sql = `
+      UPDATE products 
+      SET 
+        name = ?, 
+        sku = ?, 
+        status = ?, 
+        current_stock = ?, 
+        average_cost = ?, 
+        tax_rate = ?,
+        updated_at = strftime('%Y-%m-%d %H:%M:%S', 'now') 
+      WHERE id = ?
+    `;
+    const params = [name, sku, status, stock ?? 0, price ?? 0, tax_rate ?? 16.00, req.params.id];
+    const result = await dbRun(sql, params);
 
-  console.log('Executing SQL:', sql, 'with params:', params);
-  db.run(sql, params, function (err) {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
-    if (this.changes === 0) {
+    if (result.changes === 0) {
       return res.status(404).json({ error: 'Product not found' });
     }
     res.json({ message: 'Product updated successfully' });
-  });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
-app.delete('/api/products/:id', (req, res) => {
-  console.log('--- INICIO DE PETICIÓN DELETE /api/products/:id ---');
-  console.log('ID del producto:', req.params.id);
-  
-  db.run('DELETE FROM products WHERE id = ?', [req.params.id], function (err) {
-    if (err) return res.status(500).json({ error: err.message });
-    if (this.changes === 0) return res.status(404).json({ error: 'Product not found' });
+app.delete('/api/products/:id', async (req, res) => {
+  try {
+    const db = databaseManager.getActiveDb();
+    const dbRun = util.promisify(db.run.bind(db));
+    const result = await dbRun('DELETE FROM products WHERE id = ?', [req.params.id]);
+
+    if (result.changes === 0) return res.status(404).json({ error: 'Product not found' });
     res.status(204).send();
-  });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
-app.get('/api/products/:id/movements', (req, res) => {
+app.get('/api/products/:id/movements', async (req, res) => {
   const { id } = req.params;
-  const sql = `
-    SELECT * 
-    FROM inventory_movements 
-    WHERE product_id = ? AND status = 'Activo'
-    ORDER BY transaction_date DESC
-  `;
-  db.all(sql, [id], (err, rows) => {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
+  try {
+    const db = databaseManager.getActiveDb();
+    const dbAll = util.promisify(db.all.bind(db));
+    const sql = `
+      SELECT * 
+      FROM inventory_movements 
+      WHERE product_id = ? AND status = 'Activo'
+      ORDER BY transaction_date DESC
+    `;
+    const rows = await dbAll(sql, [id]);
     res.json(rows);
-  });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // Helper to promisify db.run, db.get, db.all
@@ -217,9 +355,6 @@ async function getNextDocumentNumber(type) {
 
 // INVENTORY MOVEMENTS
 app.post('/api/inventory/movements', async (req, res) => {
-    console.log('--- INICIO DE PETICIÓN POST /api/inventory/movements ---');
-    console.log('Cuerpo recibido:', JSON.stringify(req.body, null, 2));
-    
     const { product_id, type, quantity, unit_cost, description, date } = req.body;
     if (!product_id || !type || !quantity) {
         return res.status(400).json({ error: 'Missing required fields: product_id, type, quantity' });
@@ -229,6 +364,7 @@ app.post('/api/inventory/movements', async (req, res) => {
         return res.status(400).json({ error: 'unit_cost is required for ENTRADA movements' });
     }
 
+    const db = databaseManager.getActiveDb();
     const run = util.promisify(db.run.bind(db));
     const get = util.promisify(db.get.bind(db));
 
@@ -290,6 +426,7 @@ app.post('/api/purchases', async (req, res) => {
         return res.status(400).json({ error: 'Faltan campos requeridos: transaction_date, items' });
     }
 
+    const db = databaseManager.getActiveDb();
     const run = util.promisify(db.run.bind(db));
     const get = util.promisify(db.get.bind(db));
     const transactionId = nanoid(); // Genera un ID único para toda la transacción
@@ -353,6 +490,7 @@ app.put('/api/purchases', async (req, res) => {
         return res.status(400).json({ error: 'Faltan datos para la edición: transaction_id y purchaseData son requeridos.' });
     }
 
+    const db = databaseManager.getActiveDb();
     const run = util.promisify(db.run.bind(db));
     const all = util.promisify(db.all.bind(db));
     const get = util.promisify(db.get.bind(db));
@@ -431,6 +569,7 @@ app.delete('/api/purchases', async (req, res) => {
         return res.status(400).json({ error: 'Se requiere un transaction_id.' });
     }
 
+    const db = databaseManager.getActiveDb();
     const run = util.promisify(db.run.bind(db));
     const all = util.promisify(db.all.bind(db));
     const get = util.promisify(db.get.bind(db));
@@ -479,9 +618,11 @@ app.delete('/api/purchases', async (req, res) => {
     }
 });
 
-// PURCHASES (ENTRADA) - OBTENER HISTORIAL
-app.get('/api/purchases', (req, res) => {
-    const query = `
+app.get('/api/purchases', async (req, res) => {
+    try {
+        const db = databaseManager.getActiveDb();
+        const dbAll = util.promisify(db.all.bind(db));
+        const query = `
         SELECT 
             im.id as movementId,
             p.id as productId,
@@ -500,9 +641,8 @@ app.get('/api/purchases', (req, res) => {
         WHERE im.type = 'ENTRADA'
         ORDER BY im.transaction_date DESC, im.transaction_id;
     `;
-    db.all(query, [], (err, rows) => {
-        if (err) return res.status(500).json({ error: err.message });
-
+        const rows = await dbAll(query, []);
+        
         const grouped = rows.reduce((acc, row) => {
             if (!acc[row.transaction_id]) {
                 acc[row.transaction_id] = {
@@ -552,17 +692,21 @@ app.get('/api/purchases', (req, res) => {
         });
 
         res.json(Object.values(grouped));
-    });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });
 
-// GET PURCHASE DETAILS BY TRANSACTION ID
-app.get('/api/purchases/details', (req, res) => {
+app.get('/api/purchases/details', async (req, res) => {
     const transactionId = req.query.id;
     if (!transactionId) {
         return res.status(400).json({ error: 'Transaction ID is required' });
     }
 
-    const sql = `
+    try {
+        const db = databaseManager.getActiveDb();
+        const dbAll = util.promisify(db.all.bind(db));
+        const sql = `
         SELECT
             im.product_id as productId,
             p.name as productName,
@@ -573,24 +717,22 @@ app.get('/api/purchases/details', (req, res) => {
             im.entity_name,
             im.entity_document,
             im.document_number,
-            im.status
+            im.status,
+            im.created_at
         FROM inventory_movements im
         JOIN products p ON im.product_id = p.id
         WHERE im.transaction_id = ? AND im.type = 'ENTRADA'
     `;
-    db.all(sql, [transactionId], (err, allItems) => {
-        if (err) return res.status(500).json({ error: err.message });
+        const allItems = await dbAll(sql, [transactionId]);
         if (allItems.length === 0) return res.status(404).json({ error: 'Compra no encontrada' });
 
         let itemsToShow = allItems.filter(item => item.status === 'Activo');
         
         if (itemsToShow.length === 0) {
-            // If no active items, it's a historical view. Prioritize showing the annulled state.
             const annulledItems = allItems.filter(item => item.status === 'Anulado');
             if (annulledItems.length > 0) {
                 itemsToShow = annulledItems;
             } else {
-                // If not annulled, it must have been replaced. Show the most recent set of replaced items.
                 const lastReplacedDate = allItems
                     .filter(item => item.status === 'Reemplazado')
                     .reduce((max, i) => (i.created_at > max ? i.created_at : max), allItems[0].created_at);
@@ -619,13 +761,17 @@ app.get('/api/purchases/details', (req, res) => {
         };
 
         res.json(purchasePayload);
-    });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });
 
 
-// SALES (SALIDA) - OBTENER HISTORIAL
-app.get('/api/sales', (req, res) => {
-    const query = `
+app.get('/api/sales', async (req, res) => {
+    try {
+        const db = databaseManager.getActiveDb();
+        const dbAll = util.promisify(db.all.bind(db));
+        const query = `
         SELECT 
             im.id as movementId,
             p.id as productId,
@@ -638,15 +784,14 @@ app.get('/api/sales', (req, res) => {
             im.created_at,
             p.name as productName,
             im.quantity,
-            im.price as unit_price -- Usamos la columna 'price' para el precio de venta
+            im.price as unit_price
         FROM inventory_movements im
         JOIN products p ON im.product_id = p.id
         WHERE im.type = 'SALIDA'
         ORDER BY im.transaction_date DESC, im.transaction_id;
     `;
-    db.all(query, [], (err, rows) => {
-        if (err) return res.status(500).json({ error: err.message });
-
+        const rows = await dbAll(query, []);
+        
         const grouped = rows.reduce((acc, row) => {
             if (!acc[row.transaction_id]) {
                 acc[row.transaction_id] = {
@@ -660,7 +805,6 @@ app.get('/api/sales', (req, res) => {
                     movements: [],
                 };
             }
-            // Mapear explícitamente para asegurar la estructura del objeto
             const movement = {
                 movementId: row.movementId,
                 productId: row.productId,
@@ -674,7 +818,6 @@ app.get('/api/sales', (req, res) => {
             return acc;
         }, {});
 
-        // Post-procesamiento para determinar el estado final y filtrar los movimientos
         Object.values(grouped).forEach(transaction => {
             const active = transaction.movements.filter(m => m.status === 'Activo');
             const annulled = transaction.movements.filter(m => m.status === 'Anulado');
@@ -685,28 +828,30 @@ app.get('/api/sales', (req, res) => {
             } else if (annulled.length > 0) {
                 transaction.status = 'Anulado';
                 transaction.movements = annulled;
-            } else { // Solo quedan 'Reemplazado'
-                transaction.status = 'Reemplazado';
+            } else {
                 const lastDate = transaction.movements.reduce((max, m) => (m.created_at > max ? m.created_at : max), '');
                 transaction.movements = transaction.movements.filter(m => m.created_at === lastDate);
+                transaction.status = 'Reemplazado';
             }
-
-            // Recalcular el total basado solo en los movimientos filtrados
             transaction.total = transaction.movements.reduce((sum, m) => sum + (m.quantity * m.unit_price), 0);
         });
 
         res.json(Object.values(grouped));
-    });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });
 
-// GET SALE DETAILS BY TRANSACTION ID
-app.get('/api/sales/details', (req, res) => {
+app.get('/api/sales/details', async (req, res) => {
     const transactionId = req.query.id;
     if (!transactionId) {
         return res.status(400).json({ error: 'Transaction ID is required' });
     }
 
-    const sql = `
+    try {
+        const db = databaseManager.getActiveDb();
+        const dbAll = util.promisify(db.all.bind(db));
+        const sql = `
         SELECT
             im.product_id as productId,
             p.name as productName,
@@ -717,13 +862,13 @@ app.get('/api/sales/details', (req, res) => {
             im.entity_name,
             im.entity_document,
             im.document_number,
-            im.status
+            im.status,
+            im.created_at
         FROM inventory_movements im
         JOIN products p ON im.product_id = p.id
         WHERE im.transaction_id = ? AND im.type = 'SALIDA'
     `;
-    db.all(sql, [transactionId], (err, allItems) => {
-        if (err) return res.status(500).json({ error: err.message });
+        const allItems = await dbAll(sql, [transactionId]);
         if (allItems.length === 0) return res.status(404).json({ error: 'Venta no encontrada' });
 
         let itemsToShow = allItems.filter(item => item.status === 'Activo');
@@ -761,15 +906,13 @@ app.get('/api/sales/details', (req, res) => {
         };
 
         res.json(salePayload);
-    });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });
 
 
-// SALES (BATCH - NEW)
 app.post('/api/sales', async (req, res) => {
-    console.log('--- INICIO DE PETICIÓN POST /api/sales (NUEVA LÓGICA) ---');
-    console.log('Cuerpo de la petición:', JSON.stringify(req.body, null, 2));
-
     const { transaction_date, entity_name, entity_document, items } = req.body;
     let { document_number } = req.body;
 
@@ -777,12 +920,12 @@ app.post('/api/sales', async (req, res) => {
         return res.status(400).json({ error: 'Faltan campos requeridos: transaction_date, items' });
     }
 
+    const db = databaseManager.getActiveDb();
     const run = util.promisify(db.run.bind(db));
     const get = util.promisify(db.get.bind(db));
     const transactionId = nanoid();
 
     try {
-        // Generar número de documento si no se proporciona
         if (!document_number) {
             document_number = await getNextDocumentNumber('AUTO_SALE');
         }
@@ -803,7 +946,6 @@ app.post('/api/sales', async (req, res) => {
             if (product.current_stock < quantity) {
                 throw new Error(`Stock insuficiente para el producto ID ${productId}. Disponible: ${product.current_stock}, Requerido: ${quantity}`);
             }
-            // Validación de precio de venta vs. costo
             if (unitPrice < product.average_cost) {
                 throw new Error(`El precio de venta del producto ID ${productId} (${unitPrice}) no puede ser inferior a su costo (${product.average_cost}).`);
             }
@@ -837,13 +979,13 @@ app.post('/api/sales', async (req, res) => {
 });
 
 app.put('/api/sales', async (req, res) => {
-    console.log('--- INICIO DE PETICIÓN PUT /api/sales (EDITAR - NUEVA LÓGICA) ---');
     const { transaction_id, saleData } = req.body;
 
     if (!transaction_id || !saleData || !saleData.items) {
         return res.status(400).json({ error: 'Faltan datos para la edición: transaction_id y saleData son requeridos.' });
     }
 
+    const db = databaseManager.getActiveDb();
     const run = util.promisify(db.run.bind(db));
     const all = util.promisify(db.all.bind(db));
     const get = util.promisify(db.get.bind(db));
@@ -851,7 +993,6 @@ app.put('/api/sales', async (req, res) => {
     try {
         await run('BEGIN TRANSACTION');
 
-        // 1. ANULACIÓN: Revertir el stock de los movimientos originales
         const originalMovements = await all(`SELECT * FROM inventory_movements WHERE transaction_id = ? AND status = 'Activo'`, [transaction_id]);
 
         if (originalMovements.length === 0) {
@@ -863,15 +1004,12 @@ app.put('/api/sales', async (req, res) => {
             await run("UPDATE inventory_movements SET status = 'Reemplazado' WHERE id = ?", [move.id]);
         }
 
-        // 2. RE-CREACIÓN: Crear los nuevos movimientos con el mismo transaction_id
         const { transaction_date, entity_name, entity_document, document_number, items } = saleData;
 
         for (const item of items) {
             const product = await get('SELECT current_stock, average_cost FROM products WHERE id = ?', [item.productId]);
             if (!product) throw new Error(`Producto con ID ${item.productId} no encontrado.`);
             if (product.current_stock < item.quantity) throw new Error(`Stock insuficiente para el producto ID ${item.productId}.`);
-            
-            // Validación de precio de venta vs. costo
             if (item.unitPrice < product.average_cost) {
                 throw new Error(`El precio de venta del producto ID ${item.productId} (${item.unitPrice}) no puede ser inferior a su costo (${product.average_cost}).`);
             }
@@ -896,13 +1034,13 @@ app.put('/api/sales', async (req, res) => {
 });
 
 app.delete('/api/sales', async (req, res) => {
-    console.log('--- INICIO DE PETICIÓN DELETE /api/sales (ANULAR - NUEVA LÓGICA) ---');
     const { transaction_id } = req.body;
 
     if (!transaction_id) {
         return res.status(400).json({ error: 'Se requiere un transaction_id.' });
     }
 
+    const db = databaseManager.getActiveDb();
     const run = util.promisify(db.run.bind(db));
     const all = util.promisify(db.all.bind(db));
 
@@ -916,7 +1054,6 @@ app.delete('/api/sales', async (req, res) => {
         }
 
         for (const move of movementsToAnnul) {
-            // Revertir el stock es sumar la cantidad que se vendió
             await run('UPDATE products SET current_stock = current_stock + ? WHERE id = ?', [move.quantity, move.product_id]);
             await run("UPDATE inventory_movements SET status = 'Anulado' WHERE id = ?", [move.id]);
         }
@@ -932,25 +1069,21 @@ app.delete('/api/sales', async (req, res) => {
 });
 
 
-// REPORTS
 app.post('/api/reports/inventory-excel', async (req, res) => {
     const { startDate, endDate } = req.body;
-    console.log(`--- Solicitud de Reporte Excel de Inventario para ${startDate} a ${endDate} ---`);
-
-    const get = util.promisify(db.get.bind(db));
-    const all = util.promisify(db.all.bind(db));
-
+    
     try {
-        // 1. Obtener detalles de la tienda
-        const storeDetails = await new Promise((resolve, reject) => {
-            fs.readFile(path.join(__dirname, 'settings.json'), 'utf8', (err, data) => {
-                if (err) {
-                    if (err.code === 'ENOENT') return resolve({ name: "MI TIENDA", rif: "J-000000000" });
-                    return reject(err);
-                }
-                resolve(JSON.parse(data));
-            });
-        });
+        const db = databaseManager.getActiveDb();
+        const get = util.promisify(db.get.bind(db));
+        const all = util.promisify(db.all.bind(db));
+
+        const activeStoreId = databaseManager.getStoresConfig().activeStoreId;
+        const settingsPath = path.join(__dirname, `database_${activeStoreId}_settings.json`);
+        
+        let storeDetails = { name: "MI TIENDA", rif: "J-000000000" }; // Valores por defecto
+        if (fs.existsSync(settingsPath)) {
+            storeDetails = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+        }
 
         // 2. Obtener todos los productos
         const products = await all("SELECT id, name, sku FROM products");
@@ -1045,60 +1178,65 @@ app.post('/api/reports/inventory-excel', async (req, res) => {
 });
 
 
-app.post('/api/reports/:type', (req, res) => {
+app.post('/api/reports/:type', async (req, res) => {
     const { type } = req.params;
     const { startDate, endDate } = req.body;
     if (!startDate || !endDate) {
         return res.status(400).json({ error: 'startDate and endDate are required' });
     }
 
-    let query;
-    const reportType = type.toUpperCase();
+    try {
+        const db = databaseManager.getActiveDb();
+        const dbAll = util.promisify(db.all.bind(db));
+        let query;
+        const reportType = type.toUpperCase();
 
-    if (reportType === 'SALES' || reportType === 'PURCHASES') {
-        const movementType = reportType === 'SALES' ? 'SALIDA' : 'ENTRADA';
-        query = `
+        if (reportType === 'SALES' || reportType === 'PURCHASES') {
+            const movementType = reportType === 'SALES' ? 'SALIDA' : 'ENTRADA';
+            query = `
             SELECT p.name, p.sku, im.*
             FROM inventory_movements im
             JOIN products p ON im.product_id = p.id
             WHERE im.type = ? AND date(im.transaction_date) BETWEEN ? AND ?
             ORDER BY im.transaction_date
         `;
-        db.all(query, [movementType, startDate, endDate], (err, rows) => {
-            if (err) return res.status(500).json({ error: err.message });
+            const rows = await dbAll(query, [movementType, startDate, endDate]);
             res.json(rows);
-        });
-    } else if (reportType === 'INVENTORY') {
-        // This is a complex report, for now we just return all movements in the range
-        query = `
+        } else if (reportType === 'INVENTORY') {
+            query = `
             SELECT p.name, p.sku, im.*
             FROM inventory_movements im
             JOIN products p ON im.product_id = p.id
             WHERE im.transaction_date BETWEEN ? AND ?
             ORDER BY p.name, im.transaction_date
         `;
-         db.all(query, [startDate, endDate], (err, rows) => {
-            if (err) return res.status(500).json({ error: err.message });
+            const rows = await dbAll(query, [startDate, endDate]);
             res.json(rows);
-        });
-    } else {
-        res.status(400).json({ error: 'Invalid report type' });
+        } else {
+            res.status(400).json({ error: 'Invalid report type' });
+        }
+    } catch (error) {
+        res.status(500).json({ error: error.message });
     }
 });
 
-app.get('/api/reports', (req, res) => {
-    db.all('SELECT * FROM inventory_reports ORDER BY generated_at DESC', [], (err, rows) => {
-        if (err) return res.status(500).json({ error: err.message });
+app.get('/api/reports', async (req, res) => {
+    try {
+        const db = databaseManager.getActiveDb();
+        const dbAll = util.promisify(db.all.bind(db));
+        const rows = await dbAll('SELECT * FROM inventory_reports ORDER BY generated_at DESC', []);
         res.json(rows);
-    });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });
 
 
-// DASHBOARD
 app.get('/api/dashboard/summary', async (req, res) => {
-    const get = util.promisify(db.get.bind(db));
-
     try {
+        const db = databaseManager.getActiveDb();
+        const get = util.promisify(db.get.bind(db));
+
         const now = new Date();
         const thirtyDaysAgo = formatISO(subDays(now, 30));
         const sixtyDaysAgo = formatISO(subDays(now, 60));
@@ -1158,8 +1296,11 @@ app.get('/api/dashboard/summary', async (req, res) => {
 });
 
 
-app.get('/api/dashboard/recent-sales', (req, res) => {
-    const sql = `
+app.get('/api/dashboard/recent-sales', async (req, res) => {
+    try {
+        const db = databaseManager.getActiveDb();
+        const dbAll = util.promisify(db.all.bind(db));
+        const sql = `
         SELECT
             transaction_id as id,
             SUM(im.quantity * im.price) as amount,
@@ -1171,8 +1312,7 @@ app.get('/api/dashboard/recent-sales', (req, res) => {
         ORDER BY date DESC
         LIMIT 5
     `;
-    db.all(sql, [], (err, rows) => {
-        if (err) return res.status(500).json({ error: err.message });
+        const rows = await dbAll(sql, []);
 
         const salesData = rows.map(row => ({
             id: row.id,
@@ -1184,7 +1324,9 @@ app.get('/api/dashboard/recent-sales', (req, res) => {
         }));
 
         res.json(salesData);
-    });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });
 
 // SETTINGS - Simplified: using a JSON file for settings for now.
@@ -1232,34 +1374,38 @@ const startServer = () => {
     if (!isTestEnv) {
       console.log(`Backend server listening on http://localhost:${PORT}`);
       
-      db.serialize(() => {
-        // Crear tablas principales si no existen
-        const sqlSetup = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
-        db.exec(sqlSetup, (err) => {
-          if (err && !err.message.includes('already exists')) {
-            console.error('Error ejecutando schema.sql:', err.message);
-          } else if (!isTestEnv) {
-            console.log('Esquema de base de datos verificado/inicializado.');
-          }
-        });
+      try {
+        const db = databaseManager.getActiveDb(); // Obtener la BD activa
+        db.serialize(() => {
+          // Crear tablas principales si no existen
+          const sqlSetup = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
+          db.exec(sqlSetup, (err) => {
+            if (err && !err.message.includes('already exists')) {
+              console.error('Error ejecutando schema.sql:', err.message);
+            } else if (!isTestEnv) {
+              console.log('Esquema de base de datos verificado/inicializado.');
+            }
+          });
 
-        // Asegurarse de que la tabla de contadores y sus valores iniciales existan.
-        // Esto actúa como una mini-migración segura.
-        db.run(`
-          CREATE TABLE IF NOT EXISTS document_counters (
-            counter_type TEXT PRIMARY KEY,
-            last_number INTEGER NOT NULL DEFAULT 0
-          );
-        `, (err) => {
-          if (err) {
-            console.error("Error creando la tabla document_counters:", err.message);
-            return;
-          }
-          // Usar INSERT OR IGNORE para evitar errores si las filas ya existen.
-          db.run("INSERT OR IGNORE INTO document_counters (counter_type, last_number) VALUES ('AUTO_PURCHASE', 0);");
-          db.run("INSERT OR IGNORE INTO document_counters (counter_type, last_number) VALUES ('AUTO_SALE', 0);");
+          // Asegurarse de que la tabla de contadores y sus valores iniciales existan.
+          db.run(`
+            CREATE TABLE IF NOT EXISTS document_counters (
+              counter_type TEXT PRIMARY KEY,
+              last_number INTEGER NOT NULL DEFAULT 0
+            );
+          `, (err) => {
+            if (err) {
+              console.error("Error creando la tabla document_counters:", err.message);
+              return;
+            }
+            db.run("INSERT OR IGNORE INTO document_counters (counter_type, last_number) VALUES ('AUTO_PURCHASE', 0);");
+            db.run("INSERT OR IGNORE INTO document_counters (counter_type, last_number) VALUES ('AUTO_SALE', 0);");
+          });
         });
-      });
+      } catch (error) {
+        console.error("Error fatal al inicializar la base de datos activa:", error.message);
+        process.exit(1); // Salir si no se puede inicializar la BD
+      }
     }
   });
 };
@@ -1269,15 +1415,9 @@ const shutdown = (signal) => {
   
   server.close(() => {
     if (!isTestEnv) console.log('HTTP server closed.');
-    
-    db.close((err) => {
-      if (err) {
-        console.error('Error closing database:', err.message);
-      } else {
-        if (!isTestEnv) console.log('Database connection closed.');
-      }
-      process.exit(err ? 1 : 0);
-    });
+    databaseManager.closeAllConnections();
+    // Dar un pequeño margen para que las conexiones se cierren
+    setTimeout(() => process.exit(0), 500);
   });
 
   // Force shutdown after a timeout
@@ -1294,4 +1434,4 @@ process.on('SIGINT', () => shutdown('SIGINT'));
 // Start the server
 startServer();
 
-module.exports = { app, db, startServer, shutdown };
+module.exports = { app, startServer, shutdown };

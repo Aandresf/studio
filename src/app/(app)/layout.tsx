@@ -3,7 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { BarChart3, Box, Home, Package, ShoppingCart, PanelLeft, WifiOff, Wifi } from 'lucide-react';
+import { BarChart3, Box, Home, Package, ShoppingCart, PanelLeft, WifiOff, Wifi, Store } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -16,8 +16,8 @@ import {
     DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { WelcomeModal } from '@/components/welcome-modal';
-import { LoadingScreen } from '@/components/ui/loading-screen'; // Importar la pantalla de carga
+import { StoreSelectionModal } from '@/components/dialogs/StoreSelectionModal';
+import { LoadingScreen } from '@/components/ui/loading-screen';
 
 // 1. Crear el Contexto para el estado del Backend
 interface BackendStatusContextType {
@@ -77,17 +77,36 @@ function BackendStatusIndicator() {
 }
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-    const pathname = usePathname();
     const router = useRouter();
-    const [currentStore, setCurrentStore] = React.useState('store1');
-    const [isWelcomeModalOpen, setIsWelcomeModalOpen] = React.useState(true);
+    const [isStoreModalOpen, setIsStoreModalOpen] = React.useState(false);
+    const [activeStoreName, setActiveStoreName] = React.useState('Mi Cuenta');
     
     const [isBackendReady, setIsBackendReady] = React.useState(false);
     const [refetchKey, setRefetchKey] = React.useState(0);
 
-    // Lógica para verificar si el backend está listo
+    const fetchActiveStoreName = async () => {
+        try {
+            const { stores, activeStoreId } = await getStores();
+            const activeStore = stores.find(s => s.id === activeStoreId);
+            if (activeStore) {
+                setActiveStoreName(activeStore.name);
+            }
+        } catch (e) {
+            // Silently fail, keep default name
+        }
+    };
+
     React.useEffect(() => {
-        if (isBackendReady) return;
+        if (isBackendReady) {
+            fetchActiveStoreName();
+        }
+    }, [isBackendReady, refetchKey]); // <-- Añadido refetchKey como dependencia
+
+    React.useEffect(() => {
+        if (isBackendReady) {
+            setIsStoreModalOpen(true);
+            return;
+        }
 
         const checkBackendStatus = async () => {
             try {
@@ -98,14 +117,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     clearInterval(intervalId);
                 }
             } catch (error) {
-                // El backend aún no está listo, se intentará de nuevo.
                 console.log('Waiting for backend...');
             }
         };
 
-        const intervalId = setInterval(checkBackendStatus, 2000); // Reintentar cada 2 segundos
-
-        // Limpieza al desmontar el componente
+        const intervalId = setInterval(checkBackendStatus, 2000);
         return () => clearInterval(intervalId);
     }, [isBackendReady]);
 
@@ -114,15 +130,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         setRefetchKey(prev => prev + 1);
     };
 
-    const storeDetails = {
-        store1: { name: 'InventarioSimple Store' },
-        store2: { name: 'Mi Sucursal Principal' },
-        store3: { name: 'Depósito Central' },
-    };
-
-    const selectedStoreName = storeDetails[currentStore as keyof typeof storeDetails]?.name || 'Mi Cuenta';
-
-    // Mostrar la pantalla de carga si el backend no está listo
     if (!isBackendReady) {
         return <LoadingScreen />;
     }
@@ -183,6 +190,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                             </SheetContent>
                         </Sheet>
                         <div className="w-full flex-1" />
+                        <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+                            <Store className="h-5 w-5" />
+                            <span>{activeStoreName}</span>
+                        </div>
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button variant="secondary" size="icon" className="rounded-full">
@@ -194,24 +205,24 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>{selectedStoreName}</DropdownMenuLabel>
+                                <DropdownMenuLabel>{activeStoreName}</DropdownMenuLabel>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem onSelect={() => router.push('/settings')}>Configuración</DropdownMenuItem>
                                 <DropdownMenuItem>Soporte</DropdownMenuItem>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem onSelect={() => setIsWelcomeModalOpen(true)}>Cambiar Tienda</DropdownMenuItem>
+                                <DropdownMenuItem onSelect={() => setIsStoreModalOpen(true)}>Cambiar Tienda</DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </header>
                     <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 overflow-auto">
                         {children}
                     </main>
-                    <WelcomeModal 
-                        isOpen={isWelcomeModalOpen}
-                        onStoreSelect={(store) => {
-                            setCurrentStore(store);
-                            setIsWelcomeModalOpen(false);
-                            router.push('/dashboard');
+                    <StoreSelectionModal 
+                        isOpen={isStoreModalOpen}
+                        onStoreSelected={(storeName) => {
+                            setIsStoreModalOpen(false);
+                            if (storeName) setActiveStoreName(storeName);
+                            triggerRefetch();
                         }}
                     />
                 </div>
