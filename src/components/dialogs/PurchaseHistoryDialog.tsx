@@ -36,38 +36,6 @@ interface PurchaseHistoryDialogProps {
   onEditPurchase: (purchase: GroupedPurchase) => void;
 }
 
-const groupPurchases = (movements: PurchaseHistoryMovement[]): GroupedPurchase[] => {
-    const purchaseMap = new Map<string, GroupedPurchase>();
-
-    movements.forEach(move => {
-        const key = move.description + " | " + new Date(move.date).toISOString().substring(0, 10);
-
-        if (!purchaseMap.has(key)) {
-            const match = move.description.match(/Compra a (.*?) \(RIF: (.*?)\)\. Factura: (.*)/);
-            
-            purchaseMap.set(key, {
-                key,
-                description: move.description,
-                date: move.date,
-                supplier: match?.[1].trim() || 'N/A',
-                supplierRif: match?.[2].trim() || 'N/A',
-                invoiceNumber: match?.[3].trim() || 'N/A',
-                total: 0,
-                movements: [],
-                status: move.status,
-            });
-        }
-
-        const purchase = purchaseMap.get(key)!;
-        purchase.movements.push(move);
-        if (move.status === 'Activo') {
-            purchase.total += move.total_cost;
-        }
-    });
-
-    return Array.from(purchaseMap.values()).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-};
-
 export function PurchaseHistoryDialog({ open, onOpenChange, onViewReceipt, onEditPurchase }: PurchaseHistoryDialogProps) {
   const [history, setHistory] = React.useState<GroupedPurchase[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
@@ -76,10 +44,9 @@ export function PurchaseHistoryDialog({ open, onOpenChange, onViewReceipt, onEdi
   const fetchHistory = React.useCallback(() => {
     setIsLoading(true);
     getPurchaseHistory()
-      .then(movements => {
-          const nonReplacedMovements = movements.filter(m => m.status !== 'Reemplazado');
-          const grouped = groupPurchases(nonReplacedMovements);
-          setHistory(grouped);
+      .then(groupedPurchases => {
+          // El backend ya devuelve los datos agrupados y filtrados (sin 'Reemplazado')
+          setHistory(groupedPurchases);
       })
       .catch(() => {
         // Error handled by API layer
@@ -96,9 +63,8 @@ export function PurchaseHistoryDialog({ open, onOpenChange, onViewReceipt, onEdi
   const handleAnnul = async (purchase: GroupedPurchase) => {
     if (!window.confirm("¿Estás seguro de que quieres anular esta compra? Esta acción no se puede deshacer.")) return;
 
-    const movementIds = purchase.movements.map(m => m.id);
     try {
-        await annulPurchase({ movementIds });
+        await annulPurchase({ transaction_id: purchase.transaction_id });
         toastSuccess("Compra Anulada", "La compra ha sido anulada correctamente.");
         fetchHistory(); // Refresh list
     } catch (error) {
@@ -108,7 +74,7 @@ export function PurchaseHistoryDialog({ open, onOpenChange, onViewReceipt, onEdi
 
   const filteredHistory = history.filter(p => {
       const query = searchQuery.toLowerCase();
-      return p.supplier.toLowerCase().includes(query) || p.invoiceNumber.toLowerCase().includes(query) || (p.supplierRif && p.supplierRif.toLowerCase().includes(query));
+      return p.entity_name.toLowerCase().includes(query) || (p.document_number && p.document_number.toLowerCase().includes(query)) || (p.entity_document && p.entity_document.toLowerCase().includes(query));
   });
 
   return (
@@ -153,17 +119,17 @@ export function PurchaseHistoryDialog({ open, onOpenChange, onViewReceipt, onEdi
                 filteredHistory.map((purchase) => {
                   const isAnnulled = purchase.status === 'Anulado';
                   return (
-                    <TableRow key={purchase.key} className={isAnnulled ? "opacity-50" : ""}>
+                    <TableRow key={purchase.transaction_id} className={isAnnulled ? "opacity-50" : ""}>
                       <TableCell>
                         {isAnnulled && <Badge variant="destructive">Anulada</Badge>}
                       </TableCell>
                       <TableCell className={isAnnulled ? "line-through" : ""}>
-                        {format(new Date(purchase.date), "dd/MM/yyyy HH:mm", { locale: es })}
+                        {format(new Date(purchase.transaction_date), "dd/MM/yyyy HH:mm", { locale: es })}
                       </TableCell>
-                      <TableCell className={isAnnulled ? "line-through" : ""}>{purchase.supplier}</TableCell>
-                      <TableCell className={isAnnulled ? "line-through" : ""}>{purchase.supplierRif}</TableCell>
-                      <TableCell className={isAnnulled ? "line-through" : ""}>{purchase.invoiceNumber}</TableCell>
-                      <TableCell className={`text-right ${isAnnulled ? "line-through" : ""}`}>${purchase.total.toFixed(2)}</TableCell>
+                      <TableCell className={isAnnulled ? "line-through" : ""}>{purchase.entity_name}</TableCell>
+                      <TableCell className={isAnnulled ? "line-through" : ""}>{purchase.entity_document}</TableCell>
+                      <TableCell className={isAnnulled ? "line-through" : ""}>{purchase.document_number}</TableCell>
+                      <TableCell className={`text-right ${isAnnulled ? "line-through" : ""}`}>${purchase.total_cost.toFixed(2)}</TableCell>
                       <TableCell className="text-center">
                         <TooltipProvider>
                           <div className="flex justify-center items-center space-x-1">

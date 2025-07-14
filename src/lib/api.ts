@@ -103,22 +103,24 @@ export const deleteProduct = (id: number): Promise<null> => {
 
 // Purchase API call
 export const createPurchase = (purchase: PurchasePayload): Promise<{ message: string }> => {
+    // El payload ya viene estructurado correctamente desde el frontend.
+    // Simplemente lo pasamos al backend.
     return fetchAPI('/purchases', {
         method: 'POST',
         body: JSON.stringify(purchase),
     });
 };
 
-export const getPurchaseHistory = (): Promise<PurchaseHistoryMovement[]> => fetchAPI('/purchases');
+export const getPurchaseHistory = (): Promise<GroupedPurchase[]> => fetchAPI('/purchases');
 
-export const updatePurchase = (payload: { movementIdsToAnnul: number[], purchaseData: PurchasePayload }): Promise<{ message: string }> => {
+export const updatePurchase = (payload: { transaction_id: string, purchaseData: PurchasePayload }): Promise<{ message: string }> => {
     return fetchAPI('/purchases', {
         method: 'PUT',
         body: JSON.stringify(payload),
     });
 };
 
-export const annulPurchase = (payload: { movementIds: number[] }): Promise<{ message: string }> => {
+export const annulPurchase = (payload: { transaction_id: string }): Promise<{ message: string }> => {
     return fetchAPI('/purchases', {
         method: 'DELETE',
         body: JSON.stringify(payload),
@@ -130,7 +132,7 @@ export const getPurchaseDetails = (transactionId: string): Promise<PurchasePaylo
 };
 
 // Sale API calls
-export const getSalesHistory = (): Promise<SalesHistoryMovement[]> => fetchAPI('/sales');
+export const getSalesHistory = (): Promise<GroupedSale[]> => fetchAPI('/sales');
 
 export const getSaleDetails = (transactionId: string): Promise<SalePayload> => {
     return fetchAPI(`/sales/details?id=${encodeURIComponent(transactionId)}`);
@@ -143,14 +145,14 @@ export const createSale = (sale: SalePayload): Promise<{ message: string }> => {
     });
 };
 
-export const updateSale = (payload: { movementIdsToAnnul: number[], saleData: SalePayload }): Promise<{ message:string }> => {
+export const updateSale = (payload: { transaction_id: string, saleData: SalePayload }): Promise<{ message:string }> => {
     return fetchAPI('/sales', {
         method: 'PUT',
         body: JSON.stringify(payload),
     });
 };
 
-export const annulSale = (payload: { movementIds: number[] }): Promise<{ message: string }> => {
+export const annulSale = (payload: { transaction_id: string }): Promise<{ message: string }> => {
     return fetchAPI('/sales', {
         method: 'DELETE',
         body: JSON.stringify(payload),

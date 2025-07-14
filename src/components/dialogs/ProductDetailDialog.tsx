@@ -77,10 +77,11 @@ export function ProductDetailDialog({
 
   const MovementRow = ({ move }: { move: InventoryMovement }) => {
     const isEntry = move.type === 'ENTRADA';
+    const displayDate = move.transaction_date || move.created_at; // Fallback a created_at si transaction_date no está
     return (
       <TableRow>
         <TableCell>
-          {format(new Date(move.date), "dd/MM/yyyy HH:mm", { locale: es })}
+          {format(new Date(displayDate), "dd/MM/yyyy HH:mm", { locale: es })}
         </TableCell>
         <TableCell>
           <Badge variant={isEntry ? "default" : "secondary"} className="flex items-center w-fit">

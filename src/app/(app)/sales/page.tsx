@@ -73,7 +73,7 @@ export default function SalesPage() {
     const [isConfirmationOpen, setIsConfirmationOpen] = React.useState(false);
     const [consolidatedItems, setConsolidatedItems] = React.useState<(SaleItemPayload & { name: string })[]>([]);
     const [selectedTransactionId, setSelectedTransactionId] = React.useState<string | null>(null);
-    const [editingMovementIds, setEditingMovementIds] = React.useState<number[] | null>(null);
+    const [editingTransactionId, setEditingTransactionId] = React.useState<string | null>(null);
 
     const { isBackendReady, refetchKey, triggerRefetch } = useBackendStatus();
 
@@ -93,14 +93,32 @@ export default function SalesPage() {
 
     const productMap = React.useMemo(() => new Map(products.map(p => [p.id, p])), [products]);
     
-    const productOptions = React.useMemo(() => 
+    const productOptions = React.useMemo(() => {
+        const optionsMap = new Map<string, { value: string; label: string }>();
+
+        // Add all products with stock
         products
             .filter(p => p.stock > 0)
-            .map(p => ({ 
-                value: String(p.id), 
+            .forEach(p => optionsMap.set(String(p.id), {
+                value: String(p.id),
                 label: `(${p.sku || 'N/A'}) ${p.name}`
-            })), 
-    [products]);
+            }));
+
+        // Ensure products already in the cart are in the list, even if out of stock
+        cart.forEach(item => {
+            if (item.productId && !optionsMap.has(String(item.productId))) {
+                const product = productMap.get(item.productId);
+                if (product) {
+                    optionsMap.set(String(product.id), {
+                        value: String(product.id),
+                        label: `(${product.sku || 'N/A'}) ${product.name}`
+                    });
+                }
+            }
+        });
+
+        return Array.from(optionsMap.values());
+    }, [products, cart, productMap]);
 
     const resetForm = () => {
         setDate(new Date());
@@ -109,7 +127,7 @@ export default function SalesPage() {
         setInvoiceNumber('');
         setCart([createEmptyCartItem()]);
         setOpenComboboxIndex(null);
-        setEditingMovementIds(null);
+        setEditingTransactionId(null);
     };
 
     const handleCartItemChange = (index: number, field: keyof Omit<CartItem, 'id' | 'name' | 'availableStock'>, value: any) => {
@@ -170,31 +188,31 @@ export default function SalesPage() {
         setIsLoading(true);
         
         const salePayload: SalePayload = {
-            date: date.toISOString(),
-            clientName: clientName || undefined,
-            clientDni: clientDni || undefined,
-            invoiceNumber: invoiceNumber || undefined,
+            transaction_date: date.toISOString(),
+            entity_name: clientName || undefined,
+            entity_document: clientDni || undefined,
+            document_number: invoiceNumber || undefined,
             items: consolidatedItems,
         };
 
         try {
-            let transactionId;
-            if (editingMovementIds) {
-                await updateSale({ movementIdsToAnnul: editingMovementIds, saleData: salePayload });
+            if (editingTransactionId) {
+                await updateSale({ transaction_id: editingTransactionId, saleData: salePayload });
                 toastSuccess("Venta Actualizada", "La venta se ha modificado exitosamente.");
-                transactionId = `Venta a ${salePayload.clientName || 'cliente'} (DNI: ${salePayload.clientDni || 'N/A'}). Factura: ${salePayload.invoiceNumber || 'N/A'}`;
+                setSelectedTransactionId(editingTransactionId);
+                setIsReceiptOpen(true);
             } else {
-                await createSale(salePayload);
+                const response = await createSale(salePayload);
                 toastSuccess("Venta Registrada", "La venta se ha guardado exitosamente.");
-                transactionId = `Venta a ${salePayload.clientName || 'cliente'} (DNI: ${salePayload.clientDni || 'N/A'}). Factura: ${salePayload.invoiceNumber || 'N/A'}`;
+                setSelectedTransactionId(response.transaction_id);
+                setIsReceiptOpen(true);
             }
             
-            setSelectedTransactionId(transactionId);
-            setIsReceiptOpen(true);
             triggerRefetch();
             resetForm();
             setIsHistoryOpen(false);
         } catch (error) {
+            // Error handled in API layer
         } finally {
             setIsLoading(false);
             setIsConfirmationOpen(false);
@@ -202,30 +220,38 @@ export default function SalesPage() {
     };
 
     const handleEditSale = (sale: GroupedSale) => {
-        const productInfoMap = new Map(products.map(p => [p.name, p]));
+        setDate(new Date(sale.transaction_date));
+        setClientName(sale.entity_name);
+        setClientDni(sale.entity_document !== 'N/A' ? sale.entity_document : '');
+        setInvoiceNumber(sale.document_number);
 
-        setDate(new Date(sale.date));
-        setClientName(sale.clientName);
-        setClientDni(sale.clientDni !== 'N/A' ? sale.clientDni : '');
-        setInvoiceNumber(sale.invoiceNumber);
-        setCart(sale.movements.map(m => {
-            const product = productInfoMap.get(m.productName);
-            return {
-                id: `edit-${m.id}`,
-                productId: product?.id || null,
-                name: m.productName,
-                quantity: m.quantity,
-                price: m.unit_cost,
-                tax_rate: product?.tax_rate || 0,
-                availableStock: (product?.stock || 0) + m.quantity,
-            };
-        }));
-        setEditingMovementIds(sale.movements.map(m => m.id));
+        // Consolidate items before setting the cart
+        const consolidatedItems = new Map<number, CartItem>();
+        sale.movements.forEach(m => {
+            const product = productMap.get(m.productId);
+            if (consolidatedItems.has(m.productId)) {
+                const existing = consolidatedItems.get(m.productId)!;
+                existing.quantity += m.quantity;
+            } else {
+                consolidatedItems.set(m.productId, {
+                    id: `edit-consolidated-${m.productId}`,
+                    productId: m.productId,
+                    name: m.productName,
+                    quantity: m.quantity,
+                    price: m.unit_price,
+                    tax_rate: product?.tax_rate || 0,
+                    availableStock: (product?.stock || 0) + m.quantity,
+                });
+            }
+        });
+
+        setCart(Array.from(consolidatedItems.values()));
+        setEditingTransactionId(sale.transaction_id);
         setIsHistoryOpen(false);
     };
 
     const handleViewReceiptFromHistory = (sale: GroupedSale) => {
-        setSelectedTransactionId(sale.description);
+        setSelectedTransactionId(sale.transaction_id);
         setIsReceiptOpen(true);
     };
 
@@ -290,9 +316,9 @@ export default function SalesPage() {
             <div className="flex items-center justify-between">
                 <div className="flex-1">
                     <h1 className="font-semibold text-lg md:text-2xl">Ventas</h1>
-                    <p className="text-sm text-muted-foreground">{editingMovementIds ? `Editando venta a ${clientName}` : "Crea y gestiona facturas de venta."}</p>
+                    <p className="text-sm text-muted-foreground">{editingTransactionId ? `Editando venta a ${clientName}` : "Crea y gestiona facturas de venta."}</p>
                 </div>
-                <Button variant="outline" onClick={() => setIsHistoryOpen(true)} disabled={editingMovementIds !== null}>
+                <Button variant="outline" onClick={() => setIsHistoryOpen(true)} disabled={editingTransactionId !== null}>
                     <History className="mr-2 h-4 w-4" />
                     Historial
                 </Button>
@@ -300,7 +326,7 @@ export default function SalesPage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
                 <div className="lg:col-span-2 space-y-6">
                     <Card>
-                        <CardHeader><CardTitle>{editingMovementIds ? "Editar Venta" : "Nueva Venta"}</CardTitle></CardHeader>
+                        <CardHeader><CardTitle>{editingTransactionId ? "Editar Venta" : "Nueva Venta"}</CardTitle></CardHeader>
                         <CardContent>
                         <div className="grid gap-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -372,10 +398,10 @@ export default function SalesPage() {
                     <div className="flex flex-col gap-2">
                          <Button onClick={handleOpenConfirmation} disabled={isSubmitDisabled} size="lg">
                             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            {isLoading ? "Procesando..." : (editingMovementIds ? "Guardar Cambios" : "Registrar Venta")}
+                            {isLoading ? "Procesando..." : (editingTransactionId ? "Guardar Cambios" : "Registrar Venta")}
                         </Button>
-                        {editingMovementIds && (<Button variant="ghost" onClick={resetForm}><XCircle className="mr-2 h-4 w-4" />Cancelar Edición</Button>)}
-                        <Button variant="secondary" onClick={handleHoldSale} disabled={editingMovementIds !== null}>Poner en Espera</Button>
+                        {editingTransactionId && (<Button variant="ghost" onClick={resetForm}><XCircle className="mr-2 h-4 w-4" />Cancelar Edición</Button>)}
+                        <Button variant="secondary" onClick={handleHoldSale} disabled={editingTransactionId !== null}>Poner en Espera</Button>
                     </div>
 
                     {pendingSales.length > 0 && (

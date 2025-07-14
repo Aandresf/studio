@@ -36,37 +36,6 @@ interface SalesHistoryDialogProps {
   onEditSale: (sale: GroupedSale) => void;
 }
 
-const groupSales = (movements: SalesHistoryMovement[]): GroupedSale[] => {
-    const saleMap = new Map<string, GroupedSale>();
-
-    movements.forEach(move => {
-        // Use a more reliable key, like the description and a precise date
-        const key = move.description + " | " + new Date(move.date).toISOString();
-
-        if (!saleMap.has(key)) {
-            saleMap.set(key, {
-                key,
-                date: move.date,
-                clientName: move.clientName,
-                clientDni: move.clientDni,
-                invoiceNumber: move.invoiceNumber,
-                description: move.description, // Keep for reference
-                total: 0,
-                movements: [],
-                status: move.status,
-            });
-        }
-
-        const sale = saleMap.get(key)!;
-        sale.movements.push(move);
-        if (move.status === 'Activo') {
-            sale.total += move.total_revenue;
-        }
-    });
-
-    return Array.from(saleMap.values()).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-};
-
 export function SalesHistoryDialog({ open, onOpenChange, onViewReceipt, onEditSale }: SalesHistoryDialogProps) {
   const [history, setHistory] = React.useState<GroupedSale[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
@@ -75,10 +44,8 @@ export function SalesHistoryDialog({ open, onOpenChange, onViewReceipt, onEditSa
   const fetchHistory = React.useCallback(() => {
     setIsLoading(true);
     getSalesHistory()
-      .then(movements => {
-          const nonReplacedMovements = movements.filter(m => m.status !== 'Reemplazado');
-          const grouped = groupSales(nonReplacedMovements);
-          setHistory(grouped);
+      .then(groupedSales => {
+          setHistory(groupedSales);
       })
       .catch(() => {})
       .finally(() => setIsLoading(false));
@@ -93,9 +60,8 @@ export function SalesHistoryDialog({ open, onOpenChange, onViewReceipt, onEditSa
   const handleAnnul = async (sale: GroupedSale) => {
     if (!window.confirm("¿Estás seguro de que quieres anular esta venta? El stock de los productos se restaurará.")) return;
 
-    const movementIds = sale.movements.map(m => m.id);
     try {
-        await annulSale({ movementIds });
+        await annulSale({ transaction_id: sale.transaction_id });
         toastSuccess("Venta Anulada", "La venta ha sido anulada correctamente.");
         fetchHistory(); // Refresh list
     } catch (error) {}
@@ -103,7 +69,7 @@ export function SalesHistoryDialog({ open, onOpenChange, onViewReceipt, onEditSa
 
   const filteredHistory = history.filter(s => {
       const query = searchQuery.toLowerCase();
-      return s.clientName.toLowerCase().includes(query) || s.invoiceNumber.toLowerCase().includes(query);
+      return s.entity_name.toLowerCase().includes(query) || (s.document_number && s.document_number.toLowerCase().includes(query));
   });
 
   return (
@@ -147,15 +113,15 @@ export function SalesHistoryDialog({ open, onOpenChange, onViewReceipt, onEditSa
                 filteredHistory.map((sale) => {
                   const isAnnulled = sale.status === 'Anulado';
                   return (
-                    <TableRow key={sale.key} className={isAnnulled ? "opacity-50" : ""}>
+                    <TableRow key={sale.transaction_id} className={isAnnulled ? "opacity-50" : ""}>
                       <TableCell>
                         {isAnnulled && <Badge variant="destructive">Anulada</Badge>}
                       </TableCell>
                       <TableCell className={isAnnulled ? "line-through" : ""}>
-                        {format(new Date(sale.date), "dd/MM/yyyy HH:mm", { locale: es })}
+                        {format(new Date(sale.transaction_date), "dd/MM/yyyy HH:mm", { locale: es })}
                       </TableCell>
-                      <TableCell className={isAnnulled ? "line-through" : ""}>{sale.clientName}</TableCell>
-                      <TableCell className={isAnnulled ? "line-through" : ""}>{sale.invoiceNumber}</TableCell>
+                      <TableCell className={isAnnulled ? "line-through" : ""}>{sale.entity_name}</TableCell>
+                      <TableCell className={isAnnulled ? "line-through" : ""}>{sale.document_number}</TableCell>
                       <TableCell className={`text-right ${isAnnulled ? "line-through" : ""}`}>${sale.total.toFixed(2)}</TableCell>
                       <TableCell className="text-center">
                         <TooltipProvider>

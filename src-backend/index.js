@@ -3,6 +3,7 @@ const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
 const sqlite3 = require('sqlite3').verbose();
+const { nanoid } = require('nanoid');
 const { generateInventoryExcel } = require('./excel-generator.js');
 const { subDays, formatISO } = require('date-fns');
 
@@ -25,26 +26,8 @@ const db = new sqlite3.Database(DB_FILE, (err) => {
     console.error('Error opening database', err.message);
   } else {
     console.log(`Connected to the SQLite database: ${DB_FILE}`);
-    // Run migrations/updates
-    db.serialize(() => {
-        // Add 'status' column to 'inventory_movements' if it doesn't exist
-        db.all("PRAGMA table_info(inventory_movements)", (err, columns) => {
-            if (err) {
-                console.error("Error getting table info for inventory_movements:", err);
-                return;
-            }
-            const hasStatusColumn = columns.some(col => col.name === 'status');
-            if (!hasStatusColumn) {
-                db.run("ALTER TABLE inventory_movements ADD COLUMN status TEXT NOT NULL DEFAULT 'Activo'", (alterErr) => {
-                    if (alterErr) {
-                        console.error("Error adding status column to inventory_movements:", alterErr);
-                    } else {
-                        console.log("Column 'status' added to 'inventory_movements' table.");
-                    }
-                });
-            }
-        });
-    });
+    // La inicialización del esquema base se maneja en el script de inicio del servidor.
+    // Las migraciones complejas se manejarán con scripts dedicados.
   }
 });
 
@@ -191,7 +174,7 @@ app.get('/api/products/:id/movements', (req, res) => {
     SELECT * 
     FROM inventory_movements 
     WHERE product_id = ? AND status = 'Activo'
-    ORDER BY date DESC
+    ORDER BY transaction_date DESC
   `;
   db.all(sql, [id], (err, rows) => {
     if (err) {
@@ -247,9 +230,9 @@ app.post('/api/inventory/movements', async (req, res) => {
             new_stock -= quantity;
         }
 
-        const movementDate = date ? date : new Date().toISOString().slice(0, 19).replace('T', ' ');
-        const movementSql = `INSERT INTO inventory_movements (product_id, type, quantity, unit_cost, description, date) VALUES (?, ?, ?, ?, ?, ?)`;
-        await run(movementSql, [product_id, type, quantity, unit_cost, description, movementDate]);
+        const movementDate = new Date().toISOString();
+        const movementSql = `INSERT INTO inventory_movements (product_id, type, quantity, unit_cost, description, transaction_date, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)`;
+        await run(movementSql, [product_id, type, quantity, unit_cost, description, movementDate, movementDate]);
 
         const productSql = `UPDATE products SET current_stock = ?, average_cost = ?, updated_at = strftime('%Y-%m-%d %H:%M:%S', 'now') WHERE id = ?`;
         await run(productSql, [new_stock, new_avg_cost, product_id]);
@@ -269,24 +252,24 @@ app.post('/api/inventory/movements', async (req, res) => {
 
 // PURCHASES (BATCH)
 app.post('/api/purchases', async (req, res) => {
-    console.log('--- INICIO DE PETICIÓN POST /api/purchases ---');
-    console.log('Cuerpo de la petición (req.body):', JSON.stringify(req.body, null, 2));
+    console.log('--- INICIO DE PETICIÓN POST /api/purchases (NUEVA LÓGICA) ---');
+    console.log('Cuerpo de la petición:', JSON.stringify(req.body, null, 2));
 
-    const { date, supplier, supplierRif, invoiceNumber, items } = req.body;
+    const { transaction_date, entity_name, entity_document, document_number, items } = req.body;
 
-    if (!date || !items || !Array.isArray(items) || items.length === 0) {
-        return res.status(400).json({ error: 'Missing required fields: date, items' });
+    if (!transaction_date || !items || !Array.isArray(items) || items.length === 0) {
+        return res.status(400).json({ error: 'Faltan campos requeridos: transaction_date, items' });
     }
 
     const run = util.promisify(db.run.bind(db));
     const get = util.promisify(db.get.bind(db));
+    const transactionId = nanoid(); // Genera un ID único para toda la transacción
 
     try {
-        // Inicia una única transacción para toda la compra.
         await run('BEGIN TRANSACTION');
 
         for (const item of items) {
-            const { productId, quantity, unitCost } = item;
+            const { productId, quantity, unitCost, description } = item;
 
             if (!productId || !quantity || unitCost === undefined) {
                 throw new Error('Cada item debe tener productId, quantity y unitCost.');
@@ -297,46 +280,43 @@ app.post('/api/purchases', async (req, res) => {
                 throw new Error(`Producto con ID ${productId} no encontrado.`);
             }
 
-            // Calcula el nuevo stock y costo promedio
             const new_stock = product.current_stock + quantity;
             const current_total_value = product.current_stock * product.average_cost;
             const entry_value = quantity * unitCost;
             const new_avg_cost = new_stock > 0 ? (current_total_value + entry_value) / new_stock : 0;
 
-            // Inserta el movimiento de inventario
-            const movementDate = date ? new Date(date).toISOString().slice(0, 19).replace('T', ' ') : new Date().toISOString().slice(0, 19).replace('T', ' ');
-            const description = `Compra a ${supplier || 'proveedor'} (RIF: ${supplierRif || 'N/A'}). Factura: ${invoiceNumber || 'N/A'}`;
-            const movementSql = `INSERT INTO inventory_movements (product_id, type, quantity, unit_cost, description, date, status) VALUES (?, ?, ?, ?, ?, ?, 'Activo')`;
-            await run(movementSql, [productId, 'ENTRADA', quantity, unitCost, description, movementDate]);
+            const movementSql = `
+                INSERT INTO inventory_movements 
+                (product_id, transaction_id, transaction_date, entity_name, entity_document, document_number, type, quantity, unit_cost, description, status) 
+                VALUES (?, ?, ?, ?, ?, ?, 'ENTRADA', ?, ?, ?, 'Activo')
+            `;
+            await run(movementSql, [productId, transactionId, transaction_date, entity_name, entity_document, document_number, quantity, unitCost, description]);
 
-            // Actualiza el producto
             const productSql = `UPDATE products SET current_stock = ?, average_cost = ?, updated_at = strftime('%Y-%m-%d %H:%M:%S', 'now') WHERE id = ?`;
             await run(productSql, [new_stock, new_avg_cost, productId]);
         }
 
-        // Si todo fue bien, confirma la transacción.
         await run('COMMIT');
-        res.status(201).json({ message: 'Purchase registered successfully' });
+        res.status(201).json({ message: 'Compra registrada exitosamente', transaction_id: transactionId });
 
     } catch (err) {
         console.error('Error durante la transacción de compra:', err.message);
         try {
-            // Si algo falla, revierte todos los cambios.
             await run('ROLLBACK');
             res.status(500).json({ error: `Error en la transacción: ${err.message}` });
         } catch (rollbackErr) {
-            console.error('Fatal: Could not rollback transaction', rollbackErr);
+            console.error('Fatal: No se pudo revertir la transacción', rollbackErr);
             res.status(500).json({ error: 'Error fatal en la base de datos durante el rollback.' });
         }
     }
 });
 
 app.put('/api/purchases', async (req, res) => {
-    console.log('--- INICIO DE PETICIÓN PUT /api/purchases (EDITAR) ---');
-    const { movementIdsToAnnul, purchaseData } = req.body;
+    console.log('--- INICIO DE PETICIÓN PUT /api/purchases (EDITAR - NUEVA LÓGICA) ---');
+    const { transaction_id, purchaseData } = req.body;
 
-    if (!movementIdsToAnnul || !Array.isArray(movementIdsToAnnul) || movementIdsToAnnul.length === 0 || !purchaseData || !purchaseData.items) {
-        return res.status(400).json({ error: 'Faltan datos para la edición: movementIdsToAnnul y purchaseData son requeridos.' });
+    if (!transaction_id || !purchaseData || !purchaseData.items) {
+        return res.status(400).json({ error: 'Faltan datos para la edición: transaction_id y purchaseData son requeridos.' });
     }
 
     const run = util.promisify(db.run.bind(db));
@@ -345,17 +325,15 @@ app.put('/api/purchases', async (req, res) => {
 
     try {
         await run('BEGIN TRANSACTION');
-        console.log('Transacción iniciada para edición.');
 
-        // 1. ANULACIÓN: Revertir los movimientos originales usando sus IDs
-        const placeholders = movementIdsToAnnul.map(() => '?').join(',');
+        // 1. ANULACIÓN: Revertir los movimientos originales usando el transaction_id
         const originalMovements = await all(
-            `SELECT * FROM inventory_movements WHERE id IN (${placeholders}) AND status = 'Activo'`,
-            movementIdsToAnnul
+            `SELECT * FROM inventory_movements WHERE transaction_id = ? AND status = 'Activo'`,
+            [transaction_id]
         );
 
-        if (originalMovements.length !== movementIdsToAnnul.length) {
-            throw new Error('No se encontraron todos los movimientos de la compra original para anular, o algunos ya estaban anulados.');
+        if (originalMovements.length === 0) {
+            throw new Error('No se encontraron movimientos activos para la transacción a editar.');
         }
 
         for (const move of originalMovements) {
@@ -374,11 +352,9 @@ app.put('/api/purchases', async (req, res) => {
             await run('UPDATE products SET current_stock = ?, average_cost = ? WHERE id = ?', [stock_before_entry, avg_cost_before_entry, move.product_id]);
             await run("UPDATE inventory_movements SET status = 'Reemplazado' WHERE id = ?", [move.id]);
         }
-        console.log('Fase de anulación completada.');
 
-        // 2. RE-CREACIÓN: Crear los nuevos movimientos con los datos actualizados
-        const { date, supplier, supplierRif, invoiceNumber, items } = purchaseData;
-        const newDescription = `Compra a ${supplier || 'proveedor'} (RIF: ${supplierRif || 'N/A'}). Factura: ${invoiceNumber || 'N/A'}`;
+        // 2. RE-CREACIÓN: Crear los nuevos movimientos con el mismo transaction_id
+        const { transaction_date, entity_name, entity_document, document_number, items } = purchaseData;
 
         for (const item of items) {
             const product = await get('SELECT current_stock, average_cost FROM products WHERE id = ?', [item.productId]);
@@ -390,36 +366,35 @@ app.put('/api/purchases', async (req, res) => {
             const new_avg_cost = new_stock > 0 ? (current_total_value + entry_value) / new_stock : 0;
 
             await run(
-                "INSERT INTO inventory_movements (product_id, type, quantity, unit_cost, description, date, status) VALUES (?, ?, ?, ?, ?, ?, 'Activo')",
-                [item.productId, 'ENTRADA', item.quantity, item.unitCost, newDescription, new Date(date).toISOString()]
+                `INSERT INTO inventory_movements 
+                (product_id, transaction_id, transaction_date, entity_name, entity_document, document_number, type, quantity, unit_cost, description, status) 
+                VALUES (?, ?, ?, ?, ?, ?, 'ENTRADA', ?, ?, ?, 'Activo')`,
+                [item.productId, transaction_id, transaction_date, entity_name, entity_document, document_number, item.quantity, item.unitCost, item.description]
             );
             await run('UPDATE products SET current_stock = ?, average_cost = ? WHERE id = ?', [new_stock, new_avg_cost, item.productId]);
         }
-        console.log('Fase de re-creación completada.');
 
         await run('COMMIT');
-        console.log('Transacción completada (COMMIT).');
-        res.status(200).json({ message: 'Purchase updated successfully' });
+        res.status(200).json({ message: 'Compra actualizada exitosamente' });
 
     } catch (err) {
         console.error('Error durante la transacción de edición:', err.message);
         try {
             await run('ROLLBACK');
-            console.log('Transacción revertida (ROLLBACK).');
             res.status(500).json({ error: `Error en la transacción: ${err.message}` });
         } catch (rollbackErr) {
-            console.error('Fatal: Could not rollback transaction', rollbackErr);
+            console.error('Fatal: No se pudo revertir la transacción', rollbackErr);
             res.status(500).json({ error: 'Error fatal en la base de datos durante el rollback.' });
         }
     }
 });
 
 app.delete('/api/purchases', async (req, res) => {
-    console.log('--- INICIO DE PETICIÓN DELETE /api/purchases (ANULAR) ---');
-    const { movementIds } = req.body;
+    console.log('--- INICIO DE PETICIÓN DELETE /api/purchases (ANULAR - NUEVA LÓGICA) ---');
+    const { transaction_id } = req.body;
 
-    if (!movementIds || !Array.isArray(movementIds) || movementIds.length === 0) {
-        return res.status(400).json({ error: 'Se requiere un array de movementIds.' });
+    if (!transaction_id) {
+        return res.status(400).json({ error: 'Se requiere un transaction_id.' });
     }
 
     const run = util.promisify(db.run.bind(db));
@@ -429,14 +404,13 @@ app.delete('/api/purchases', async (req, res) => {
     try {
         await run('BEGIN TRANSACTION');
 
-        const placeholders = movementIds.map(() => '?').join(',');
         const movementsToAnnul = await all(
-            `SELECT * FROM inventory_movements WHERE id IN (${placeholders}) AND status = 'Activo'`,
-            movementIds
+            `SELECT * FROM inventory_movements WHERE transaction_id = ? AND status = 'Activo'`,
+            [transaction_id]
         );
 
-        if (movementsToAnnul.length !== movementIds.length) {
-            throw new Error('No se encontraron todos los movimientos para anular, o algunos ya no estaban activos.');
+        if (movementsToAnnul.length === 0) {
+            throw new Error('No se encontraron movimientos activos para anular en esta transacción.');
         }
 
         for (const move of movementsToAnnul) {
@@ -465,43 +439,85 @@ app.delete('/api/purchases', async (req, res) => {
             await run('ROLLBACK');
             res.status(500).json({ error: `Error en la transacción: ${err.message}` });
         } catch (rollbackErr) {
-            console.error('Fatal: Could not rollback transaction', rollbackErr);
+            console.error('Fatal: No se pudo revertir la transacción', rollbackErr);
             res.status(500).json({ error: 'Error fatal durante el rollback.' });
         }
     }
 });
 
-// PURCHASES (ENTRADA)
+// PURCHASES (ENTRADA) - OBTENER HISTORIAL
 app.get('/api/purchases', (req, res) => {
     const query = `
         SELECT 
-            im.id,
-            im.date,
+            im.id as movementId,
+            p.id as productId,
+            im.transaction_id,
+            im.transaction_date,
+            im.entity_name,
+            im.entity_document,
+            im.document_number,
+            im.status,
+            im.created_at,
             p.name as productName,
             im.quantity,
-            im.unit_cost,
-            im.description,
-            im.status
+            im.unit_cost
         FROM inventory_movements im
         JOIN products p ON im.product_id = p.id
         WHERE im.type = 'ENTRADA'
-        ORDER BY im.date DESC;
+        ORDER BY im.transaction_date DESC, im.transaction_id;
     `;
     db.all(query, [], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
-        
-        const purchases = rows.map(p => {
-            const match = p.description.match(/Compra a (.*?) \(RIF: (.*?)\)\. Factura: (.*)/);
-            return {
-                ...p,
-                total_cost: (p.quantity || 0) * (p.unit_cost || 0),
-                supplier: match?.[1].trim() || 'N/A',
-                supplierRif: match?.[2].trim() || 'N/A',
-                invoiceNumber: match?.[3].trim() || 'N/A',
+
+        const grouped = rows.reduce((acc, row) => {
+            if (!acc[row.transaction_id]) {
+                acc[row.transaction_id] = {
+                    transaction_id: row.transaction_id,
+                    transaction_date: row.transaction_date,
+                    entity_name: row.entity_name,
+                    entity_document: row.entity_document,
+                    document_number: row.document_number,
+                    status: 'Unknown', // Se determinará después
+                    total_cost: 0,
+                    movements: [],
+                };
+            }
+            // Mapear explícitamente para asegurar la estructura del objeto
+            const movement = {
+                movementId: row.movementId,
+                productId: row.productId,
+                productName: row.productName,
+                quantity: row.quantity,
+                unit_cost: row.unit_cost,
+                status: row.status,
+                created_at: row.created_at
             };
+            acc[row.transaction_id].movements.push(movement);
+            return acc;
+        }, {});
+
+        // Post-procesamiento para determinar el estado final y filtrar los movimientos
+        Object.values(grouped).forEach(transaction => {
+            const active = transaction.movements.filter(m => m.status === 'Activo');
+            const annulled = transaction.movements.filter(m => m.status === 'Anulado');
+
+            if (active.length > 0) {
+                transaction.status = 'Activo';
+                transaction.movements = active;
+            } else if (annulled.length > 0) {
+                transaction.status = 'Anulado';
+                transaction.movements = annulled;
+            } else { // Solo quedan 'Reemplazado'
+                transaction.status = 'Reemplazado';
+                const lastDate = transaction.movements.reduce((max, m) => (m.created_at > max ? m.created_at : max), '');
+                transaction.movements = transaction.movements.filter(m => m.created_at === lastDate);
+            }
+
+            // Recalcular el total basado solo en los movimientos filtrados
+            transaction.total_cost = transaction.movements.reduce((sum, m) => sum + (m.quantity * m.unit_cost), 0);
         });
 
-        res.json(purchases);
+        res.json(Object.values(grouped));
     });
 });
 
@@ -519,42 +535,47 @@ app.get('/api/purchases/details', (req, res) => {
             im.quantity,
             im.unit_cost as unitCost,
             p.tax_rate,
-            im.date,
-            im.description,
+            im.transaction_date,
+            im.entity_name,
+            im.entity_document,
+            im.document_number,
             im.status
         FROM inventory_movements im
         JOIN products p ON im.product_id = p.id
-        WHERE im.description = ? AND im.type = 'ENTRADA'
+        WHERE im.transaction_id = ? AND im.type = 'ENTRADA'
     `;
     db.all(sql, [transactionId], (err, allItems) => {
         if (err) return res.status(500).json({ error: err.message });
-        if (allItems.length === 0) return res.status(404).json({ error: 'Purchase not found' });
+        if (allItems.length === 0) return res.status(404).json({ error: 'Compra no encontrada' });
 
-        let itemsToShow;
-        const activeItems = allItems.filter(item => item.status === 'Activo');
-        const annulledItems = allItems.filter(item => item.status === 'Anulado');
-
-        if (activeItems.length > 0) {
-            itemsToShow = activeItems;
-        } else if (annulledItems.length > 0) {
-            itemsToShow = annulledItems;
-        } else {
-            itemsToShow = allItems.filter(item => item.status === 'Reemplazado');
-        }
+        let itemsToShow = allItems.filter(item => item.status === 'Activo');
         
         if (itemsToShow.length === 0) {
-             const lastDate = allItems.reduce((max, i) => i.date > max ? i.date : max, allItems[0].date);
-             itemsToShow = allItems.filter(i => i.date === lastDate);
+            // If no active items, it's a historical view. Prioritize showing the annulled state.
+            const annulledItems = allItems.filter(item => item.status === 'Anulado');
+            if (annulledItems.length > 0) {
+                itemsToShow = annulledItems;
+            } else {
+                // If not annulled, it must have been replaced. Show the most recent set of replaced items.
+                const lastReplacedDate = allItems
+                    .filter(item => item.status === 'Reemplazado')
+                    .reduce((max, i) => (i.created_at > max ? i.created_at : max), allItems[0].created_at);
+                
+                itemsToShow = allItems.filter(item => item.status === 'Reemplazado' && item.created_at === lastReplacedDate);
+            }
+        }
+
+        if (itemsToShow.length === 0) {
+            return res.status(404).json({ error: 'No se encontraron items para esta transacción.' });
         }
 
         const firstItem = itemsToShow[0];
-        const match = firstItem.description.match(/Compra a (.*?) \(RIF: (.*?)\)\. Factura: (.*)/);
         
         const purchasePayload = {
-            date: firstItem.date,
-            supplier: match?.[1].trim() || 'N/A',
-            supplierRif: match?.[2].trim() || 'N/A',
-            invoiceNumber: match?.[3].trim() || 'N/A',
+            transaction_date: firstItem.transaction_date,
+            entity_name: firstItem.entity_name,
+            entity_document: firstItem.entity_document,
+            document_number: firstItem.document_number,
             items: itemsToShow.map(i => ({
                 productId: i.productId,
                 quantity: i.quantity,
@@ -568,102 +589,79 @@ app.get('/api/purchases/details', (req, res) => {
 });
 
 
-// GET PURCHASE DETAILS BY TRANSACTION ID
-app.get('/api/purchases/details', (req, res) => {
-    const transactionId = req.query.id;
-    if (!transactionId) {
-        return res.status(400).json({ error: 'Transaction ID is required' });
-    }
-
-    const sql = `
-        SELECT
-            im.product_id as productId,
-            p.name as productName,
-            im.quantity,
-            im.unit_cost as unitCost,
-            p.tax_rate,
-            im.date,
-            im.description,
-            im.status
-        FROM inventory_movements im
-        JOIN products p ON im.product_id = p.id
-        WHERE im.description = ? AND im.type = 'ENTRADA'
-    `;
-    db.all(sql, [transactionId], (err, allItems) => {
-        if (err) return res.status(500).json({ error: err.message });
-        if (allItems.length === 0) return res.status(404).json({ error: 'Purchase not found' });
-
-        let itemsToShow;
-        const activeItems = allItems.filter(item => item.status === 'Activo');
-        const annulledItems = allItems.filter(item => item.status === 'Anulado');
-
-        if (activeItems.length > 0) {
-            itemsToShow = activeItems;
-        } else if (annulledItems.length > 0) {
-            itemsToShow = annulledItems;
-        } else {
-            itemsToShow = allItems.filter(item => item.status === 'Reemplazado');
-        }
-        
-        if (itemsToShow.length === 0) {
-             const lastDate = allItems.reduce((max, i) => i.date > max ? i.date : max, allItems[0].date);
-             itemsToShow = allItems.filter(i => i.date === lastDate);
-        }
-
-        const firstItem = itemsToShow[0];
-        const match = firstItem.description.match(/Compra a (.*?) \(RIF: (.*?)\)\. Factura: (.*)/);
-        
-        const purchasePayload = {
-            date: firstItem.date,
-            supplier: match?.[1].trim() || 'N/A',
-            supplierRif: match?.[2].trim() || 'N/A',
-            invoiceNumber: match?.[3].trim() || 'N/A',
-            items: itemsToShow.map(i => ({
-                productId: i.productId,
-                quantity: i.quantity,
-                unitCost: i.unitCost,
-                tax_rate: i.tax_rate
-            }))
-        };
-
-        res.json(purchasePayload);
-    });
-});
-
-
-// SALES (SALIDA)
+// SALES (SALIDA) - OBTENER HISTORIAL
 app.get('/api/sales', (req, res) => {
     const query = `
         SELECT 
-            im.id,
-            im.date,
+            im.id as movementId,
+            p.id as productId,
+            im.transaction_id,
+            im.transaction_date,
+            im.entity_name,
+            im.entity_document,
+            im.document_number,
+            im.status,
+            im.created_at,
             p.name as productName,
             im.quantity,
-            im.unit_cost, -- This is the sale price
-            im.description,
-            im.status -- Crucial for history management
+            im.price as unit_price -- Usamos la columna 'price' para el precio de venta
         FROM inventory_movements im
         JOIN products p ON im.product_id = p.id
         WHERE im.type = 'SALIDA'
-        ORDER BY im.date DESC;
+        ORDER BY im.transaction_date DESC, im.transaction_id;
     `;
     db.all(query, [], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
 
-        const sales = rows.map(s => {
-            const match = s.description.match(/Venta a (?<clientName>.*?) \(DNI: (?<clientDni>.*?)\)\. Factura: (?<invoiceNumber>.*)/);
-            
-            return {
-                ...s,
-                total_revenue: (s.quantity || 0) * (s.unit_cost || 0),
-                // Provide parsed fields for the frontend
-                clientName: match?.groups.clientName.trim() || 'N/A',
-                clientDni: match?.groups.clientDni.trim() || 'N/A',
-                invoiceNumber: match?.groups.invoiceNumber.trim() || 'N/A',
+        const grouped = rows.reduce((acc, row) => {
+            if (!acc[row.transaction_id]) {
+                acc[row.transaction_id] = {
+                    transaction_id: row.transaction_id,
+                    transaction_date: row.transaction_date,
+                    entity_name: row.entity_name,
+                    entity_document: row.entity_document,
+                    document_number: row.document_number,
+                    status: 'Unknown',
+                    total: 0,
+                    movements: [],
+                };
+            }
+            // Mapear explícitamente para asegurar la estructura del objeto
+            const movement = {
+                movementId: row.movementId,
+                productId: row.productId,
+                productName: row.productName,
+                quantity: row.quantity,
+                unit_price: row.unit_price,
+                status: row.status,
+                created_at: row.created_at
             };
+            acc[row.transaction_id].movements.push(movement);
+            return acc;
+        }, {});
+
+        // Post-procesamiento para determinar el estado final y filtrar los movimientos
+        Object.values(grouped).forEach(transaction => {
+            const active = transaction.movements.filter(m => m.status === 'Activo');
+            const annulled = transaction.movements.filter(m => m.status === 'Anulado');
+
+            if (active.length > 0) {
+                transaction.status = 'Activo';
+                transaction.movements = active;
+            } else if (annulled.length > 0) {
+                transaction.status = 'Anulado';
+                transaction.movements = annulled;
+            } else { // Solo quedan 'Reemplazado'
+                transaction.status = 'Reemplazado';
+                const lastDate = transaction.movements.reduce((max, m) => (m.created_at > max ? m.created_at : max), '');
+                transaction.movements = transaction.movements.filter(m => m.created_at === lastDate);
+            }
+
+            // Recalcular el total basado solo en los movimientos filtrados
+            transaction.total = transaction.movements.reduce((sum, m) => sum + (m.quantity * m.unit_price), 0);
         });
 
-        res.json(sales);
+        res.json(Object.values(grouped));
     });
 });
 
@@ -679,48 +677,47 @@ app.get('/api/sales/details', (req, res) => {
             im.product_id as productId,
             p.name as productName,
             im.quantity,
-            im.unit_cost as unitPrice,
+            im.price as unitPrice,
             p.tax_rate,
-            im.date,
-            im.description,
+            im.transaction_date,
+            im.entity_name,
+            im.entity_document,
+            im.document_number,
             im.status
         FROM inventory_movements im
         JOIN products p ON im.product_id = p.id
-        WHERE im.description = ? AND im.type = 'SALIDA'
+        WHERE im.transaction_id = ? AND im.type = 'SALIDA'
     `;
     db.all(sql, [transactionId], (err, allItems) => {
         if (err) return res.status(500).json({ error: err.message });
-        if (allItems.length === 0) return res.status(404).json({ error: 'Sale not found' });
+        if (allItems.length === 0) return res.status(404).json({ error: 'Venta no encontrada' });
 
-        let itemsToShow;
-        const activeItems = allItems.filter(item => item.status === 'Activo');
-        const annulledItems = allItems.filter(item => item.status === 'Anulado');
+        let itemsToShow = allItems.filter(item => item.status === 'Activo');
 
-        if (activeItems.length > 0) {
-            itemsToShow = activeItems;
-        } else if (annulledItems.length > 0) {
-            itemsToShow = annulledItems;
-        } else {
-            // Fallback to replaced or any other state if no active/annulled found
-            itemsToShow = allItems.filter(item => item.status === 'Reemplazado');
-        }
-        
         if (itemsToShow.length === 0) {
-             // If all else fails (e.g. only replaced items exist but we filtered them out)
-             // show the most recent group by date. This is a safe fallback.
-             const lastDate = allItems.reduce((max, i) => i.date > max ? i.date : max, allItems[0].date);
-             itemsToShow = allItems.filter(i => i.date === lastDate);
+            const annulledItems = allItems.filter(item => item.status === 'Anulado');
+            if (annulledItems.length > 0) {
+                itemsToShow = annulledItems;
+            } else {
+                const lastReplacedDate = allItems
+                    .filter(item => item.status === 'Reemplazado')
+                    .reduce((max, i) => (i.created_at > max ? i.created_at : max), allItems[0].created_at);
+                
+                itemsToShow = allItems.filter(item => item.status === 'Reemplazado' && item.created_at === lastReplacedDate);
+            }
         }
 
+        if (itemsToShow.length === 0) {
+            return res.status(404).json({ error: 'No se encontraron items para esta transacción.' });
+        }
 
         const firstItem = itemsToShow[0];
-        const match = firstItem.description.match(/Venta a (?<clientName>.*?) \(DNI: (?<clientDni>.*?)\)\. Factura: (?<invoiceNumber>.*)/);
 
         const salePayload = {
-            date: firstItem.date,
-            clientName: match?.groups.clientName.trim() || 'N/A',
-            clientDni: match?.groups.clientDni.trim() || 'N/A',
-            invoiceNumber: match?.groups.invoiceNumber.trim() || 'N/A',
+            transaction_date: firstItem.transaction_date,
+            entity_name: firstItem.entity_name,
+            entity_document: firstItem.entity_document,
+            document_number: firstItem.document_number,
             items: itemsToShow.map(i => ({
                 productId: i.productId,
                 quantity: i.quantity,
@@ -736,29 +733,30 @@ app.get('/api/sales/details', (req, res) => {
 
 // SALES (BATCH - NEW)
 app.post('/api/sales', async (req, res) => {
-    console.log('--- INICIO DE PETICIÓN POST /api/sales ---');
-    console.log('Cuerpo de la petición (req.body):', JSON.stringify(req.body, null, 2));
+    console.log('--- INICIO DE PETICIÓN POST /api/sales (NUEVA LÓGICA) ---');
+    console.log('Cuerpo de la petición:', JSON.stringify(req.body, null, 2));
 
-    const { date, clientName, clientDni, invoiceNumber, items } = req.body;
+    const { transaction_date, entity_name, entity_document, document_number, items } = req.body;
 
-    if (!date || !items || !Array.isArray(items) || items.length === 0) {
-        return res.status(400).json({ error: 'Faltan campos requeridos: date, items' });
+    if (!transaction_date || !items || !Array.isArray(items) || items.length === 0) {
+        return res.status(400).json({ error: 'Faltan campos requeridos: transaction_date, items' });
     }
 
     const run = util.promisify(db.run.bind(db));
     const get = util.promisify(db.get.bind(db));
+    const transactionId = nanoid();
 
     try {
         await run('BEGIN TRANSACTION');
 
         for (const item of items) {
-            const { productId, quantity, unitPrice } = item;
+            const { productId, quantity, unitPrice, description } = item;
 
             if (!productId || !quantity || unitPrice === undefined) {
                 throw new Error('Cada item debe tener productId, quantity y unitPrice.');
             }
 
-            const product = await get('SELECT current_stock, average_cost FROM products WHERE id = ?', [productId]);
+            const product = await get('SELECT current_stock FROM products WHERE id = ?', [productId]);
             if (!product) {
                 throw new Error(`Producto con ID ${productId} no encontrado.`);
             }
@@ -766,23 +764,21 @@ app.post('/api/sales', async (req, res) => {
                 throw new Error(`Stock insuficiente para el producto ID ${productId}. Disponible: ${product.current_stock}, Requerido: ${quantity}`);
             }
 
-            // El costo promedio del producto no cambia en una venta.
             const new_stock = product.current_stock - quantity;
 
-            // Inserta el movimiento de inventario
-            const movementDate = date ? new Date(date).toISOString().slice(0, 19).replace('T', ' ') : new Date().toISOString().slice(0, 19).replace('T', ' ');
-            const description = `Venta a ${clientName || 'cliente'} (DNI: ${clientDni || 'N/A'}). Factura: ${invoiceNumber || 'N/A'}`;
-            // En una venta, 'unit_cost' representa el precio de venta.
-            const movementSql = `INSERT INTO inventory_movements (product_id, type, quantity, unit_cost, description, date, status) VALUES (?, ?, ?, ?, ?, ?, 'Activo')`;
-            await run(movementSql, [productId, 'SALIDA', quantity, unitPrice, description, movementDate]);
+            const movementSql = `
+                INSERT INTO inventory_movements 
+                (product_id, transaction_id, transaction_date, entity_name, entity_document, document_number, type, quantity, price, description, status) 
+                VALUES (?, ?, ?, ?, ?, ?, 'SALIDA', ?, ?, ?, 'Activo')
+            `;
+            await run(movementSql, [productId, transactionId, transaction_date, entity_name, entity_document, document_number, quantity, unitPrice, description]);
 
-            // Actualiza solo el stock del producto
             const productSql = `UPDATE products SET current_stock = ?, updated_at = strftime('%Y-%m-%d %H:%M:%S', 'now') WHERE id = ?`;
             await run(productSql, [new_stock, productId]);
         }
 
         await run('COMMIT');
-        res.status(201).json({ message: 'Sale registered successfully' });
+        res.status(201).json({ message: 'Venta registrada exitosamente', transaction_id: transactionId });
 
     } catch (err) {
         console.error('Error durante la transacción de venta:', err.message);
@@ -790,18 +786,18 @@ app.post('/api/sales', async (req, res) => {
             await run('ROLLBACK');
             res.status(500).json({ error: `Error en la transacción: ${err.message}` });
         } catch (rollbackErr) {
-            console.error('Fatal: Could not rollback transaction', rollbackErr);
+            console.error('Fatal: No se pudo revertir la transacción', rollbackErr);
             res.status(500).json({ error: 'Error fatal en la base de datos durante el rollback.' });
         }
     }
 });
 
 app.put('/api/sales', async (req, res) => {
-    console.log('--- INICIO DE PETICIÓN PUT /api/sales (EDITAR) ---');
-    const { movementIdsToAnnul, saleData } = req.body;
+    console.log('--- INICIO DE PETICIÓN PUT /api/sales (EDITAR - NUEVA LÓGICA) ---');
+    const { transaction_id, saleData } = req.body;
 
-    if (!movementIdsToAnnul || !Array.isArray(movementIdsToAnnul) || movementIdsToAnnul.length === 0 || !saleData || !saleData.items) {
-        return res.status(400).json({ error: 'Faltan datos para la edición: movementIdsToAnnul y saleData son requeridos.' });
+    if (!transaction_id || !saleData || !saleData.items) {
+        return res.status(400).json({ error: 'Faltan datos para la edición: transaction_id y saleData son requeridos.' });
     }
 
     const run = util.promisify(db.run.bind(db));
@@ -812,32 +808,36 @@ app.put('/api/sales', async (req, res) => {
         await run('BEGIN TRANSACTION');
 
         // 1. ANULACIÓN: Revertir el stock de los movimientos originales
-        const placeholders = movementIdsToAnnul.map(() => '?').join(',');
-        const originalMovements = await all(`SELECT * FROM inventory_movements WHERE id IN (${placeholders}) AND status = 'Activo'`, movementIdsToAnnul);
+        const originalMovements = await all(`SELECT * FROM inventory_movements WHERE transaction_id = ? AND status = 'Activo'`, [transaction_id]);
 
-        if (originalMovements.length !== movementIdsToAnnul.length) throw new Error('No se encontraron todos los movimientos de la venta original para editar.');
+        if (originalMovements.length === 0) {
+            throw new Error('No se encontraron movimientos de venta activos para editar.');
+        }
 
         for (const move of originalMovements) {
-            // Revertir el stock es sumar la cantidad que se vendió
             await run('UPDATE products SET current_stock = current_stock + ? WHERE id = ?', [move.quantity, move.product_id]);
             await run("UPDATE inventory_movements SET status = 'Reemplazado' WHERE id = ?", [move.id]);
         }
 
-        // 2. RE-CREACIÓN: Crear los nuevos movimientos con los datos actualizados
-        const { date, clientName, clientDni, invoiceNumber, items } = saleData;
-        const newDescription = `Venta a ${clientName || 'cliente'} (DNI: ${clientDni || 'N/A'}). Factura: ${invoiceNumber || 'N/A'}`;
+        // 2. RE-CREACIÓN: Crear los nuevos movimientos con el mismo transaction_id
+        const { transaction_date, entity_name, entity_document, document_number, items } = saleData;
 
         for (const item of items) {
             const product = await get('SELECT current_stock FROM products WHERE id = ?', [item.productId]);
             if (!product) throw new Error(`Producto con ID ${item.productId} no encontrado.`);
             if (product.current_stock < item.quantity) throw new Error(`Stock insuficiente para el producto ID ${item.productId}.`);
 
-            await run("INSERT INTO inventory_movements (product_id, type, quantity, unit_cost, description, date, status) VALUES (?, 'SALIDA', ?, ?, ?, ?, 'Activo')", [item.productId, item.quantity, item.unitPrice, newDescription, new Date(date).toISOString()]);
+            await run(
+                `INSERT INTO inventory_movements 
+                (product_id, transaction_id, transaction_date, entity_name, entity_document, document_number, type, quantity, price, description, status) 
+                VALUES (?, ?, ?, ?, ?, ?, 'SALIDA', ?, ?, ?, 'Activo')`,
+                [item.productId, transaction_id, transaction_date, entity_name, entity_document, document_number, item.quantity, item.unitPrice, item.description]
+            );
             await run('UPDATE products SET current_stock = current_stock - ? WHERE id = ?', [item.quantity, item.productId]);
         }
 
         await run('COMMIT');
-        res.status(200).json({ message: 'Sale updated successfully' });
+        res.status(200).json({ message: 'Venta actualizada exitosamente' });
 
     } catch (err) {
         console.error('Error durante la transacción de edición de venta:', err.message);
@@ -847,11 +847,11 @@ app.put('/api/sales', async (req, res) => {
 });
 
 app.delete('/api/sales', async (req, res) => {
-    console.log('--- INICIO DE PETICIÓN DELETE /api/sales (ANULAR) ---');
-    const { movementIds } = req.body;
+    console.log('--- INICIO DE PETICIÓN DELETE /api/sales (ANULAR - NUEVA LÓGICA) ---');
+    const { transaction_id } = req.body;
 
-    if (!movementIds || !Array.isArray(movementIds) || movementIds.length === 0) {
-        return res.status(400).json({ error: 'Se requiere un array de movementIds.' });
+    if (!transaction_id) {
+        return res.status(400).json({ error: 'Se requiere un transaction_id.' });
     }
 
     const run = util.promisify(db.run.bind(db));
@@ -860,10 +860,11 @@ app.delete('/api/sales', async (req, res) => {
     try {
         await run('BEGIN TRANSACTION');
 
-        const placeholders = movementIds.map(() => '?').join(',');
-        const movementsToAnnul = await all(`SELECT * FROM inventory_movements WHERE id IN (${placeholders}) AND status = 'Activo'`, movementIds);
+        const movementsToAnnul = await all(`SELECT * FROM inventory_movements WHERE transaction_id = ? AND status = 'Activo'`, [transaction_id]);
 
-        if (movementsToAnnul.length !== movementIds.length) throw new Error('No se encontraron todos los movimientos para anular, o algunos ya no estaban activos.');
+        if (movementsToAnnul.length === 0) {
+            throw new Error('No se encontraron movimientos de venta activos para anular.');
+        }
 
         for (const move of movementsToAnnul) {
             // Revertir el stock es sumar la cantidad que se vendió
@@ -914,14 +915,14 @@ app.post('/api/reports/inventory-excel', async (req, res) => {
                 `SELECT 
                     SUM(CASE WHEN type = 'ENTRADA' THEN quantity ELSE -quantity END) as stock
                  FROM inventory_movements 
-                 WHERE product_id = ? AND date(date) < ?`,
+                 WHERE product_id = ? AND date(transaction_date) < ?`,
                 [product.id, startDate]
             );
             const existenciaAnterior = initialStockResult?.stock || 0;
 
             // Movimientos dentro del período
             const movements = await all(
-                `SELECT type, quantity, unit_cost FROM inventory_movements WHERE product_id = ? AND date(date) BETWEEN ? AND ?`,
+                `SELECT type, quantity, unit_cost FROM inventory_movements WHERE product_id = ? AND date(transaction_date) BETWEEN ? AND ?`,
                 [product.id, startDate, endDate]
             );
 
@@ -981,8 +982,8 @@ app.post('/api/reports/:type', (req, res) => {
             SELECT p.name, p.sku, im.*
             FROM inventory_movements im
             JOIN products p ON im.product_id = p.id
-            WHERE im.type = ? AND date(im.date) BETWEEN ? AND ?
-            ORDER BY im.date
+            WHERE im.type = ? AND date(im.transaction_date) BETWEEN ? AND ?
+            ORDER BY im.transaction_date
         `;
         db.all(query, [movementType, startDate, endDate], (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
@@ -994,8 +995,8 @@ app.post('/api/reports/:type', (req, res) => {
             SELECT p.name, p.sku, im.*
             FROM inventory_movements im
             JOIN products p ON im.product_id = p.id
-            WHERE im.date BETWEEN ? AND ?
-            ORDER BY p.name, im.date
+            WHERE im.transaction_date BETWEEN ? AND ?
+            ORDER BY p.name, im.transaction_date
         `;
          db.all(query, [startDate, endDate], (err, rows) => {
             if (err) return res.status(500).json({ error: err.message });
@@ -1025,12 +1026,12 @@ app.get('/api/dashboard/summary', async (req, res) => {
 
         const salesQuery = `
             SELECT
-                SUM(CASE WHEN date >= ? THEN quantity * unit_cost ELSE 0 END) as currentRevenue,
-                COUNT(CASE WHEN date >= ? THEN 1 ELSE NULL END) as currentSalesCount,
-                SUM(CASE WHEN date >= ? AND date < ? THEN quantity * unit_cost ELSE 0 END) as previousRevenue,
-                COUNT(CASE WHEN date >= ? AND date < ? THEN 1 ELSE NULL END) as previousSalesCount
+                SUM(CASE WHEN transaction_date >= ? THEN quantity * price ELSE 0 END) as currentRevenue,
+                COUNT(CASE WHEN transaction_date >= ? THEN 1 ELSE NULL END) as currentSalesCount,
+                SUM(CASE WHEN transaction_date >= ? AND transaction_date < ? THEN quantity * price ELSE 0 END) as previousRevenue,
+                COUNT(CASE WHEN transaction_date >= ? AND transaction_date < ? THEN 1 ELSE NULL END) as previousSalesCount
             FROM inventory_movements
-            WHERE type = 'SALIDA' AND status = 'Activo' AND date >= ?
+            WHERE type = 'SALIDA' AND status = 'Activo' AND transaction_date >= ?
         `;
 
         const productQuery = `
@@ -1081,14 +1082,13 @@ app.get('/api/dashboard/summary', async (req, res) => {
 app.get('/api/dashboard/recent-sales', (req, res) => {
     const sql = `
         SELECT
-            description as id, -- Use description as the unique transaction ID
-            SUM(im.quantity * im.unit_cost) as amount,
-            MAX(im.date) as date,
-            -- Extract client name from the description string
-            SUBSTR(im.description, 9, INSTR(SUBSTR(im.description, 9), ' (DNI:') - 1) as customerName
+            transaction_id as id,
+            SUM(im.quantity * im.price) as amount,
+            MAX(im.transaction_date) as date,
+            entity_name as customerName
         FROM inventory_movements im
         WHERE im.type = 'SALIDA' AND im.status = 'Activo'
-        GROUP BY description
+        GROUP BY transaction_id
         ORDER BY date DESC
         LIMIT 5
     `;
@@ -1096,10 +1096,10 @@ app.get('/api/dashboard/recent-sales', (req, res) => {
         if (err) return res.status(500).json({ error: err.message });
 
         const salesData = rows.map(row => ({
-            id: row.id, // This is now the transaction ID (description)
+            id: row.id,
             customerName: row.customerName || 'Venta de mostrador',
-            customerEmail: '', // Keep it clean
-            status: 'Completado', // Consistent status
+            customerEmail: '',
+            status: 'Completado',
             date: row.date,
             amount: row.amount || 0
         }));

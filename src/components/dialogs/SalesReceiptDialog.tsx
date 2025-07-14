@@ -157,19 +157,19 @@ export function SalesReceiptDialog({
         <Separator className="my-2 border-dashed" />
         <div className="flex justify-between">
             <span>Factura #:</span>
-            <span>{sale.invoiceNumber || "N/A"}</span>
+            <span>{sale.document_number || "N/A"}</span>
         </div>
         <div className="flex justify-between">
             <span>Fecha:</span>
-            <span>{format(new Date(sale.date), "dd/MM/yyyy HH:mm", { locale: es })}</span>
+            <span>{format(new Date(sale.transaction_date), "dd/MM/yyyy HH:mm", { locale: es })}</span>
         </div>
         <div className="flex justify-between">
             <span>Cliente:</span>
-            <span>{sale.clientName || "N/A"}</span>
+            <span>{sale.entity_name || "N/A"}</span>
         </div>
           <div className="flex justify-between">
             <span>DNI/RIF:</span>
-            <span>{sale.clientDni || "N/A"}</span>
+            <span>{sale.entity_document || "N/A"}</span>
         </div>
         <Separator className="my-2 border-dashed" />
         <div>

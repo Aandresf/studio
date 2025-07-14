@@ -164,19 +164,19 @@ export function PurchaseReceiptDialog({
         <Separator className="my-2 border-dashed" />
         <div className="flex justify-between">
             <span>Factura #:</span>
-            <span>{purchase.invoiceNumber || "N/A"}</span>
+            <span>{purchase.document_number || "N/A"}</span>
         </div>
         <div className="flex justify-between">
             <span>Fecha:</span>
-            <span>{format(new Date(purchase.date), "dd/MM/yyyy HH:mm", { locale: es })}</span>
+            <span>{format(new Date(purchase.transaction_date), "dd/MM/yyyy HH:mm", { locale: es })}</span>
         </div>
         <div className="flex justify-between">
             <span>Proveedor:</span>
-            <span>{purchase.supplier || "N/A"}</span>
+            <span>{purchase.entity_name || "N/A"}</span>
         </div>
           <div className="flex justify-between">
             <span>RIF:</span>
-            <span>{purchase.supplierRif || "N/A"}</span>
+            <span>{purchase.entity_document || "N/A"}</span>
         </div>
         <Separator className="my-2 border-dashed" />
         <div>

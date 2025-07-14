@@ -231,3 +231,25 @@ Esta es la parte crucial para llenar el reporte correctamente. Cada columna de l
         2.  **Por valoración final:** `Existencia Actual (Unidades)` x `Valor Promedio Unitario ACTUAL (Bs)`. El `Valor Promedio Actual` será el último costo promedio que se calculó en el período.
 
 En resumen, la clave es: **las salidas de inventario, sin importar su motivo (venta, retiro, etc.), siempre se valoran al costo promedio ponderado que esté vigente en ese preciso momento.** Este es el método que la administración tributaria venezolana (SENIAT) verifica para validar el costo de ventas declarado.
+---
+## Tarea Actual: Refactorización de Transacciones
+
+**Fecha:** 13 de Julio de 2025
+
+**Objetivo:** Modificar la base de datos y el backend para utilizar un identificador de transacción único e inmutable (`transaction_id`) y campos estructurados para la fecha y los datos de la entidad (cliente/proveedor), eliminando la dependencia del campo `description` para almacenar esta información crítica.
+
+### Plan de Implementación
+
+1.  **Paso 1: Modificar la Base de Datos (Backend)**
+    *   **[COMPLETADO]** Actualizar `src-backend/schema.sql` para añadir las columnas `transaction_id`, `transaction_date`, `entity_name`, y `entity_document` a la tabla `inventory_movements`.
+    *   **[COMPLETADO]** Crear un script de migración (`src-backend/temp_alter.sql`) para aplicar estos cambios a la base de datos existente.
+
+2.  **Paso 2: Refactorizar la Capa de API (`src/lib/api.ts`)**
+    *   **[COMPLETADO]** Modificar las funciones de creación (ej. `createPurchase`) para que dejen de empaquetar datos en `description` y los envíen como campos separados.
+    *   **[COMPLETADO]** Actualizar las funciones de lectura (ej. `getPurchaseHistory`) para que usen `transaction_id` para agrupar y solicitar recibos.
+
+3.  **Paso 3: Refactorizar el Servidor Backend (`src-backend/index.js`)**
+    *   **[COMPLETADO]** Actualizar los endpoints `POST` para que reciban los nuevos campos estructurados, generen un `transaction_id` único por lote y lo guarden en cada movimiento.
+    *   **[COMPLETADO]** Actualizar los endpoints `GET`, `PUT` y `DELETE` para que lean, actualicen y anulen transacciones usando el `transaction_id`.
+
+

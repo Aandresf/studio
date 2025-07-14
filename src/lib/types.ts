@@ -88,15 +88,16 @@ export interface PurchaseItemPayload {
 }
 
 export interface PurchasePayload {
-  date: string;
-  supplier?: string;
-  supplierRif?: string;
-  invoiceNumber?: string;
+  transaction_date: string;
+  entity_name?: string;
+  entity_document?: string;
+  document_number?: string;
   items: PurchaseItemPayload[];
 }
 
 export interface PurchaseHistoryMovement {
-  id: number;
+  movementId: number;
+  productId: number;
   date: string;
   productName: string;
   quantity: number;
@@ -106,13 +107,14 @@ export interface PurchaseHistoryMovement {
 }
 
 export interface GroupedPurchase {
-  description: string; // This is the transaction ID
-  date: string;
-  supplier: string;
-  supplierRif: string;
-  invoiceNumber: string;
+  transaction_id: string;
+  transaction_date: string;
+  entity_name: string;
+  entity_document: string;
+  document_number: string;
   movements: PurchaseHistoryMovement[];
   status: 'Activo' | 'Anulado' | 'Reemplazado';
+  total_cost: number;
 }
 
 export interface SaleItemPayload {
@@ -123,35 +125,28 @@ export interface SaleItemPayload {
 }
 
 export interface SalePayload {
-  date: string;
-  clientName?: string;
-  clientDni?: string;
-  invoiceNumber?: string;
+  transaction_date: string;
+  entity_name?: string;
+  entity_document?: string;
+  document_number?: string;
   items: SaleItemPayload[];
 }
 
 export interface SalesHistoryMovement {
-  id: number;
-  date: string;
+  movementId: number;
+  productId: number;
   productName: string;
   quantity: number;
-  unit_cost: number;
-  total_revenue: number;
-  description: string;
+  unit_price: number;
   status: 'Activo' | 'Reemplazado' | 'Anulado';
-  // Parsed from description in the backend
-  clientName: string;
-  clientDni: string;
-  invoiceNumber: string;
 }
 
 export interface GroupedSale {
-  key: string; 
-  date: string;
-  clientName: string;
-  clientDni: string;
-  invoiceNumber: string;
-  description: string;
+  transaction_id: string;
+  transaction_date: string;
+  entity_name: string;
+  entity_document: string;
+  document_number: string;
   total: number;
   movements: SalesHistoryMovement[];
   status: 'Activo' | 'Anulado' | 'Reemplazado';
