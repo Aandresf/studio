@@ -756,22 +756,26 @@ app.post('/api/sales', async (req, res) => {
                 throw new Error('Cada item debe tener productId, quantity y unitPrice.');
             }
 
-            const product = await get('SELECT current_stock FROM products WHERE id = ?', [productId]);
+            const product = await get('SELECT current_stock, average_cost FROM products WHERE id = ?', [productId]);
             if (!product) {
                 throw new Error(`Producto con ID ${productId} no encontrado.`);
             }
             if (product.current_stock < quantity) {
                 throw new Error(`Stock insuficiente para el producto ID ${productId}. Disponible: ${product.current_stock}, Requerido: ${quantity}`);
             }
+            // Validación de precio de venta vs. costo
+            if (unitPrice < product.average_cost) {
+                throw new Error(`El precio de venta del producto ID ${productId} (${unitPrice}) no puede ser inferior a su costo (${product.average_cost}).`);
+            }
 
             const new_stock = product.current_stock - quantity;
 
             const movementSql = `
                 INSERT INTO inventory_movements 
-                (product_id, transaction_id, transaction_date, entity_name, entity_document, document_number, type, quantity, price, description, status) 
-                VALUES (?, ?, ?, ?, ?, ?, 'SALIDA', ?, ?, ?, 'Activo')
+                (product_id, transaction_id, transaction_date, entity_name, entity_document, document_number, type, quantity, unit_cost, price, description, status) 
+                VALUES (?, ?, ?, ?, ?, ?, 'SALIDA', ?, ?, ?, ?, 'Activo')
             `;
-            await run(movementSql, [productId, transactionId, transaction_date, entity_name, entity_document, document_number, quantity, unitPrice, description]);
+            await run(movementSql, [productId, transactionId, transaction_date, entity_name, entity_document, document_number, quantity, product.average_cost, unitPrice, description]);
 
             const productSql = `UPDATE products SET current_stock = ?, updated_at = strftime('%Y-%m-%d %H:%M:%S', 'now') WHERE id = ?`;
             await run(productSql, [new_stock, productId]);
@@ -823,15 +827,20 @@ app.put('/api/sales', async (req, res) => {
         const { transaction_date, entity_name, entity_document, document_number, items } = saleData;
 
         for (const item of items) {
-            const product = await get('SELECT current_stock FROM products WHERE id = ?', [item.productId]);
+            const product = await get('SELECT current_stock, average_cost FROM products WHERE id = ?', [item.productId]);
             if (!product) throw new Error(`Producto con ID ${item.productId} no encontrado.`);
             if (product.current_stock < item.quantity) throw new Error(`Stock insuficiente para el producto ID ${item.productId}.`);
+            
+            // Validación de precio de venta vs. costo
+            if (item.unitPrice < product.average_cost) {
+                throw new Error(`El precio de venta del producto ID ${item.productId} (${item.unitPrice}) no puede ser inferior a su costo (${product.average_cost}).`);
+            }
 
             await run(
                 `INSERT INTO inventory_movements 
-                (product_id, transaction_id, transaction_date, entity_name, entity_document, document_number, type, quantity, price, description, status) 
-                VALUES (?, ?, ?, ?, ?, ?, 'SALIDA', ?, ?, ?, 'Activo')`,
-                [item.productId, transaction_id, transaction_date, entity_name, entity_document, document_number, item.quantity, item.unitPrice, item.description]
+                (product_id, transaction_id, transaction_date, entity_name, entity_document, document_number, type, quantity, unit_cost, price, description, status) 
+                VALUES (?, ?, ?, ?, ?, ?, 'SALIDA', ?, ?, ?, ?, 'Activo')`,
+                [item.productId, transaction_id, transaction_date, entity_name, entity_document, document_number, item.quantity, product.average_cost, item.unitPrice, item.description]
             );
             await run('UPDATE products SET current_stock = current_stock - ? WHERE id = ?', [item.quantity, item.productId]);
         }
