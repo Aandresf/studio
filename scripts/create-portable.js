@@ -50,11 +50,11 @@ async function createPortableRelease() {
             console.warn('Advertencia: No se encontró el binding de SQLite3. La base de datos podría fallar.');
         }
 
-        // 3. Colocar archivos de datos limpios en la carpeta 'app/data'
+        // 3. Colocar schema en la raíz de 'app' y datos limpios en 'app/data'
         console.log('Copiando schema y creando configuración de tienda en blanco...');
         await fs.copy(
             path.join(backendSrcDir, 'schema.sql'),
-            path.join(dataDir, 'schema.sql')
+            path.join(appDir, 'schema.sql') // Copiar a la raíz de 'app'
         );
         await fs.writeJson(path.join(dataDir, 'stores.json'), {
             stores: [],

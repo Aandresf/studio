@@ -1250,6 +1250,16 @@ app.get('/api/reports', async (req, res) => {
 
 app.get('/api/dashboard/summary', async (req, res) => {
     try {
+        const config = databaseManager.getStoresConfig();
+        if (!config.activeStoreId) {
+            // Si no hay tienda activa, devolver valores por defecto.
+            return res.json({
+                totalRevenue: { value: 0, change: 0 },
+                sales: { value: 0, change: 0 },
+                totalProducts: { value: 0, change: 0 },
+                newCustomers: { value: 0, change: 0 }
+            });
+        }
         const db = databaseManager.getActiveDb();
         const get = util.promisify(db.get.bind(db));
 
@@ -1314,6 +1324,10 @@ app.get('/api/dashboard/summary', async (req, res) => {
 
 app.get('/api/dashboard/recent-sales', async (req, res) => {
     try {
+        const config = databaseManager.getStoresConfig();
+        if (!config.activeStoreId) {
+            return res.json([]); // Si no hay tienda, devolver un array vacío
+        }
         const db = databaseManager.getActiveDb();
         const dbAll = util.promisify(db.all.bind(db));
         const sql = `
