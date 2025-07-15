@@ -3,20 +3,24 @@ const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const fs = require('fs');
 
-const STORES_CONFIG_PATH = path.join(__dirname, 'stores.json');
-const DB_DIR = __dirname;
+const { dataDir } = require('./config'); // Importar la ruta de datos centralizada
+
+const STORES_CONFIG_PATH = path.join(dataDir, 'stores.json');
+const DB_DIR = dataDir;
+
+// Asegurarse de que el directorio de datos exista
+if (!fs.existsSync(DB_DIR)) {
+    fs.mkdirSync(DB_DIR, { recursive: true });
+}
 
 let activeStoreId = null;
 const openConnections = new Map();
 
-// Función para cargar la configuración de las tiendas
 function getStoresConfig() {
     if (!fs.existsSync(STORES_CONFIG_PATH)) {
-        // Si no existe, crea un archivo por defecto con una tienda principal
-        const defaultConfig = {
-            stores: [{ id: 'main', name: 'Tienda Principal', dbPath: 'database.db', status: 'active', deletion_date: null }],
-            activeStoreId: 'main'
-        };
+        // Si no hay config, se empieza con una configuración vacía.
+        // El frontend guiará al usuario para crear la primera tienda.
+        const defaultConfig = { stores: [], activeStoreId: null };
         fs.writeFileSync(STORES_CONFIG_PATH, JSON.stringify(defaultConfig, null, 2));
         return defaultConfig;
     }

@@ -1,22 +1,4 @@
 {
-  "stores": [
-    {
-      "id": "main",
-      "name": "Tienda Principal",
-      "dbPath": "database.db"
-    },
-    {
-      "id": "ak_el_reino_TDDA",
-      "name": "Ak El Reino",
-      "dbPath": "database_ak_el_reino_TDDA.db"
-    },
-    {
-      "id": "ferreagro_t8-P",
-      "name": "Ferreagro",
-      "dbPath": "database_ferreagro_t8-P.db",
-      "status": "active",
-      "deletion_date": null
-    }
-  ],
-  "activeStoreId": "ferreagro_t8-P"
+  "stores": [],
+  "activeStoreId": null
 }

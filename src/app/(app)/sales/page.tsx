@@ -6,7 +6,7 @@ import { es } from 'date-fns/locale';
 import { Calendar as CalendarIcon, PlusCircle, Trash2, History, Loader2, ListRestart, Trash, XCircle } from 'lucide-react';
 
 import { useBackendStatus } from '@/app/(app)/layout';
-import { getProducts, createSale, updateSale, Product } from '@/lib/api';
+import { getProducts, createSale, updateSale, Product, getStores, getStoreDetails } from '@/lib/api';
 import { SalePayload, GroupedSale, SaleItemPayload } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { toastSuccess, toastError } from '@/hooks/use-toast';
@@ -90,10 +90,12 @@ export default function SalesPage() {
                     getStoreDetails(activeStoreId)
                 ]);
                 
-                setProducts(productsData.filter((p: any) => p.status === 'Activo'));
+                setProducts(productsData);
                 setStoreSettings(settingsData || {});
 
-            } catch (error) {} finally {
+            } catch (error) {
+                console.error('Error fetching initial sales data:', error);
+            } finally {
                 setIsLoadingProducts(false);
             }
         };
@@ -106,15 +108,16 @@ export default function SalesPage() {
         const optionsMap = new Map<string, { value: string; label: string }>();
         const showOutOfStock = storeSettings.advanced?.showOutOfStockProducts || false;
 
-        // Add products based on stock and settings
-        products
-            .filter(p => showOutOfStock || p.stock > 0)
-            .forEach(p => optionsMap.set(String(p.id), {
-                value: String(p.id),
-                label: `(${p.sku || 'N/A'}) ${p.name}`
-            }));
+        const filteredProducts = products.filter(p => {
+            if (showOutOfStock) return true;
+            return p.stock > 0;
+        });
 
-        // Ensure products already in the cart are in the list, even if out of stock
+        filteredProducts.forEach(p => optionsMap.set(String(p.id), {
+            value: String(p.id),
+            label: `(${p.sku || 'N/A'}) ${p.name}`
+        }));
+
         cart.forEach(item => {
             if (item.productId && !optionsMap.has(String(item.productId))) {
                 const product = productMap.get(item.productId);
@@ -126,7 +129,7 @@ export default function SalesPage() {
                 }
             }
         });
-
+        
         return Array.from(optionsMap.values());
     }, [products, cart, productMap, storeSettings]);
 

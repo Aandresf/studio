@@ -6,7 +6,7 @@ import { es } from 'date-fns/locale';
 import { Calendar as CalendarIcon, PlusCircle, Trash2, History, Loader2, ListRestart, Trash, XCircle } from 'lucide-react';
 
 import { useBackendStatus } from '@/app/(app)/layout';
-import { getProducts, createPurchase, updatePurchase, Product } from '@/lib/api';
+import { getProducts, createPurchase, updatePurchase, Product, getStores, getStoreDetails } from '@/lib/api';
 import { PurchasePayload, GroupedPurchase, PurchaseItemPayload } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { toastSuccess, toastError } from '@/hooks/use-toast';

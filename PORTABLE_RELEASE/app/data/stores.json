@@ -1,0 +1,12 @@
+{
+  "stores": [
+    {
+      "id": "ak_el_reino_wZn2",
+      "name": "Ak El Reino",
+      "dbPath": "database_ak_el_reino_wZn2.db",
+      "status": "active",
+      "deletion_date": null
+    }
+  ],
+  "activeStoreId": "ak_el_reino_wZn2"
+}

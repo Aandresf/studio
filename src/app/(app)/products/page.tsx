@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { PlusCircle, Search } from 'lucide-react';
 
 import { useBackendStatus } from '@/app/(app)/layout';
-import { getProducts, deleteProduct, getStoreDetails } from '@/lib/api';
+import { getProducts, deleteProduct, getStoreDetails, getStores } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';

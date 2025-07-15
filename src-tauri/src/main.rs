@@ -24,10 +24,14 @@ fn main() {
                 // En modo de producción (release), usamos el binario pre-compilado.
                 #[cfg(not(debug_assertions))]
                 let (mut rx, _child) = {
-                    let sidecar_path = handle.path().resource_dir().unwrap().join("binaries/backend.exe");
+                    let resources_path = handle.path().resource_dir().unwrap();
+                    let sidecar_path = resources_path.join("backend.exe");
+                    
                     handle.shell()
-                        .sidecar(sidecar_path)
-                        .expect("Failed to create sidecar command")
+                        .command(sidecar_path)
+                        // Establecemos el directorio de trabajo en la misma carpeta que el ejecutable principal.
+                        // Así, el backend creará su carpeta 'data' en el lugar correcto.
+                        .current_dir(resources_path)
                         .spawn()
                         .expect("Failed to spawn sidecar")
                 };

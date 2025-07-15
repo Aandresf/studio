@@ -9,7 +9,8 @@
     "src/",
     "src-tauri/",
     ".next/",
-    "out/"
+    "out/",
+    "src-backend/data/"
   ],
   "exec": "node src-backend/index.js"
 }

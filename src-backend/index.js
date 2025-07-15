@@ -19,6 +19,7 @@ app.use(express.urlencoded({ extended: true }));
 
 
 
+const { dataDir, schemaPath } = require('./config');
 const databaseManager = require('./database-manager');
 
 // Middleware
@@ -31,7 +32,6 @@ app.use(express.urlencoded({ extended: true }));
 app.get('/api/stores', (req, res) => {
     try {
         const config = databaseManager.getStoresConfig();
-        // Filtrar para devolver solo las tiendas activas (o las que no tienen status, por retrocompatibilidad)
         const activeStores = config.stores.filter(s => s.status === 'active' || s.status === undefined);
         res.json({ ...config, stores: activeStores });
     } catch (error) {
@@ -55,7 +55,6 @@ app.delete('/api/stores/:id', (req, res) => {
         config.stores[storeIndex].status = 'deleted';
         config.stores[storeIndex].deletion_date = new Date().toISOString();
 
-        // Si la tienda eliminada era la activa, cambiar a otra
         if (config.activeStoreId === id) {
             const nextActiveStore = config.stores.find(s => s.status === 'active');
             config.activeStoreId = nextActiveStore.id;
@@ -83,37 +82,24 @@ app.post('/api/stores/active', (req, res) => {
 });
 
 app.post('/api/stores', async (req, res) => {
-    console.log('[Debug] Endpoint POST /api/stores alcanzado.');
     const { name } = req.body;
     if (!name) {
-        console.log('[Debug] Error: Nombre de tienda no proporcionado.');
         return res.status(400).json({ error: 'Se requiere un nombre para la nueva tienda.' });
     }
 
     const newId = name.toLowerCase().replace(/\s+/g, '_') + `_${nanoid(4)}`;
-    const newDbPath = path.join(__dirname, `database_${newId}.db`);
-    console.log(`[Debug] Nueva tienda: ID=${newId}, Path=${newDbPath}`);
+    const newDbPath = path.join(dataDir, `database_${newId}.db`);
 
     try {
-        console.log('[Debug] Iniciando la creación de la base de datos...');
         await new Promise((resolve, reject) => {
             const newDb = new sqlite3.Database(newDbPath, (err) => {
-                if (err) return reject(new Error(`Error al crear el archivo de la BD: ${err.message}`));
-                console.log('[Debug] Archivo .db creado. Ejecutando esquema...');
+                if (err) return reject(err);
                 
-                const sqlSetup = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
+                const sqlSetup = fs.readFileSync(schemaPath, 'utf8');
                 newDb.exec(sqlSetup, (execErr) => {
-                    if (execErr) {
-                        console.log('[Debug] Error al ejecutar schema.sql.');
-                        newDb.close();
-                        return reject(new Error(`Error al ejecutar el esquema en la nueva BD: ${execErr.message}`));
-                    }
-                    console.log('[Debug] Esquema ejecutado. Cerrando nueva BD...');
-                    newDb.close((closeErr) => {
-                        if (closeErr) return reject(new Error(`Error al cerrar la nueva BD: ${closeErr.message}`));
-                        console.log('[Debug] Nueva BD cerrada exitosamente.');
-                        resolve();
-                    });
+                    newDb.close();
+                    if (execErr) return reject(execErr);
+                    resolve();
                 });
             });
         });
@@ -125,37 +111,29 @@ app.post('/api/stores', async (req, res) => {
             status: 'active', 
             deletion_date: null 
         };
-        console.log('[Debug] Añadiendo nueva tienda a la configuración...');
         databaseManager.addStore(newStore);
-        console.log('[Debug] Tienda añadida. Enviando respuesta 201.');
-        
         res.status(201).json(newStore);
 
     } catch (error) {
-        console.error("[Debug] Error CRÍTICO en el bloque catch:", error);
-        if (fs.existsSync(newDbPath)) {
-            console.log('[Debug] Limpiando archivo de BD fallido...');
-            fs.unlinkSync(newDbPath);
-        }
+        if (fs.existsSync(newDbPath)) fs.unlinkSync(newDbPath);
         res.status(500).json({ error: `Error al crear la tienda: ${error.message}` });
     }
 });
 
 app.get('/api/stores/:id/details', (req, res) => {
     const { id } = req.params;
-    const settingsPath = path.join(__dirname, `database_${id}_settings.json`);
+    const settingsPath = path.join(dataDir, `database_${id}_settings.json`);
     if (fs.existsSync(settingsPath)) {
         const settings = fs.readFileSync(settingsPath, 'utf8');
         res.json(JSON.parse(settings));
     } else {
-        // Si no hay un archivo de configuración, devuelve un objeto vacío
         res.json({});
     }
 });
 
 app.put('/api/stores/:id/details', (req, res) => {
     const { id } = req.params;
-    const settingsPath = path.join(__dirname, `database_${id}_settings.json`);
+    const settingsPath = path.join(dataDir, `database_${id}_settings.json`);
     try {
         fs.writeFileSync(settingsPath, JSON.stringify(req.body, null, 2));
         res.json({ message: 'Detalles de la tienda actualizados correctamente.' });
@@ -207,7 +185,7 @@ app.get('/api/products', async (req, res) => {
   }
 });
 
-app.post('/api/products', async (req, res) => {
+app.post('/api/products', (req, res) => {
   const { name, sku, stock = 0, price = 0, tax_rate = 16.00 } = req.body;
   const status = req.body.status === 'Inactivo' ? 'Inactivo' : 'Activo';
 
@@ -217,19 +195,22 @@ app.post('/api/products', async (req, res) => {
 
   try {
     const db = databaseManager.getActiveDb();
-    const dbRun = util.promisify(db.run.bind(db));
-
     const sql = `INSERT INTO products (name, sku, status, current_stock, average_cost, tax_rate) VALUES (?, ?, ?, ?, ?, ?)`;
-    const result = await dbRun(sql, [name, sku, status, stock, price, tax_rate]);
     
-    res.status(201).json({ 
-      id: result.lastID, 
-      name,
-      sku,
-      status,
-      stock,
-      price,
-      tax_rate
+    // Usar el método de callback para obtener acceso a `this.lastID`
+    db.run(sql, [name, sku, status, stock, price, tax_rate], function(err) {
+      if (err) {
+        return res.status(500).json({ error: err.message });
+      }
+      res.status(201).json({ 
+        id: this.lastID, // `this.lastID` solo está disponible en este callback
+        name,
+        sku,
+        status,
+        stock,
+        price,
+        tax_rate
+      });
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -256,7 +237,7 @@ app.get('/api/products/:id', async (req, res) => {
   }
 });
 
-app.put('/api/products/:id', async (req, res) => {
+app.put('/api/products/:id', (req, res) => {
   const { name, sku, stock, price, tax_rate } = req.body;
   const status = req.body.status === 'Inactivo' ? 'Inactivo' : 'Activo';
   
@@ -266,7 +247,6 @@ app.put('/api/products/:id', async (req, res) => {
 
   try {
     const db = databaseManager.getActiveDb();
-    const dbRun = util.promisify(db.run.bind(db));
     const sql = `
       UPDATE products 
       SET 
@@ -280,25 +260,33 @@ app.put('/api/products/:id', async (req, res) => {
       WHERE id = ?
     `;
     const params = [name, sku, status, stock ?? 0, price ?? 0, tax_rate ?? 16.00, req.params.id];
-    const result = await dbRun(sql, params);
-
-    if (result.changes === 0) {
-      return res.status(404).json({ error: 'Product not found' });
-    }
-    res.json({ message: 'Product updated successfully' });
+    
+    db.run(sql, params, function(err) {
+      if (err) {
+        return res.status(500).json({ error: err.message });
+      }
+      if (this.changes === 0) {
+        return res.status(404).json({ error: 'Product not found' });
+      }
+      res.json({ message: 'Product updated successfully' });
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-app.delete('/api/products/:id', async (req, res) => {
+app.delete('/api/products/:id', (req, res) => {
   try {
     const db = databaseManager.getActiveDb();
-    const dbRun = util.promisify(db.run.bind(db));
-    const result = await dbRun('DELETE FROM products WHERE id = ?', [req.params.id]);
-
-    if (result.changes === 0) return res.status(404).json({ error: 'Product not found' });
-    res.status(204).send();
+    db.run('DELETE FROM products WHERE id = ?', [req.params.id], function(err) {
+      if (err) {
+        return res.status(500).json({ error: err.message });
+      }
+      if (this.changes === 0) {
+        return res.status(404).json({ error: 'Product not found' });
+      }
+      res.status(204).send();
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -326,7 +314,7 @@ app.get('/api/products/:id/movements', async (req, res) => {
 const util = require('util');
 
 // Helper para generar números de documento automáticos
-async function getNextDocumentNumber(type) {
+async function getNextDocumentNumber(db, type) {
     const run = util.promisify(db.run.bind(db));
     const get = util.promisify(db.get.bind(db));
     
@@ -334,7 +322,6 @@ async function getNextDocumentNumber(type) {
     try {
         let counter = await get('SELECT last_number FROM document_counters WHERE counter_type = ?', [type]);
         
-        // Si el contador no existe, lo inicializa.
         if (!counter) {
             await run('INSERT INTO document_counters (counter_type, last_number) VALUES (?, 0)', [type]);
             counter = { last_number: 0 };
@@ -344,11 +331,10 @@ async function getNextDocumentNumber(type) {
         await run('UPDATE document_counters SET last_number = ? WHERE counter_type = ?', [newNumber, type]);
         await run('COMMIT');
         
-        // Formatear el número a 5 dígitos con ceros a la izquierda
         return `FAC-AUTO-${String(newNumber).padStart(5, '0')}`;
     } catch (error) {
         await run('ROLLBACK');
-        throw error; // Propagar el error para que el endpoint principal lo maneje
+        throw error;
     }
 }
 
@@ -416,9 +402,6 @@ app.post('/api/inventory/movements', async (req, res) => {
 
 // PURCHASES (BATCH)
 app.post('/api/purchases', async (req, res) => {
-    console.log('--- INICIO DE PETICIÓN POST /api/purchases (NUEVA LÓGICA) ---');
-    console.log('Cuerpo de la petición:', JSON.stringify(req.body, null, 2));
-
     const { transaction_date, entity_name, entity_document, items } = req.body;
     let { document_number } = req.body;
 
@@ -429,12 +412,11 @@ app.post('/api/purchases', async (req, res) => {
     const db = databaseManager.getActiveDb();
     const run = util.promisify(db.run.bind(db));
     const get = util.promisify(db.get.bind(db));
-    const transactionId = nanoid(); // Genera un ID único para toda la transacción
+    const transactionId = nanoid();
 
     try {
-        // Generar número de documento si no se proporciona
         if (!document_number) {
-            document_number = await getNextDocumentNumber('AUTO_PURCHASE');
+            document_number = await getNextDocumentNumber(db, 'AUTO_PURCHASE');
         }
 
         await run('BEGIN TRANSACTION');
@@ -483,7 +465,6 @@ app.post('/api/purchases', async (req, res) => {
 });
 
 app.put('/api/purchases', async (req, res) => {
-    console.log('--- INICIO DE PETICIÓN PUT /api/purchases (EDITAR - NUEVA LÓGICA) ---');
     const { transaction_id, purchaseData } = req.body;
 
     if (!transaction_id || !purchaseData || !purchaseData.items) {
@@ -562,7 +543,6 @@ app.put('/api/purchases', async (req, res) => {
 });
 
 app.delete('/api/purchases', async (req, res) => {
-    console.log('--- INICIO DE PETICIÓN DELETE /api/purchases (ANULAR - NUEVA LÓGICA) ---');
     const { transaction_id } = req.body;
 
     if (!transaction_id) {
@@ -926,17 +906,15 @@ app.post('/api/sales', async (req, res) => {
     const transactionId = nanoid();
 
     try {
-        // --- Obtener configuración de la tienda ---
         const activeStoreId = databaseManager.getStoresConfig().activeStoreId;
-        const settingsPath = path.join(__dirname, `database_${activeStoreId}_settings.json`);
-        let settings = { advanced: {} }; // Default settings
+        const settingsPath = path.join(dataDir, `database_${activeStoreId}_settings.json`);
+        let settings = { advanced: {} };
         if (fs.existsSync(settingsPath)) {
             settings = { ...settings, ...JSON.parse(fs.readFileSync(settingsPath, 'utf8')) };
         }
-        // --- Fin de obtener configuración ---
 
         if (!document_number) {
-            document_number = await getNextDocumentNumber('AUTO_SALE');
+            document_number = await getNextDocumentNumber(db, 'AUTO_SALE');
         }
 
         await run('BEGIN TRANSACTION');
@@ -953,14 +931,12 @@ app.post('/api/sales', async (req, res) => {
                 throw new Error(`Producto con ID ${productId} no encontrado.`);
             }
 
-            // --- Validaciones Condicionales ---
             if (!settings.advanced?.allowNegativeStock && product.current_stock < quantity) {
                 throw new Error(`Stock insuficiente para el producto ID ${productId}. Disponible: ${product.current_stock}, Requerido: ${quantity}`);
             }
             if (!settings.advanced?.allowSellBelowCost && unitPrice < product.average_cost) {
                 throw new Error(`El precio de venta del producto ID ${productId} (${unitPrice}) no puede ser inferior a su costo (${product.average_cost}).`);
             }
-            // --- Fin de Validaciones ---
 
             const new_stock = product.current_stock - quantity;
 
@@ -1106,95 +1082,107 @@ app.post('/api/reports/inventory-excel', async (req, res) => {
         const all = util.promisify(db.all.bind(db));
 
         const activeStoreId = databaseManager.getStoresConfig().activeStoreId;
-        const settingsPath = path.join(__dirname, `database_${activeStoreId}_settings.json`);
+        const settingsPath = path.join(dataDir, `database_${activeStoreId}_settings.json`);
         
         let storeDetails = { name: "MI TIENDA", rif: "J-000000000" }; // Valores por defecto
         if (fs.existsSync(settingsPath)) {
-            storeDetails = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+            const savedSettings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+            // Los datos guardados tienen prioridad sobre los valores por defecto.
+            storeDetails = { ...storeDetails, ...savedSettings };
         }
 
-        // 2. Obtener todos los productos
         const products = await all("SELECT id, name, sku FROM products");
-
         let inventoryData = [];
 
-        // 3. Para cada producto, calcular los datos del reporte
         for (const product of products) {
-            // --- CÁLCULO DE UNIDADES ---
-            const initialStockResult = await get(
-                `SELECT SUM(CASE WHEN type = 'ENTRADA' THEN quantity ELSE -quantity END) as stock
+            // 1. Obtener estado inicial (existencia y costo) antes del período, considerando solo movimientos activos
+            const initialState = await get(
+                `SELECT 
+                    SUM(CASE WHEN type = 'ENTRADA' THEN quantity ELSE -quantity END) as initialStock,
+                    (SELECT average_cost FROM products WHERE id = ?) as initialAvgCost
                  FROM inventory_movements 
-                 WHERE product_id = ? AND date(transaction_date) < ?`,
-                [product.id, startDate]
+                 WHERE product_id = ? AND status = 'Activo' AND date(transaction_date) < ?`,
+                [product.id, product.id, startDate]
             );
-            const existenciaAnterior = initialStockResult?.stock || 0;
 
+            let existenciaAnterior = initialState?.initialStock || 0;
+            let costoPromedioActual = initialState?.initialAvgCost || 0;
+
+            // 2. Obtener todos los movimientos ACTIVOS DENTRO del período, ordenados por fecha
             const movements = await all(
-                `SELECT type, quantity, unit_cost FROM inventory_movements WHERE product_id = ? AND date(transaction_date) BETWEEN ? AND ?`,
+                `SELECT type, quantity, unit_cost, price, transaction_date 
+                 FROM inventory_movements 
+                 WHERE product_id = ? AND status = 'Activo' AND date(transaction_date) BETWEEN ? AND ?
+                 ORDER BY transaction_date ASC`,
                 [product.id, startDate, endDate]
             );
 
-            const entradas = movements.filter(m => m.type === 'ENTRADA').reduce((sum, m) => sum + m.quantity, 0);
-            const salidas = movements.filter(m => m.type === 'SALIDA').reduce((sum, m) => sum + m.quantity, 0);
-            const retiros = movements.filter(m => m.type === 'RETIRO').reduce((sum, m) => sum + m.quantity, 0);
-            const autoconsumo = movements.filter(m => m.type === 'AUTO-CONSUMO').reduce((sum, m) => sum + m.quantity, 0);
-            const existenciaActual = existenciaAnterior + entradas - salidas - retiros - autoconsumo;
-
-            // --- CÁLCULO DE VALORES MONETARIOS ---
-            const lastCostBeforePeriod = await get(
-                `SELECT average_cost FROM products 
-                 WHERE id = ?`, // Se asume que el costo promedio actual es una buena aproximación para el anterior
-                [product.id]
-            );
-            const valorUnitarioAnterior = lastCostBeforePeriod?.average_cost || 0;
-            const valorExistenciaAnterior = existenciaAnterior * valorUnitarioAnterior;
-
-            const valorEntradas = movements
-                .filter(m => m.type === 'ENTRADA')
-                .reduce((sum, m) => sum + (m.quantity * m.unit_cost), 0);
+            let totalEntradasUnidades = 0;
+            let totalSalidasUnidades = 0;
+            let totalRetirosUnidades = 0;
+            let totalAutoconsumoUnidades = 0;
             
-            const valorSalidas = movements
-                .filter(m => m.type === 'SALIDA')
-                .reduce((sum, m) => sum + (m.quantity * m.unit_cost), 0);
+            let valorEntradas = 0;
+            let valorSalidas = 0;
+            let valorRetiros = 0;
+            let valorAutoconsumo = 0;
 
-            const valorRetiros = movements
-                .filter(m => m.type === 'RETIRO')
-                .reduce((sum, m) => sum + (m.quantity * m.unit_cost), 0);
+            // 3. Iterar cronológicamente para calcular valores y costos correctos
+            for (const move of movements) {
+                if (move.type === 'ENTRADA') {
+                    const valorTotalAnterior = existenciaAnterior * costoPromedioActual;
+                    const valorEntradaActual = move.quantity * move.unit_cost;
+                    
+                    existenciaAnterior += move.quantity;
+                    costoPromedioActual = existenciaAnterior > 0 ? (valorTotalAnterior + valorEntradaActual) / existenciaAnterior : 0;
+                    
+                    totalEntradasUnidades += move.quantity;
+                    valorEntradas += valorEntradaActual;
+                } else {
+                    // Para cualquier tipo de SALIDA, se valora al costo promedio del momento
+                    const valorSalida = move.quantity * costoPromedioActual;
+                    existenciaAnterior -= move.quantity;
+
+                    if (move.type === 'SALIDA') {
+                        totalSalidasUnidades += move.quantity;
+                        valorSalidas += valorSalida;
+                    } else if (move.type === 'RETIRO') {
+                        totalRetirosUnidades += move.quantity;
+                        valorRetiros += valorSalida;
+                    } else if (move.type === 'AUTO-CONSUMO') {
+                        totalAutoconsumoUnidades += move.quantity;
+                        valorAutoconsumo += valorSalida;
+                    }
+                }
+            }
+
+            const valorExistenciaAnterior = (initialState?.initialStock || 0) * (initialState?.initialAvgCost || 0);
             
-            const valorAutoconsumo = movements
-                .filter(m => m.type === 'AUTO-CONSUMO')
-                .reduce((sum, m) => sum + (m.quantity * m.unit_cost), 0);
-
-            // --- CÁLCULO DEL VALOR PROMEDIO DEL PERÍODO ---
-            const valorPromedio = (entradas > 0) ? (valorEntradas / entradas) : valorUnitarioAnterior;
-
-            // Obtener el costo promedio más reciente para valorar la existencia actual
-            const currentProductInfo = await get(`SELECT average_cost FROM products WHERE id = ?`, [product.id]);
-            const valorUnitarioActual = currentProductInfo?.average_cost || 0;
-            const valorExistenciaActual = existenciaActual * valorUnitarioActual;
+            // La existencia final es el valor de `existenciaAnterior` después de todas las iteraciones.
+            const existenciaActual = existenciaAnterior; 
+            const valorExistenciaActual = existenciaActual * costoPromedioActual;
 
             inventoryData.push({
                 code: product.sku || `P-${product.id}`,
                 description: product.name,
-                existenciaAnterior,
-                entradas,
-                salidas,
-                retiros,
-                autoconsumo,
+                existenciaAnterior: initialState?.initialStock || 0,
+                entradas: totalEntradasUnidades,
+                salidas: totalSalidasUnidades,
+                retiros: totalRetirosUnidades,
+                autoconsumo: totalAutoconsumoUnidades,
                 existenciaActual,
-                valorUnitarioAnterior,
+                valorUnitarioAnterior: initialState?.initialAvgCost || 0,
                 valorExistenciaAnterior,
                 valorEntradas,
                 valorSalidas,
                 valorRetiros,
                 valorAutoconsumo,
-                valorUnitarioActual,
+                valorUnitarioActual: costoPromedioActual,
                 valorExistenciaActual,
-                valorPromedio // Añadido el valor calculado
+                valorPromedio: (totalEntradasUnidades > 0) ? (valorEntradas / totalEntradasUnidades) : (initialState?.initialAvgCost || 0)
             });
         }
 
-        // 4. Llamar al generador de Excel
         await generateInventoryExcel(res, storeDetails, inventoryData, startDate, endDate);
 
     } catch (error) {
@@ -1403,9 +1391,8 @@ const startServer = () => {
       console.log(`Backend server listening on http://localhost:${PORT}`);
       
       try {
-        const db = databaseManager.getActiveDb(); // Obtener la BD activa
+        const db = databaseManager.getActiveDb();
         db.serialize(() => {
-          // Crear tablas principales si no existen
           const sqlSetup = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
           db.exec(sqlSetup, (err) => {
             if (err && !err.message.includes('already exists')) {
@@ -1415,7 +1402,6 @@ const startServer = () => {
             }
           });
 
-          // Asegurarse de que la tabla de contadores y sus valores iniciales existan.
           db.run(`
             CREATE TABLE IF NOT EXISTS document_counters (
               counter_type TEXT PRIMARY KEY,
@@ -1431,8 +1417,12 @@ const startServer = () => {
           });
         });
       } catch (error) {
-        console.error("Error fatal al inicializar la base de datos activa:", error.message);
-        process.exit(1); // Salir si no se puede inicializar la BD
+        if (error.message.includes("No hay una tienda activa seleccionada")) {
+            console.log("No hay tienda activa. Esperando la creación de la primera tienda desde la interfaz.");
+        } else {
+            console.error("Error fatal al inicializar la base de datos activa:", error.message);
+            process.exit(1);
+        }
       }
     }
   });
