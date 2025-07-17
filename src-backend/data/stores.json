@@ -16,7 +16,14 @@
       "dbPath": "database_ferreagro_t8-P.db",
       "status": "active",
       "deletion_date": null
+    },
+    {
+      "id": "disveliz_diaz_studio_848V",
+      "name": "Disveliz Diaz Studio",
+      "dbPath": "database_disveliz_diaz_studio_848V.db",
+      "status": "active",
+      "deletion_date": null
     }
   ],
-  "activeStoreId": "main"
+  "activeStoreId": "disveliz_diaz_studio_848V"
 }
