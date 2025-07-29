@@ -6,7 +6,7 @@ import { es } from 'date-fns/locale';
 import { Calendar as CalendarIcon, PlusCircle, Trash2, History, Loader2, ListRestart, Trash, XCircle } from 'lucide-react';
 
 import { useBackendStatus } from '@/app/(app)/layout';
-import { getProducts, createSale, updateSale, Product, getStores, getStoreDetails } from '@/lib/api';
+import { getProducts, createSale, updateSale, Product, getStores, getStoreDetails, getPendingTransactions, addPendingTransaction, removePendingTransaction } from '@/lib/api';
 import { SalePayload, GroupedSale, SaleItemPayload } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { toastSuccess, toastError } from '@/hooks/use-toast';
@@ -85,13 +85,16 @@ export default function SalesPage() {
             setIsLoadingProducts(true);
             try {
                 const { activeStoreId } = await getStores();
-                const [productsData, settingsData] = await Promise.all([
+                const [productsData, settingsData, pendingData] = await Promise.all([
                     getProducts(),
-                    getStoreDetails(activeStoreId)
+                    getStoreDetails(activeStoreId),
+                    getPendingTransactions()
                 ]);
                 
+                console.log('[SALES PAGE] Fetched store settings:', settingsData);
                 setProducts(productsData);
                 setStoreSettings(settingsData || {});
+                setPendingSales(pendingData.sales || []);
 
             } catch (error) {
                 console.error('Error fetching initial sales data:', error);
@@ -268,36 +271,93 @@ export default function SalesPage() {
         setIsReceiptOpen(true);
     };
 
-    const handleHoldSale = () => {
+    const handleHoldSale = async () => {
         if (cart.every(item => item.productId === null)) {
             toastError("Venta Vacía", "No puedes poner en espera una venta sin productos.");
             return;
         }
-        const newPendingSale: PendingSale = { id: `pending-${Date.now()}`, cart, date, clientName, clientDni, invoiceNumber, createdAt: new Date() };
-        setPendingSales(prev => [...prev, newPendingSale]);
-        toastSuccess("Venta en Espera", "La venta actual se ha movido a la lista de espera.");
-        resetForm();
+        const newPendingSale: PendingSale = { 
+            id: `pending-${Date.now()}`, 
+            cart, 
+            date, 
+            clientName, 
+            clientDni, 
+            invoiceNumber, 
+            createdAt: new Date() 
+        };
+        
+        try {
+            await addPendingTransaction('sale', newPendingSale);
+            toastSuccess("Venta en Espera", "La venta actual se ha guardado.");
+            resetForm();
+            triggerRefetch(); // Recarga la lista de pendientes
+        } catch (error) {
+            // El error ya se muestra a través del toast en la capa de API
+        }
     };
 
-    const handleRestoreSale = (saleToRestore: PendingSale) => {
+    const handleRestoreSale = async (saleToRestore: PendingSale) => {
         setCart(saleToRestore.cart);
-        setDate(saleToRestore.date);
+        setDate(new Date(saleToRestore.date)); // Asegurarse que la fecha se restaura como objeto Date
         setClientName(saleToRestore.clientName);
         setClientDni(saleToRestore.clientDni);
         setInvoiceNumber(saleToRestore.invoiceNumber);
-        setPendingSales(prev => prev.filter(s => s.id !== saleToRestore.id));
-        toastSuccess("Venta Restaurada", "La venta ha sido cargada en el formulario.");
+        
+        try {
+            await removePendingTransaction(saleToRestore.id);
+            toastSuccess("Venta Restaurada", "La venta ha sido cargada en el formulario.");
+            triggerRefetch(); // Recarga la lista de pendientes
+        } catch (error) {
+            // El error ya se muestra
+        }
     };
 
-    const handleRemovePendingSale = (id: string) => {
-        setPendingSales(prev => prev.filter(s => s.id !== id));
+    const handleRemovePendingSale = async (id: string) => {
+        try {
+            await removePendingTransaction(id);
+            toastSuccess("Venta Descartada", "La venta en espera ha sido eliminada.");
+            triggerRefetch(); // Recarga la lista de pendientes
+        } catch (error) {
+            // El error ya se muestra
+        }
     };
 
     const subtotal = cart.reduce((acc, item) => acc + item.quantity * item.price, 0);
     const totalTaxes = cart.reduce((acc, item) => acc + (item.quantity * item.price * (item.tax_rate / 100)), 0);
     const total = subtotal + totalTaxes;
 
-    const isSubmitDisabled = cart.some(item => !item.productId || item.quantity <= 0 || item.quantity > item.availableStock) || isLoading;
+    const allowNegativeSales = storeSettings.advanced?.allowNegativeStockSales || false;
+    console.log(`[SALES PAGE] 'allowNegativeSales' is currently: ${allowNegativeSales}`);
+
+    const isSubmitDisabled = React.useMemo(() => {
+        console.log('[SubmitCheck] Recalculating isSubmitDisabled...');
+        if (isLoading) {
+            console.log('[SubmitCheck] Disabled due to isLoading=true');
+            return true;
+        }
+
+        const isAnyItemInvalid = cart.some(item => {
+            console.log(`[SubmitCheck] Checking item: ${item.name || 'New Item'} (ID: ${item.productId})`);
+            if (!item.productId || item.quantity <= 0) {
+                console.log(`[SubmitCheck] -> INVALID: No product selected or quantity is zero.`);
+                return true;
+            }
+            if (allowNegativeSales) {
+                console.log(`[SubmitCheck] -> VALID (Negative sales allowed)`);
+                return false;
+            }
+            const invalid = item.quantity > item.availableStock;
+            if (invalid) {
+                console.log(`[SubmitCheck] -> INVALID: Quantity (${item.quantity}) > Stock (${item.availableStock})`);
+            } else {
+                console.log(`[SubmitCheck] -> VALID: Quantity (${item.quantity}) <= Stock (${item.availableStock})`);
+            }
+            return invalid;
+        });
+        
+        console.log(`[SubmitCheck] Final result: isAnyItemInvalid = ${isAnyItemInvalid}`);
+        return isAnyItemInvalid;
+    }, [cart, isLoading, allowNegativeSales]);
 
     const renderComboboxHeader = () => (
         <div className="grid grid-cols-12 gap-4 px-3 py-2 text-xs font-semibold text-muted-foreground bg-muted">
@@ -374,7 +434,16 @@ export default function SalesPage() {
                                                     renderOption={renderComboboxOption}
                                                 />
                                             </div>
-                                            <div className="col-span-4 md:col-span-2"><Input type="number" value={item.quantity} onChange={(e) => handleCartItemChange(index, 'quantity', e.target.value)} min="1" max={item.availableStock > 0 ? item.availableStock : undefined} /></div>
+                                            <div className="col-span-4 md:col-span-2">
+                                                <Input 
+                                                    type="number" 
+                                                    value={item.quantity} 
+                                                    onChange={(e) => handleCartItemChange(index, 'quantity', e.target.value)} 
+                                                    min="1" 
+                                                    max={allowNegativeSales ? undefined : item.availableStock} 
+                                                />
+                                                {console.log(`[InputQty] Item ${item.name}: max set to -> ${allowNegativeSales ? 'undefined' : item.availableStock}`)}
+                                            </div>
                                             <div className="col-span-4 md:col-span-2"><Input type="number" value={item.price} onChange={(e) => handleCartItemChange(index, 'price', e.target.value)} min="0" /></div>
                                             <div className="col-span-4 md:col-span-2 flex justify-end"><Button variant="outline" size="icon" className="text-muted-foreground" onClick={() => removeCartItem(index)} disabled={cart.length <= 1}><Trash2 className="h-4 w-4"/></Button></div>
                                         </div>
@@ -439,7 +508,13 @@ export default function SalesPage() {
                 </div>
             </div>
         </div>
-        <SalesHistoryDialog open={isHistoryOpen} onOpenChange={setIsHistoryOpen} onViewReceipt={handleViewReceiptFromHistory} onEditSale={handleEditSale} />
+        <SalesHistoryDialog 
+            open={isHistoryOpen} 
+            onOpenChange={setIsHistoryOpen} 
+            onViewReceipt={handleViewReceiptFromHistory} 
+            onEditSale={handleEditSale} 
+            refetchKey={refetchKey}
+        />
         <SalesReceiptDialog 
             open={isReceiptOpen} 
             onOpenChange={(open) => {

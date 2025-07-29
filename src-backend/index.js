@@ -145,6 +145,66 @@ app.put('/api/stores/:id/details', (req, res) => {
 
 // --- API Endpoints (Refactorizados) ---
 
+const PENDING_TRANSACTIONS_FILE = path.join(dataDir, 'pending_transactions.json');
+
+// Helper para leer transacciones pendientes
+const readPendingTransactions = () => {
+    if (!fs.existsSync(PENDING_TRANSACTIONS_FILE)) {
+        return { sales: [], purchases: [] };
+    }
+    const data = fs.readFileSync(PENDING_TRANSACTIONS_FILE, 'utf8');
+    return JSON.parse(data);
+};
+
+// Helper para escribir transacciones pendientes
+const writePendingTransactions = (data) => {
+    fs.writeFileSync(PENDING_TRANSACTIONS_FILE, JSON.stringify(data, null, 2));
+};
+
+app.get('/api/pending-transactions', (req, res) => {
+    const data = readPendingTransactions();
+    res.json(data);
+});
+
+app.post('/api/pending-transactions', (req, res) => {
+    const { type, payload } = req.body; // type es 'sale' o 'purchase'
+    if (!type || !payload || !['sale', 'purchase'].includes(type)) {
+        return res.status(400).json({ error: 'Tipo de transacción o payload inválido.' });
+    }
+    
+    const data = readPendingTransactions();
+    if (type === 'sale') {
+        data.sales.push(payload);
+    } else {
+        data.purchases.push(payload);
+    }
+    
+    writePendingTransactions(data);
+    res.status(201).json(payload);
+});
+
+app.delete('/api/pending-transactions/:id', (req, res) => {
+    const { id } = req.params;
+    const data = readPendingTransactions();
+    
+    // Filtrar ambos arrays para eliminar el ID
+    const initialSalesCount = data.sales.length;
+    const initialPurchasesCount = data.purchases.length;
+
+    data.sales = data.sales.filter(s => s.id !== id);
+    data.purchases = data.purchases.filter(p => p.id !== id);
+
+    const wasDeleted = data.sales.length < initialSalesCount || data.purchases.length < initialPurchasesCount;
+
+    if (wasDeleted) {
+        writePendingTransactions(data);
+        res.status(200).json({ message: 'Transacción pendiente eliminada.' });
+    } else {
+        res.status(404).json({ error: 'No se encontró la transacción pendiente.' });
+    }
+});
+
+
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 
 app.post('/api/app/quit', (req, res) => {
@@ -893,8 +953,11 @@ app.get('/api/sales/details', async (req, res) => {
 
 
 app.post('/api/sales', async (req, res) => {
-    const { transaction_date, entity_name, entity_document, items } = req.body;
-    let { document_number } = req.body;
+    const { transaction_date, entity_document, items } = req.body;
+    let { document_number, entity_name } = req.body;
+
+    // Si no hay nombre de entidad, asignar uno por defecto.
+    entity_name = entity_name || 'Cliente General';
 
     if (!transaction_date || !items || !Array.isArray(items) || items.length === 0) {
         return res.status(400).json({ error: 'Faltan campos requeridos: transaction_date, items' });
@@ -983,7 +1046,7 @@ app.put('/api/sales', async (req, res) => {
 
         // --- Obtener configuración de la tienda ---
         const activeStoreId = databaseManager.getStoresConfig().activeStoreId;
-        const settingsPath = path.join(__dirname, `database_${activeStoreId}_settings.json`);
+        const settingsPath = path.join(dataDir, `database_${activeStoreId}_settings.json`);
         let settings = { advanced: {} }; // Default settings
         if (fs.existsSync(settingsPath)) {
             settings = { ...settings, ...JSON.parse(fs.readFileSync(settingsPath, 'utf8')) };
@@ -1003,7 +1066,8 @@ app.put('/api/sales', async (req, res) => {
         }
 
         // 2. RE-CREACIÓN: Crear los nuevos movimientos con el mismo transaction_id
-        const { transaction_date, entity_name, entity_document, document_number, items } = saleData;
+        const { transaction_date, entity_document, document_number, items } = saleData;
+        const entity_name = saleData.entity_name || 'Cliente General';
 
         for (const item of items) {
             const product = await get('SELECT current_stock, average_cost FROM products WHERE id = ?', [item.productId]);

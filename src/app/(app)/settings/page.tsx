@@ -27,7 +27,7 @@ interface StoreDetails {
   rif?: string;
   address?: string;
   advanced?: {
-    allowNegativeStock?: boolean;
+    allowNegativeStockSales?: boolean;
     allowSellBelowCost?: boolean;
     showOutOfStockProducts?: boolean;
   }
@@ -154,6 +154,7 @@ export default function SettingsPage() {
   };
 
   const handleAdvancedChange = (id: keyof NonNullable<StoreDetails['advanced']>, checked: boolean) => {
+    console.log(`[SETTINGS] Changing advanced setting: ${id} to ${checked}`);
     setStoreDetails(prev => ({
         ...prev,
         advanced: {
@@ -265,9 +266,9 @@ export default function SettingsPage() {
                             </p>
                         </div>
                         <Switch
-                            id="allowNegativeStock"
-                            checked={storeDetails.advanced?.allowNegativeStock || false}
-                            onCheckedChange={(checked) => handleAdvancedChange('allowNegativeStock', checked)}
+                            id="allowNegativeStockSales"
+                            checked={storeDetails.advanced?.allowNegativeStockSales || false}
+                            onCheckedChange={(checked) => handleAdvancedChange('allowNegativeStockSales', checked)}
                         />
                     </div>
                     <div className="flex items-center justify-between rounded-lg border p-4">

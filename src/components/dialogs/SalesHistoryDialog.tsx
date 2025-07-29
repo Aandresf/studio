@@ -34,9 +34,10 @@ interface SalesHistoryDialogProps {
   onOpenChange: (open: boolean) => void;
   onViewReceipt: (sale: GroupedSale) => void;
   onEditSale: (sale: GroupedSale) => void;
+  refetchKey: number;
 }
 
-export function SalesHistoryDialog({ open, onOpenChange, onViewReceipt, onEditSale }: SalesHistoryDialogProps) {
+export function SalesHistoryDialog({ open, onOpenChange, onViewReceipt, onEditSale, refetchKey }: SalesHistoryDialogProps) {
   const [history, setHistory] = React.useState<GroupedSale[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState("");
@@ -55,7 +56,7 @@ export function SalesHistoryDialog({ open, onOpenChange, onViewReceipt, onEditSa
     if (open) {
       fetchHistory();
     }
-  }, [open, fetchHistory]);
+  }, [open, fetchHistory, refetchKey]);
 
   const handleAnnul = async (sale: GroupedSale) => {
     if (!window.confirm("¿Estás seguro de que quieres anular esta venta? El stock de los productos se restaurará.")) return;
@@ -69,7 +70,9 @@ export function SalesHistoryDialog({ open, onOpenChange, onViewReceipt, onEditSa
 
   const filteredHistory = history.filter(s => {
       const query = searchQuery.toLowerCase();
-      return s.entity_name.toLowerCase().includes(query) || (s.document_number && s.document_number.toLowerCase().includes(query));
+      const entityName = s.entity_name || "";
+      const documentNumber = s.document_number || "";
+      return entityName.toLowerCase().includes(query) || documentNumber.toLowerCase().includes(query);
   });
 
   return (

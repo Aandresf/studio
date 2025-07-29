@@ -263,3 +263,19 @@ export const updateStoreDetails = (storeId: string, details: any): Promise<{ mes
 export const deleteStore = (storeId: string): Promise<{ message: string }> => fetchAPI(`/stores/${storeId}`, { method: 'DELETE' });
 export const quitApplication = (): Promise<void> => fetchAPI('/app/quit', { method: 'POST' });
 
+// Pending Transactions API calls
+export const getPendingTransactions = (): Promise<{ sales: any[], purchases: any[] }> => fetchAPI('/pending-transactions');
+
+export const addPendingTransaction = (type: 'sale' | 'purchase', payload: any): Promise<any> => {
+    return fetchAPI('/pending-transactions', {
+        method: 'POST',
+        body: JSON.stringify({ type, payload }),
+    });
+};
+
+export const removePendingTransaction = (id: string): Promise<{ message: string }> => {
+    return fetchAPI(`/pending-transactions/${id}`, {
+        method: 'DELETE',
+    });
+};
+

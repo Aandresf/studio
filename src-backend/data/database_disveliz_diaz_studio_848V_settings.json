@@ -1,5 +1,11 @@
 {
   "name": "Disveliz Diaz Studio",
   "rif": "V-177250372",
-  "address": "Guasdualito, Paez, Apure"
+  "address": "Guasdualito, Paez, Apure",
+  "advanced": {
+    "allowNegativeStock": true,
+    "showOutOfStockProducts": true,
+    "allowNegativeStockSales": true,
+    "allowSellBelowCost": true
+  }
 }

@@ -6,7 +6,7 @@ import { es } from 'date-fns/locale';
 import { Calendar as CalendarIcon, PlusCircle, Trash2, History, Loader2, ListRestart, Trash, XCircle } from 'lucide-react';
 
 import { useBackendStatus } from '@/app/(app)/layout';
-import { getProducts, createPurchase, updatePurchase, Product, getStores, getStoreDetails } from '@/lib/api';
+import { getProducts, createPurchase, updatePurchase, Product, getStores, getStoreDetails, getPendingTransactions, addPendingTransaction, removePendingTransaction } from '@/lib/api';
 import { PurchasePayload, GroupedPurchase, PurchaseItemPayload } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { toastSuccess, toastError } from '@/hooks/use-toast';
@@ -86,12 +86,14 @@ export default function PurchasesPage() {
             setIsLoadingProducts(true);
             try {
                 const { activeStoreId } = await getStores();
-                const [productsData, settingsData] = await Promise.all([
+                const [productsData, settingsData, pendingData] = await Promise.all([
                     getProducts(),
-                    getStoreDetails(activeStoreId)
+                    getStoreDetails(activeStoreId),
+                    getPendingTransactions()
                 ]);
                 setProducts(productsData);
                 setStoreSettings(settingsData || {});
+                setPendingPurchases(pendingData.purchases || []);
             } catch (error) {} finally {
                 setIsLoadingProducts(false);
             }
@@ -244,29 +246,49 @@ export default function PurchasesPage() {
         setIsReceiptOpen(true);
     };
 
-    const handleHoldPurchase = () => {
+    const handleHoldPurchase = async () => {
         if (cart.every(item => item.productId === null)) {
             toastError("Compra Vacía", "No puedes poner en espera una compra sin productos.");
             return;
         }
-        const newPendingPurchase: PendingPurchase = { id: `pending-${Date.now()}`, cart, date, supplier, supplierRif, invoiceNumber, createdAt: new Date() };
-        setPendingPurchases(prev => [...prev, newPendingPurchase]);
-        toastSuccess("Compra en Espera", "La compra actual se ha movido a la lista de espera.");
-        resetForm();
+        const newPendingPurchase: PendingPurchase = { 
+            id: `pending-${Date.now()}`, 
+            cart, 
+            date, 
+            supplier, 
+            supplierRif, 
+            invoiceNumber, 
+            createdAt: new Date() 
+        };
+        
+        try {
+            await addPendingTransaction('purchase', newPendingPurchase);
+            toastSuccess("Compra en Espera", "La compra actual se ha guardado.");
+            resetForm();
+            triggerRefetch();
+        } catch (error) {}
     };
 
-    const handleRestorePurchase = (purchaseToRestore: PendingPurchase) => {
+    const handleRestorePurchase = async (purchaseToRestore: PendingPurchase) => {
         setCart(purchaseToRestore.cart);
-        setDate(purchaseToRestore.date);
+        setDate(new Date(purchaseToRestore.date));
         setSupplier(purchaseToRestore.supplier);
         setSupplierRif(purchaseToRestore.supplierRif);
         setInvoiceNumber(purchaseToRestore.invoiceNumber);
-        setPendingPurchases(prev => prev.filter(p => p.id !== purchaseToRestore.id));
-        toastSuccess("Compra Restaurada", "La compra ha sido cargada en el formulario.");
+        
+        try {
+            await removePendingTransaction(purchaseToRestore.id);
+            toastSuccess("Compra Restaurada", "La compra ha sido cargada en el formulario.");
+            triggerRefetch();
+        } catch (error) {}
     };
 
-    const handleRemovePendingPurchase = (id: string) => {
-        setPendingPurchases(prev => prev.filter(p => p.id !== id));
+    const handleRemovePendingPurchase = async (id: string) => {
+        try {
+            await removePendingTransaction(id);
+            toastSuccess("Compra Descartada", "La compra en espera ha sido eliminada.");
+            triggerRefetch();
+        } catch (error) {}
     };
 
     const handleOpenNewProductDialog = () => {
