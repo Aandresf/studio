@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS products (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,
   sku TEXT UNIQUE,
+  descripcion TEXT DEFAULT '', -- Descripción detallada del producto
   tax_rate REAL NOT NULL DEFAULT 16.00, -- Tasa de impuesto (ej. 16.00 para 16%). 0 para exento.
   status TEXT NOT NULL DEFAULT 'Activo', -- Puede ser 'Activo' o 'Inactivo'
   image TEXT, -- URL o path a la imagen del producto
