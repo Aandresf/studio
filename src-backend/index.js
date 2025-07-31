@@ -258,16 +258,15 @@ app.post('/api/products', (req, res) => {
     const db = databaseManager.getActiveDb();
     const sql = `INSERT INTO products (name, sku, description, status, current_stock, average_cost, tax_rate) VALUES (?, ?, ?, ?, ?, ?, ?)`;
     
-    // Usar el método de callback para obtener acceso a `this.lastID`
-    db.run(sql, [name, sku, description, status, stock, price, tax_rate], function(err) {
+    db.run(sql, [name, sku, description || '', status, stock, price, tax_rate], function(err) {
       if (err) {
         return res.status(500).json({ error: err.message });
       }
       res.status(201).json({ 
-        id: this.lastID, // `this.lastID` solo está disponible en este callback
+        id: this.lastID,
         name,
         sku,
-        description,
+        description: description || '',
         status,
         stock,
         price,
@@ -322,7 +321,7 @@ app.put('/api/products/:id', (req, res) => {
         updated_at = strftime('%Y-%m-%d %H:%M:%S', 'now') 
       WHERE id = ?
     `;
-    const params = [name, sku, description, status, stock ?? 0, price ?? 0, tax_rate ?? 16.00, req.params.id];
+    const params = [name, sku, description || '', status, stock ?? 0, price ?? 0, tax_rate ?? 16.00, req.params.id];
     
     db.run(sql, params, function(err) {
       if (err) {

@@ -118,7 +118,7 @@ export function ProductDetailDialog({
                       {product.description && (
                         <div className="pt-2">
                             <p className="font-semibold">Descripción:</p>
-                            <p className="text-muted-foreground">{product.description}</p>
+                            <p className="text-muted-foreground whitespace-pre-wrap">{product.description}</p>
                         </div>
                       )}
                   </div>
