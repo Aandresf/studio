@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { toastSuccess, toastError } from '@/hooks/use-toast';
+import { Textarea } from '@/components/ui/textarea';
 import { createProduct, updateProduct } from '@/lib/api';
 import { Product } from '@/lib/types';
 
@@ -114,6 +115,10 @@ export function ProductDialog({ open, onOpenChange, product, onProductSaved, gen
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="sku" className="text-right">SKU</Label>
               <Input id="sku" value={editingProduct.sku ?? ''} onChange={(e) => setEditingProduct({ ...editingProduct, sku: e.target.value })} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-start gap-4">
+              <Label htmlFor="description" className="text-right pt-2">Descripción</Label>
+              <Textarea id="description" value={editingProduct.description ?? ''} onChange={(e) => setEditingProduct({ ...editingProduct, description: e.target.value })} className="col-span-3" rows={3} />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="price" className="text-right">Precio</Label>

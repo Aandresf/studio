@@ -3,6 +3,7 @@ export interface Product {
   id: number;
   name: string;
   sku: string | null;
+  description?: string;
   stock: number;
   price: number;
   tax_rate: number;

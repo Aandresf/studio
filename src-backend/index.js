@@ -225,7 +225,7 @@ app.get('/api/products', async (req, res) => {
     const db = databaseManager.getActiveDb();
     const dbAll = util.promisify(db.all.bind(db));
     
-    const sql = "SELECT id, name, sku, status, image, current_stock, average_cost, tax_rate FROM products ORDER BY id DESC";
+    const sql = "SELECT id, name, sku, status, image, description, current_stock, average_cost, tax_rate FROM products ORDER BY id DESC";
     const rows = await dbAll(sql, []);
 
     const products = rows.map(p => ({
@@ -234,6 +234,7 @@ app.get('/api/products', async (req, res) => {
       sku: p.sku,
       status: p.status,
       image: p.image,
+      description: p.description,
       tax_rate: p.tax_rate,
       stock: p.current_stock,
       price: p.average_cost
@@ -246,7 +247,7 @@ app.get('/api/products', async (req, res) => {
 });
 
 app.post('/api/products', (req, res) => {
-  const { name, sku, stock = 0, price = 0, tax_rate = 16.00 } = req.body;
+  const { name, sku, description, stock = 0, price = 0, tax_rate = 16.00 } = req.body;
   const status = req.body.status === 'Inactivo' ? 'Inactivo' : 'Activo';
 
   if (!name) {
@@ -255,10 +256,10 @@ app.post('/api/products', (req, res) => {
 
   try {
     const db = databaseManager.getActiveDb();
-    const sql = `INSERT INTO products (name, sku, status, current_stock, average_cost, tax_rate) VALUES (?, ?, ?, ?, ?, ?)`;
+    const sql = `INSERT INTO products (name, sku, description, status, current_stock, average_cost, tax_rate) VALUES (?, ?, ?, ?, ?, ?, ?)`;
     
     // Usar el método de callback para obtener acceso a `this.lastID`
-    db.run(sql, [name, sku, status, stock, price, tax_rate], function(err) {
+    db.run(sql, [name, sku, description, status, stock, price, tax_rate], function(err) {
       if (err) {
         return res.status(500).json({ error: err.message });
       }
@@ -266,6 +267,7 @@ app.post('/api/products', (req, res) => {
         id: this.lastID, // `this.lastID` solo está disponible en este callback
         name,
         sku,
+        description,
         status,
         stock,
         price,
@@ -283,7 +285,7 @@ app.get('/api/products/:id', async (req, res) => {
     const dbGet = util.promisify(db.get.bind(db));
     const sql = `
       SELECT
-        id, name, sku, status, image, tax_rate,
+        id, name, sku, description, status, image, tax_rate,
         current_stock as stock,
         average_cost as price
       FROM products
@@ -298,7 +300,7 @@ app.get('/api/products/:id', async (req, res) => {
 });
 
 app.put('/api/products/:id', (req, res) => {
-  const { name, sku, stock, price, tax_rate } = req.body;
+  const { name, sku, description, stock, price, tax_rate } = req.body;
   const status = req.body.status === 'Inactivo' ? 'Inactivo' : 'Activo';
   
   if (!name) {
@@ -312,6 +314,7 @@ app.put('/api/products/:id', (req, res) => {
       SET 
         name = ?, 
         sku = ?, 
+        description = ?,
         status = ?, 
         current_stock = ?, 
         average_cost = ?, 
@@ -319,7 +322,7 @@ app.put('/api/products/:id', (req, res) => {
         updated_at = strftime('%Y-%m-%d %H:%M:%S', 'now') 
       WHERE id = ?
     `;
-    const params = [name, sku, status, stock ?? 0, price ?? 0, tax_rate ?? 16.00, req.params.id];
+    const params = [name, sku, description, status, stock ?? 0, price ?? 0, tax_rate ?? 16.00, req.params.id];
     
     db.run(sql, params, function(err) {
       if (err) {
