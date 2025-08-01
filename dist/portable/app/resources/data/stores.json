@@ -1,0 +1,19 @@
+{
+  "stores": [
+    {
+      "id": "prueb_tienda_k7fT",
+      "name": "prueb tienda",
+      "dbPath": "database_prueb_tienda_k7fT.db",
+      "status": "active",
+      "deletion_date": null
+    },
+    {
+      "id": "fre_H5g9",
+      "name": "fre",
+      "dbPath": "database_fre_H5g9.db",
+      "status": "active",
+      "deletion_date": null
+    }
+  ],
+  "activeStoreId": "fre_H5g9"
+}

@@ -22,7 +22,7 @@ fn main() {
                 #[cfg(not(debug_assertions))]
                 let (mut rx, child) = {
                     let resources_path = handle.path().resource_dir().unwrap();
-                    let sidecar_path = resources_path.join("backend/backend.exe");
+                    let sidecar_path = resources_path.join("resources/backend.exe");
                     
                     handle.shell()
                         .command(sidecar_path)

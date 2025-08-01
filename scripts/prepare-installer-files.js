@@ -5,7 +5,7 @@ const { execSync } = require('child_process');
 const projectRoot = path.join(__dirname, '..');
 const distDir = path.join(projectRoot, 'dist');
 const backendOutputDir = path.join(distDir, 'backend');
-const payloadDir = path.join(distDir, 'payload_final');
+const payloadDir = path.join(projectRoot, 'src-tauri/resources');
 
 async function prepareInstallerFiles() {
     try {

@@ -1,6 +1,6 @@
 @echo off
 echo Lanzando el backend y la aplicacion...
-cd /d "%~dp0\app"
+cd /d "%~dp0\resources"
 
 echo Abriendo consola del backend...
 start "Backend Console" cmd /k "backend.exe"
@@ -8,5 +8,6 @@ start "Backend Console" cmd /k "backend.exe"
 echo Esperando 2 segundos para que el backend inicie...
 timeout /t 2 /nobreak > nul
 
+cd /d "%~dp0\.."
 echo Lanzando aplicacion principal...
 start "" "Inventario App.exe"

@@ -10,6 +10,7 @@
     "start": "next start",
     "lint": "next lint",
     "compile:backend": "node scripts/prepare-installer-files.js",
+    "compile:portable": "node scripts/create-portable.js",
     "tauri": "tauri",
     "prepackage:portable": "npm run tauri build",
     "package:portable": "node scripts/create-portable.js",
