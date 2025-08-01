@@ -1,0 +1,19 @@
+{
+  "stores": [
+    {
+      "id": "ppp_eCND",
+      "name": "ppp",
+      "dbPath": "database_ppp_eCND.db",
+      "status": "active",
+      "deletion_date": null
+    },
+    {
+      "id": "6t_me9u",
+      "name": "6t",
+      "dbPath": "database_6t_me9u.db",
+      "status": "active",
+      "deletion_date": null
+    }
+  ],
+  "activeStoreId": "6t_me9u"
+}

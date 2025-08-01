@@ -6,7 +6,14 @@
       "dbPath": "database_ak_el_reino_2ASD.db",
       "status": "active",
       "deletion_date": null
+    },
+    {
+      "id": "d_6UAV",
+      "name": "d",
+      "dbPath": "database_d_6UAV.db",
+      "status": "active",
+      "deletion_date": null
     }
   ],
-  "activeStoreId": "ak_el_reino_2ASD"
+  "activeStoreId": "d_6UAV"
 }

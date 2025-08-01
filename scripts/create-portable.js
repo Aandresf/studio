@@ -4,7 +4,7 @@ const archiver = require('archiver');
 const { glob } = require('glob');
 
 const projectRoot = path.join(__dirname, '..');
-const releaseBaseDir = path.join(projectRoot, 'PORTABLE_RELEASE_v2');
+const releaseBaseDir = path.join(projectRoot, 'PORTABLE_RELEASE_v3');
 const appDir = path.join(releaseBaseDir, 'app');
 const dataDir = path.join(appDir, 'data');
 const tauriTargetDir = path.join(projectRoot, 'src-tauri/target/release');
