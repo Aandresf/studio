@@ -1,19 +1,19 @@
 {
   "stores": [
     {
-      "id": "ppp_eCND",
-      "name": "ppp",
-      "dbPath": "database_ppp_eCND.db",
+      "id": "fere_K-EI",
+      "name": "fere",
+      "dbPath": "database_fere_K-EI.db",
       "status": "active",
       "deletion_date": null
     },
     {
-      "id": "6t_me9u",
-      "name": "6t",
-      "dbPath": "database_6t_me9u.db",
+      "id": "fefafa_ST7c",
+      "name": "fefafa",
+      "dbPath": "database_fefafa_ST7c.db",
       "status": "active",
       "deletion_date": null
     }
   ],
-  "activeStoreId": "6t_me9u"
+  "activeStoreId": "fefafa_ST7c"
 }

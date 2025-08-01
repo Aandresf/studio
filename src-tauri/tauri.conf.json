@@ -34,7 +34,7 @@
       "../icons/icon.ico"
     ],
     "resources": [
-      "binaries/backend.exe"
+      "resources/**/*"
     ]
   },
   "plugins": {}
