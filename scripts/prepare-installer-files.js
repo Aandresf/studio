@@ -3,43 +3,43 @@ const path = require('path');
 const { execSync } = require('child_process');
 
 const projectRoot = path.join(__dirname, '..');
-const outputDir = path.join(projectRoot, 'dist');
-const assetsDir = path.join(outputDir, 'backend');
-const backendSrcDir = path.join(projectRoot, 'src-backend');
+const distDir = path.join(projectRoot, 'dist');
+const backendOutputDir = path.join(distDir, 'backend');
+const payloadDir = path.join(distDir, 'payload_final');
 
 async function prepareInstallerFiles() {
     try {
         console.log('Iniciando la preparación de archivos para el instalador...');
 
-        // 1. Limpiar y crear directorio de assets
-        console.log('Limpiando y creando estructura de directorios...');
-        await fs.emptyDir(assetsDir);
-        await fs.ensureDir(path.join(assetsDir, 'data'));
+        // 1. Limpiar directorios
+        console.log('Limpiando directorios de compilación...');
+        await fs.emptyDir(backendOutputDir);
+        await fs.emptyDir(payloadDir);
+        await fs.ensureDir(path.join(backendOutputDir, 'data')); // Recrear data en la salida del back
 
-        // 2. Compilar el backend directamente a la carpeta de resources
+        // 2. Compilar el backend a su carpeta de salida
         console.log('Compilando el backend...');
-        const outputPath = path.join(assetsDir, 'backend.exe');
-        execSync(`npx pkg . -t node18-win-x64 -o "${outputPath}"`, {
-            cwd: backendSrcDir,
+        const backendExePath = path.join(backendOutputDir, 'backend.exe');
+        execSync(`npx pkg . -t node18-win-x64 -o "${backendExePath}"`, {
+            cwd: path.join(projectRoot, 'src-backend'),
             stdio: 'inherit'
         });
-        console.log(`Backend compilado en: ${outputPath}`);
+        console.log(`Backend compilado en: ${backendExePath}`);
 
-        // 3. Copiar las dependencias restantes
-        console.log('Copiando dependencias...');
-        const sqliteBindingPath = path.join(backendSrcDir, 'node_modules/sqlite3/build/Release/node_sqlite3.node');
+        // 3. Copiar dependencias a la carpeta de salida del backend
+        console.log('Copiando dependencias del backend...');
+        const sqliteBindingPath = path.join(projectRoot, 'src-backend/node_modules/sqlite3/build/Release/node_sqlite3.node');
         if (await fs.pathExists(sqliteBindingPath)) {
-            await fs.copy(sqliteBindingPath, path.join(assetsDir, 'node_sqlite3.node'));
-            console.log('Binding de SQLite3 copiado.');
+            await fs.copy(sqliteBindingPath, path.join(backendOutputDir, 'node_sqlite3.node'));
         } else {
             throw new Error('¡Error crítico! No se encontró el binding de SQLite3.');
         }
-
-        await fs.copy(
-            path.join(backendSrcDir, 'schema.sql'),
-            path.join(assetsDir, 'schema.sql')
-        );
-        console.log('Schema.sql copiado.');
+        await fs.copy(path.join(projectRoot, 'src-backend/schema.sql'), path.join(backendOutputDir, 'schema.sql'));
+        
+        // 4. Crear el payload final para Tauri (la parte clave)
+        console.log('Creando payload final aplanado para el instalador...');
+        await fs.copy(backendOutputDir, payloadDir);
+        console.log(`Payload final creado en: ${payloadDir}`);
 
         console.log('¡Archivos para el instalador preparados con éxito!');
 
