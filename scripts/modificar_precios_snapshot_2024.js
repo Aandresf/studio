@@ -1,9 +1,8 @@
-
 const util = require('util');
 const databaseManager = require('../src-backend/database-manager');
 
-const SNAPSHOT_DATE = '2023-11-30';
-const PERCENTAGE_INCREASE = 0.0217286205; // 2.17286205%
+const SNAPSHOT_DATE = '2024-11-30';
+const PERCENTAGE_INCREASE = 0.05784637203491623; // 5.7846372035%
 
 async function applySnapshotModification() {
     console.log(`--- FASE DE EJECUCIÓN ---`);

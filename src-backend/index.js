@@ -481,6 +481,7 @@ app.post('/api/inventory/create-snapshot', async (req, res) => {
     }
 
     const db = databaseManager.getActiveDb();
+    const get = util.promisify(db.get.bind(db));
     const all = util.promisify(db.all.bind(db));
     const run = util.promisify(db.run.bind(db));
 
@@ -492,16 +493,33 @@ app.post('/api/inventory/create-snapshot', async (req, res) => {
         let totalValue = 0;
 
         for (const product of products) {
-            const movements = await all(
-                `SELECT type, quantity, unit_cost 
-                 FROM inventory_movements 
-                 WHERE product_id = ? AND status = 'Activo' AND date(transaction_date) <= ?
-                 ORDER BY transaction_date ASC, created_at ASC`,
+            // Lógica optimizada: buscar el snapshot más reciente como punto de partida
+            const latestSnapshot = await get(
+                `SELECT snapshot_date, closing_stock, closing_average_cost 
+                 FROM inventory_snapshots
+                 WHERE product_id = ? AND date(snapshot_date) < ?
+                 ORDER BY snapshot_date DESC
+                 LIMIT 1`,
                 [product.id, snapshot_date]
             );
 
             let closing_stock = 0;
             let closing_average_cost = 0;
+            let calculationStartDate = '1970-01-01';
+
+            if (latestSnapshot) {
+                closing_stock = latestSnapshot.closing_stock;
+                closing_average_cost = latestSnapshot.closing_average_cost;
+                calculationStartDate = latestSnapshot.snapshot_date;
+            }
+
+            const movements = await all(
+                `SELECT type, quantity, unit_cost 
+                 FROM inventory_movements 
+                 WHERE product_id = ? AND status = 'Activo' AND date(transaction_date) > ? AND date(transaction_date) <= ?
+                 ORDER BY transaction_date ASC, created_at ASC`,
+                [product.id, calculationStartDate, snapshot_date]
+            );
 
             for (const move of movements) {
                 if (move.type === 'ENTRADA') {
@@ -514,8 +532,8 @@ app.post('/api/inventory/create-snapshot', async (req, res) => {
                 }
             }
 
-            if (closing_stock > 0) {
-                const insertSql = `
+            if (closing_stock > 0 || (latestSnapshot && movements.length === 0)) {
+                 const insertSql = `
                     INSERT INTO inventory_snapshots (product_id, snapshot_date, closing_stock, closing_average_cost) 
                     VALUES (?, ?, ?, ?)
                     ON CONFLICT(product_id, snapshot_date) DO UPDATE SET
@@ -524,7 +542,9 @@ app.post('/api/inventory/create-snapshot', async (req, res) => {
                 `;
                 await run(insertSql, [product.id, snapshot_date, closing_stock, closing_average_cost]);
                 createdCount++;
-                totalValue += closing_stock * closing_average_cost;
+                if (closing_stock > 0) {
+                    totalValue += closing_stock * closing_average_cost;
+                }
             }
         }
 
@@ -1362,6 +1382,7 @@ app.post('/api/reports/historical-summary', async (req, res) => {
 
     try {
         const db = databaseManager.getActiveDb();
+        const get = util.promisify(db.get.bind(db));
         const all = util.promisify(db.all.bind(db));
 
         const products = await all("SELECT id FROM products");
@@ -1369,16 +1390,32 @@ app.post('/api/reports/historical-summary', async (req, res) => {
         let totalValue = 0;
 
         for (const product of products) {
-            const movements = await all(
-                `SELECT type, quantity, unit_cost 
-                 FROM inventory_movements 
-                 WHERE product_id = ? AND status = 'Activo' AND date(transaction_date) <= ?
-                 ORDER BY transaction_date ASC, created_at ASC`,
+            const latestSnapshot = await get(
+                `SELECT snapshot_date, closing_stock, closing_average_cost 
+                 FROM inventory_snapshots
+                 WHERE product_id = ? AND date(snapshot_date) <= ?
+                 ORDER BY snapshot_date DESC
+                 LIMIT 1`,
                 [product.id, date]
             );
 
             let currentStock = 0;
             let avgCost = 0;
+            let calculationStartDate = '1970-01-01';
+
+            if (latestSnapshot) {
+                currentStock = latestSnapshot.closing_stock;
+                avgCost = latestSnapshot.closing_average_cost;
+                calculationStartDate = latestSnapshot.snapshot_date;
+            }
+
+            const movements = await all(
+                `SELECT type, quantity, unit_cost 
+                 FROM inventory_movements 
+                 WHERE product_id = ? AND status = 'Activo' AND date(transaction_date) > ? AND date(transaction_date) <= ?
+                 ORDER BY transaction_date ASC, created_at ASC`,
+                [product.id, calculationStartDate, date]
+            );
 
             for (const move of movements) {
                 if (move.type === 'ENTRADA') {
