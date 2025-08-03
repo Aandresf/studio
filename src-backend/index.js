@@ -1161,18 +1161,33 @@ app.post('/api/reports/inventory-excel', async (req, res) => {
         let inventoryData = [];
 
         for (const product of products) {
-            // 1. Obtener estado inicial (existencia y costo) antes del período, considerando solo movimientos activos
-            const initialState = await get(
-                `SELECT 
-                    SUM(CASE WHEN type = 'ENTRADA' THEN quantity ELSE -quantity END) as initialStock,
-                    (SELECT average_cost FROM products WHERE id = ?) as initialAvgCost
+            // 1. Calcular estado inicial (existencia y costo) antes del período de forma histórica
+            const historicalMovements = await all(
+                `SELECT type, quantity, unit_cost 
                  FROM inventory_movements 
-                 WHERE product_id = ? AND status = 'Activo' AND date(transaction_date) < ?`,
-                [product.id, product.id, startDate]
+                 WHERE product_id = ? AND status = 'Activo' AND date(transaction_date) < ?
+                 ORDER BY transaction_date ASC`,
+                [product.id, startDate]
             );
 
-            let existenciaAnterior = initialState?.initialStock || 0;
-            let costoPromedioActual = initialState?.initialAvgCost || 0;
+            let initialStock = 0;
+            let initialAvgCost = 0;
+
+            for (const move of historicalMovements) {
+                if (move.type === 'ENTRADA') {
+                    const currentTotalValue = initialStock * initialAvgCost;
+                    const entryValue = move.quantity * move.unit_cost;
+                    initialStock += move.quantity;
+                    initialAvgCost = initialStock > 0 ? (currentTotalValue + entryValue) / initialStock : 0;
+                } else { // SALIDA, RETIRO, AUTO-CONSUMO
+                    initialStock -= move.quantity;
+                }
+            }
+
+            // 'initialStock' y 'initialAvgCost' ahora tienen el estado correcto al inicio del período.
+            // 'costoPromedioActual' se usará para los cálculos dentro del período.
+            let existenciaAcumulada = initialStock;
+            let costoPromedioActual = initialAvgCost;
 
             // 2. Obtener todos los movimientos ACTIVOS DENTRO del período, ordenados por fecha
             const movements = await all(
@@ -1193,21 +1208,21 @@ app.post('/api/reports/inventory-excel', async (req, res) => {
             let valorRetiros = 0;
             let valorAutoconsumo = 0;
 
-            // 3. Iterar cronológicamente para calcular valores y costos correctos
+            // 3. Iterar cronológicamente para calcular valores y costos correctos DENTRO del período
             for (const move of movements) {
                 if (move.type === 'ENTRADA') {
-                    const valorTotalAnterior = existenciaAnterior * costoPromedioActual;
+                    const valorTotalAnterior = existenciaAcumulada * costoPromedioActual;
                     const valorEntradaActual = move.quantity * move.unit_cost;
                     
-                    existenciaAnterior += move.quantity;
-                    costoPromedioActual = existenciaAnterior > 0 ? (valorTotalAnterior + valorEntradaActual) / existenciaAnterior : 0;
+                    existenciaAcumulada += move.quantity;
+                    costoPromedioActual = existenciaAcumulada > 0 ? (valorTotalAnterior + valorEntradaActual) / existenciaAcumulada : 0;
                     
                     totalEntradasUnidades += move.quantity;
                     valorEntradas += valorEntradaActual;
                 } else {
                     // Para cualquier tipo de SALIDA, se valora al costo promedio del momento
                     const valorSalida = move.quantity * costoPromedioActual;
-                    existenciaAnterior -= move.quantity;
+                    existenciaAcumulada -= move.quantity;
 
                     if (move.type === 'SALIDA') {
                         totalSalidasUnidades += move.quantity;
@@ -1222,22 +1237,22 @@ app.post('/api/reports/inventory-excel', async (req, res) => {
                 }
             }
 
-            const valorExistenciaAnterior = (initialState?.initialStock || 0) * (initialState?.initialAvgCost || 0);
+            const valorExistenciaAnterior = initialStock * initialAvgCost;
             
-            // La existencia final es el valor de `existenciaAnterior` después de todas las iteraciones.
-            const existenciaActual = existenciaAnterior; 
+            // La existencia final es el valor de `existenciaAcumulada` después de todas las iteraciones.
+            const existenciaActual = existenciaAcumulada; 
             const valorExistenciaActual = existenciaActual * costoPromedioActual;
 
             inventoryData.push({
                 code: product.sku || `P-${product.id}`,
                 description: product.name,
-                existenciaAnterior: initialState?.initialStock || 0,
+                existenciaAnterior: initialStock,
                 entradas: totalEntradasUnidades,
                 salidas: totalSalidasUnidades,
                 retiros: totalRetirosUnidades,
                 autoconsumo: totalAutoconsumoUnidades,
                 existenciaActual,
-                valorUnitarioAnterior: initialState?.initialAvgCost || 0,
+                valorUnitarioAnterior: initialAvgCost,
                 valorExistenciaAnterior,
                 valorEntradas,
                 valorSalidas,
@@ -1245,7 +1260,7 @@ app.post('/api/reports/inventory-excel', async (req, res) => {
                 valorAutoconsumo,
                 valorUnitarioActual: costoPromedioActual,
                 valorExistenciaActual,
-                valorPromedio: (totalEntradasUnidades > 0) ? (valorEntradas / totalEntradasUnidades) : (initialState?.initialAvgCost || 0)
+                valorPromedio: (totalEntradasUnidades > 0) ? (valorEntradas / totalEntradasUnidades) : initialAvgCost
             });
         }
 
