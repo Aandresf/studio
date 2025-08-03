@@ -462,6 +462,68 @@ app.post('/api/inventory/movements', async (req, res) => {
     }
 });
 
+app.post('/api/inventory/create-snapshot', async (req, res) => {
+    const { snapshot_date } = req.body;
+    if (!snapshot_date) {
+        return res.status(400).json({ error: 'Se requiere un snapshot_date.' });
+    }
+
+    const db = databaseManager.getActiveDb();
+    const all = util.promisify(db.all.bind(db));
+    const run = util.promisify(db.run.bind(db));
+
+    try {
+        await run('BEGIN TRANSACTION');
+
+        const products = await all("SELECT id FROM products");
+        let createdCount = 0;
+
+        for (const product of products) {
+            const movements = await all(
+                `SELECT type, quantity, unit_cost 
+                 FROM inventory_movements 
+                 WHERE product_id = ? AND status = 'Activo' AND date(transaction_date) <= ?
+                 ORDER BY transaction_date ASC, created_at ASC`,
+                [product.id, snapshot_date]
+            );
+
+            let closing_stock = 0;
+            let closing_average_cost = 0;
+
+            for (const move of movements) {
+                if (move.type === 'ENTRADA') {
+                    const currentTotalValue = closing_stock * closing_average_cost;
+                    const entryValue = move.quantity * (move.unit_cost || 0);
+                    closing_stock += move.quantity;
+                    closing_average_cost = closing_stock > 0 ? (currentTotalValue + entryValue) / closing_stock : 0;
+                } else {
+                    closing_stock -= move.quantity;
+                }
+            }
+
+            if (closing_stock > 0) {
+                const insertSql = `
+                    INSERT INTO inventory_snapshots (product_id, snapshot_date, closing_stock, closing_average_cost) 
+                    VALUES (?, ?, ?, ?)
+                    ON CONFLICT(product_id, snapshot_date) DO UPDATE SET
+                        closing_stock = excluded.closing_stock,
+                        closing_average_cost = excluded.closing_average_cost;
+                `;
+                await run(insertSql, [product.id, snapshot_date, closing_stock, closing_average_cost]);
+                createdCount++;
+            }
+        }
+
+        await run('COMMIT');
+        res.status(201).json({ message: `Snapshot creado/actualizado exitosamente para ${createdCount} productos en la fecha ${snapshot_date}.` });
+
+    } catch (error) {
+        console.error('Error creando el snapshot:', error);
+        await run('ROLLBACK');
+        res.status(500).json({ error: `Error al crear el snapshot: ${error.message}` });
+    }
+});
+
 // PURCHASES (BATCH)
 app.post('/api/purchases', async (req, res) => {
     const { transaction_date, entity_name, entity_document, items } = req.body;
@@ -1161,86 +1223,82 @@ app.post('/api/reports/inventory-excel', async (req, res) => {
         let inventoryData = [];
 
         for (const product of products) {
-            // 1. Calcular estado inicial (existencia y costo) antes del período de forma histórica
-            const historicalMovements = await all(
-                `SELECT type, quantity, unit_cost 
-                 FROM inventory_movements 
-                 WHERE product_id = ? AND status = 'Activo' AND date(transaction_date) < ?
-                 ORDER BY transaction_date ASC`,
+            // 1. Buscar el snapshot más reciente ANTES de la fecha de inicio del reporte.
+            const latestSnapshot = await get(
+                `SELECT snapshot_date, closing_stock, closing_average_cost 
+                 FROM inventory_snapshots
+                 WHERE product_id = ? AND date(snapshot_date) < ?
+                 ORDER BY snapshot_date DESC
+                 LIMIT 1`,
                 [product.id, startDate]
             );
 
             let initialStock = 0;
             let initialAvgCost = 0;
+            let calculationStartDate = '1970-01-01'; // Fecha de inicio por defecto si no hay snapshot
+
+            if (latestSnapshot) {
+                initialStock = latestSnapshot.closing_stock;
+                initialAvgCost = latestSnapshot.closing_average_cost;
+                calculationStartDate = latestSnapshot.snapshot_date;
+            }
+
+            // 2. Calcular estado inicial desde el último snapshot (o desde el inicio) hasta la fecha de inicio del reporte.
+            const historicalMovements = await all(
+                `SELECT type, quantity, unit_cost 
+                 FROM inventory_movements 
+                 WHERE product_id = ? AND status = 'Activo' AND date(transaction_date) > ? AND date(transaction_date) < ?
+                 ORDER BY transaction_date ASC, created_at ASC`,
+                [product.id, calculationStartDate, startDate]
+            );
 
             for (const move of historicalMovements) {
                 if (move.type === 'ENTRADA') {
                     const currentTotalValue = initialStock * initialAvgCost;
-                    const entryValue = move.quantity * move.unit_cost;
+                    const entryValue = move.quantity * (move.unit_cost || 0);
                     initialStock += move.quantity;
                     initialAvgCost = initialStock > 0 ? (currentTotalValue + entryValue) / initialStock : 0;
-                } else { // SALIDA, RETIRO, AUTO-CONSUMO
+                } else {
                     initialStock -= move.quantity;
                 }
             }
 
-            // 'initialStock' y 'initialAvgCost' ahora tienen el estado correcto al inicio del período.
-            // 'costoPromedioActual' se usará para los cálculos dentro del período.
+            // 'initialStock' y 'initialAvgCost' ahora tienen el estado correcto al inicio del período del reporte.
             let existenciaAcumulada = initialStock;
             let costoPromedioActual = initialAvgCost;
 
-            // 2. Obtener todos los movimientos ACTIVOS DENTRO del período, ordenados por fecha
+            // 3. Obtener todos los movimientos ACTIVOS DENTRO del período del reporte.
             const movements = await all(
                 `SELECT type, quantity, unit_cost, price, transaction_date 
                  FROM inventory_movements 
                  WHERE product_id = ? AND status = 'Activo' AND date(transaction_date) BETWEEN ? AND ?
-                 ORDER BY transaction_date ASC`,
+                 ORDER BY transaction_date ASC, created_at ASC`,
                 [product.id, startDate, endDate]
             );
 
-            let totalEntradasUnidades = 0;
-            let totalSalidasUnidades = 0;
-            let totalRetirosUnidades = 0;
-            let totalAutoconsumoUnidades = 0;
-            
-            let valorEntradas = 0;
-            let valorSalidas = 0;
-            let valorRetiros = 0;
-            let valorAutoconsumo = 0;
+            let totalEntradasUnidades = 0, totalSalidasUnidades = 0, totalRetirosUnidades = 0, totalAutoconsumoUnidades = 0;
+            let valorEntradas = 0, valorSalidas = 0, valorRetiros = 0, valorAutoconsumo = 0;
 
-            // 3. Iterar cronológicamente para calcular valores y costos correctos DENTRO del período
+            // 4. Iterar cronológicamente para calcular valores DENTRO del período del reporte.
             for (const move of movements) {
                 if (move.type === 'ENTRADA') {
                     const valorTotalAnterior = existenciaAcumulada * costoPromedioActual;
                     const valorEntradaActual = move.quantity * move.unit_cost;
-                    
                     existenciaAcumulada += move.quantity;
                     costoPromedioActual = existenciaAcumulada > 0 ? (valorTotalAnterior + valorEntradaActual) / existenciaAcumulada : 0;
-                    
                     totalEntradasUnidades += move.quantity;
                     valorEntradas += valorEntradaActual;
                 } else {
-                    // Para cualquier tipo de SALIDA, se valora al costo promedio del momento
                     const valorSalida = move.quantity * costoPromedioActual;
                     existenciaAcumulada -= move.quantity;
-
-                    if (move.type === 'SALIDA') {
-                        totalSalidasUnidades += move.quantity;
-                        valorSalidas += valorSalida;
-                    } else if (move.type === 'RETIRO') {
-                        totalRetirosUnidades += move.quantity;
-                        valorRetiros += valorSalida;
-                    } else if (move.type === 'AUTO-CONSUMO') {
-                        totalAutoconsumoUnidades += move.quantity;
-                        valorAutoconsumo += valorSalida;
-                    }
+                    if (move.type === 'SALIDA') { totalSalidasUnidades += move.quantity; valorSalidas += valorSalida; }
+                    else if (move.type === 'RETIRO') { totalRetirosUnidades += move.quantity; valorRetiros += valorSalida; }
+                    else if (move.type === 'AUTO-CONSUMO') { totalAutoconsumoUnidades += move.quantity; valorAutoconsumo += valorSalida; }
                 }
             }
 
             const valorExistenciaAnterior = initialStock * initialAvgCost;
-            
-            // La existencia final es el valor de `existenciaAcumulada` después de todas las iteraciones.
-            const existenciaActual = existenciaAcumulada; 
+            const existenciaActual = existenciaAcumulada;
             const valorExistenciaActual = existenciaActual * costoPromedioActual;
 
             inventoryData.push({
