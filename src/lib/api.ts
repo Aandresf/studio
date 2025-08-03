@@ -172,6 +172,17 @@ export const createInventoryMovement = (movement: Omit<InventoryMovement, 'id' |
     });
 };
 
+export const getLatestSnapshot = (): Promise<{ last_date: string | null }> => {
+    return fetchAPI('/inventory/latest-snapshot');
+};
+
+export const createInventorySnapshot = (snapshot_date: string): Promise<{ message: string, snapshot: { date: string, productCount: number, totalValue: number } }> => {
+    return fetchAPI('/inventory/create-snapshot', {
+        method: 'POST',
+        body: JSON.stringify({ snapshot_date }),
+    });
+};
+
 // Reports API calls
 export const getReports = (): Promise<ReportMetadata[]> => fetchAPI('/reports');
 

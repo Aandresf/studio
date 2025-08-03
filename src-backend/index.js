@@ -462,6 +462,18 @@ app.post('/api/inventory/movements', async (req, res) => {
     }
 });
 
+app.get('/api/inventory/latest-snapshot', async (req, res) => {
+    try {
+        const db = databaseManager.getActiveDb();
+        const get = util.promisify(db.get.bind(db));
+        const latest = await get("SELECT MAX(snapshot_date) as last_date FROM inventory_snapshots");
+        res.json({ last_date: latest?.last_date || null });
+    } catch (error) {
+        console.error('Error al obtener el último snapshot:', error);
+        res.status(500).json({ error: 'Error interno al consultar el último snapshot.' });
+    }
+});
+
 app.post('/api/inventory/create-snapshot', async (req, res) => {
     const { snapshot_date } = req.body;
     if (!snapshot_date) {
@@ -477,6 +489,7 @@ app.post('/api/inventory/create-snapshot', async (req, res) => {
 
         const products = await all("SELECT id FROM products");
         let createdCount = 0;
+        let totalValue = 0;
 
         for (const product of products) {
             const movements = await all(
@@ -511,11 +524,19 @@ app.post('/api/inventory/create-snapshot', async (req, res) => {
                 `;
                 await run(insertSql, [product.id, snapshot_date, closing_stock, closing_average_cost]);
                 createdCount++;
+                totalValue += closing_stock * closing_average_cost;
             }
         }
 
         await run('COMMIT');
-        res.status(201).json({ message: `Snapshot creado/actualizado exitosamente para ${createdCount} productos en la fecha ${snapshot_date}.` });
+        res.status(201).json({ 
+            message: `Snapshot creado/actualizado exitosamente para ${createdCount} productos en la fecha ${snapshot_date}.`,
+            snapshot: {
+                date: snapshot_date,
+                productCount: createdCount,
+                totalValue: totalValue
+            }
+        });
 
     } catch (error) {
         console.error('Error creando el snapshot:', error);
@@ -1372,6 +1393,62 @@ app.post('/api/reports/:type', async (req, res) => {
         }
     } catch (error) {
         res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/api/reports/historical-summary', async (req, res) => {
+    const { date } = req.body;
+    if (!date) {
+        return res.status(400).json({ error: 'Se requiere una fecha.' });
+    }
+
+    try {
+        const db = databaseManager.getActiveDb();
+        const all = util.promisify(db.all.bind(db));
+
+        const products = await all("SELECT id FROM products");
+        let totalStock = 0;
+        let totalValue = 0;
+
+        for (const product of products) {
+            const movements = await all(
+                `SELECT type, quantity, unit_cost 
+                 FROM inventory_movements 
+                 WHERE product_id = ? AND status = 'Activo' AND date(transaction_date) <= ?
+                 ORDER BY transaction_date ASC, created_at ASC`,
+                [product.id, date]
+            );
+
+            let currentStock = 0;
+            let avgCost = 0;
+
+            for (const move of movements) {
+                if (move.type === 'ENTRADA') {
+                    const currentTotalValue = currentStock * avgCost;
+                    const entryValue = move.quantity * (move.unit_cost || 0);
+                    currentStock += move.quantity;
+                    avgCost = currentStock > 0 ? (currentTotalValue + entryValue) / currentStock : 0;
+                } else {
+                    currentStock -= move.quantity;
+                }
+            }
+            
+            if (currentStock > 0) {
+                totalStock += currentStock;
+                totalValue += currentStock * avgCost;
+            }
+        }
+        
+        res.json({
+            date,
+            totalProductCount: products.length,
+            totalStock,
+            totalValue
+        });
+
+    } catch (error) {
+        console.error(`Error calculando el resumen histórico para la fecha ${date}:`, error);
+        res.status(500).json({ error: 'Error interno al calcular el resumen.' });
     }
 });
 

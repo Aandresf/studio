@@ -849,6 +849,7 @@ __turbopack_context__.s({
     "annulSale": (()=>annulSale),
     "backupDatabase": (()=>backupDatabase),
     "createInventoryMovement": (()=>createInventoryMovement),
+    "createInventorySnapshot": (()=>createInventorySnapshot),
     "createProduct": (()=>createProduct),
     "createPurchase": (()=>createPurchase),
     "createReport": (()=>createReport),
@@ -858,6 +859,7 @@ __turbopack_context__.s({
     "deleteStore": (()=>deleteStore),
     "exportInventoryToExcel": (()=>exportInventoryToExcel),
     "getDashboardSummary": (()=>getDashboardSummary),
+    "getLatestSnapshot": (()=>getLatestSnapshot),
     "getPendingTransactions": (()=>getPendingTransactions),
     "getProductMovements": (()=>getProductMovements),
     "getProducts": (()=>getProducts),
@@ -1019,6 +1021,17 @@ const createInventoryMovement = (movement)=>{
     return fetchAPI('/inventory/movements', {
         method: 'POST',
         body: JSON.stringify(movement)
+    });
+};
+const getLatestSnapshot = ()=>{
+    return fetchAPI('/inventory/latest-snapshot');
+};
+const createInventorySnapshot = (snapshot_date)=>{
+    return fetchAPI('/inventory/create-snapshot', {
+        method: 'POST',
+        body: JSON.stringify({
+            snapshot_date
+        })
     });
 };
 const getReports = ()=>fetchAPI('/reports');

@@ -8,13 +8,17 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTheme } from "@/components/theme-provider";
-import { Download, Upload, Trash2 } from "lucide-react";
+import { Download, Upload, Trash2, Calendar as CalendarIcon, ChevronsUpDown } from "lucide-react";
 import { useBackendStatus } from '@/app/(app)/layout';
-import { getStores, getStoreDetails, updateStoreDetails, deleteStore } from '@/lib/api';
+import { getStores, getStoreDetails, updateStoreDetails, deleteStore, getLatestSnapshot, createInventorySnapshot } from '@/lib/api';
 import { toastSuccess, toastError } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 interface Store {
   id: string;
@@ -31,6 +35,127 @@ interface StoreDetails {
     allowSellBelowCost?: boolean;
     showOutOfStockProducts?: boolean;
   }
+}
+
+interface SnapshotResult {
+    date: string;
+    productCount: number;
+    totalValue: number;
+}
+
+function InventorySnapshotCard() {
+    const [latestSnapshotDate, setLatestSnapshotDate] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+    const [isCreating, setIsCreating] = useState(false);
+    const [snapshotResult, setSnapshotResult] = useState<SnapshotResult | null>(null);
+
+    const fetchLatestSnapshot = useCallback(async () => {
+        setIsLoading(true);
+        try {
+            const { last_date } = await getLatestSnapshot();
+            setLatestSnapshotDate(last_date);
+        } catch (error) {
+            // Error handled in API layer
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchLatestSnapshot();
+    }, [fetchLatestSnapshot]);
+
+    const handleCreateSnapshot = async () => {
+        if (!selectedDate) {
+            toastError("Error", "Por favor, selecciona una fecha para el cierre.");
+            return;
+        }
+        setIsCreating(true);
+        try {
+            const dateString = format(selectedDate, 'yyyy-MM-dd');
+            const result = await createInventorySnapshot(dateString);
+            setSnapshotResult(result.snapshot);
+            toastSuccess("Éxito", `Cierre para el ${dateString} creado correctamente.`);
+            fetchLatestSnapshot(); // Actualizar la fecha del último snapshot
+        } catch (error) {
+            // Error handled in API layer
+        } finally {
+            setIsCreating(false);
+        }
+    };
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Cierres de Inventario (Snapshots)</CardTitle>
+                <CardDescription>
+                    Crea un "cierre" o punto de guardado del inventario en una fecha específica para acelerar la generación de reportes futuros.
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                {isLoading ? (
+                    <Skeleton className="h-6 w-1/2" />
+                ) : (
+                    <p className="text-sm text-muted-foreground">
+                        Último cierre realizado: {latestSnapshotDate ? format(new Date(latestSnapshotDate), 'PPP', { locale: es }) : 'Ninguno'}
+                    </p>
+                )}
+                <div className="flex flex-col sm:flex-row items-center gap-4">
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button
+                                variant={"outline"}
+                                className="w-full sm:w-[280px] justify-start text-left font-normal"
+                            >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {selectedDate ? format(selectedDate, 'PPP', { locale: es }) : <span>Selecciona una fecha</span>}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                            <Calendar
+                                mode="single"
+                                selected={selectedDate}
+                                onSelect={setSelectedDate}
+                                initialFocus
+                            />
+                        </PopoverContent>
+                    </Popover>
+                    <Button onClick={handleCreateSnapshot} disabled={isCreating || !selectedDate}>
+                        {isCreating ? 'Generando Cierre...' : 'Generar Cierre'}
+                    </Button>
+                </div>
+                {snapshotResult && (
+                     <Dialog open={!!snapshotResult} onOpenChange={(isOpen) => !isOpen && setSnapshotResult(null)}>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Resultado del Cierre de Inventario</DialogTitle>
+                            </DialogHeader>
+                            <div className="space-y-4 py-4">
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Fecha del Cierre:</span>
+                                    <span className="font-medium">{format(new Date(snapshotResult.date), 'PPP', { locale: es })}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Productos Procesados:</span>
+                                    <span className="font-medium">{snapshotResult.productCount}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Valor Total del Inventario:</span>
+                                    <span className="font-bold text-lg text-primary">
+                                        ${snapshotResult.totalValue.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </span>
+                                </div>
+                            </div>
+                            <DialogFooter>
+                                <Button onClick={() => setSnapshotResult(null)}>Cerrar</Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+                )}
+            </CardContent>
+        </Card>
+    );
 }
 
 function DangerZone({ activeStoreId, stores, onStoreDeleted }: { activeStoreId: string, stores: Store[], onStoreDeleted: () => void }) {
@@ -318,6 +443,7 @@ export default function SettingsPage() {
         </TabsContent>
         <TabsContent value="miscellaneous">
            <div className="grid gap-6">
+            <InventorySnapshotCard />
             <Card>
               <CardHeader>
                 <CardTitle>Base de Datos</CardTitle>

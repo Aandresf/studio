@@ -2431,6 +2431,10 @@ body {
     display: table-cell;
   }
 
+  .sm\:w-\[280px\] {
+    width: 280px;
+  }
+
   .sm\:max-w-\[425px\] {
     max-width: 425px;
   }

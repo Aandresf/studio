@@ -123,7 +123,21 @@ Se ha realizado una revisión y refactorización exhaustiva de varios endpoints 
     3.  **Edición Segura:** Añadir la capacidad de editar ventas desde el historial. El backend (`PUT /api/sales`) debe seguir el patrón de **anulación y re-creación** para garantizar la integridad del inventario y mantener un rastro de auditoría.
     4.  **Interfaz de Usuario Pulida:** Reemplazar los botones de texto en los modales de historial y recibo por **botones de icono con tooltips** (para acciones como Editar, Ver Recibo, Imprimir, etc.), manteniendo la consistencia visual con la sección de Compras.
 
+---
+## Tarea en Pausa: Modificación de Precios de Snapshot
 
+**Objetivo:** Aplicar un aumento porcentual (`2.17286205%`) a los costos de los productos guardados en el snapshot de inventario con fecha `2023-12-31`.
 
+**Estado Actual:**
+1.  Se implementó la funcionalidad completa para crear y utilizar "snapshots" de inventario, optimizando la generación de reportes.
+2.  Se creó la UI en la página de "Configuración" para que el usuario pueda generar estos snapshots.
+3.  Se detectó que el snapshot para la fecha `2023-12-31` aún no había sido creado.
+4.  Se creó un script (`scripts/crear_snapshot.js`) para generar el snapshot necesario.
+5.  Se creó un script de simulación (`scripts/modificar_precios_snapshot.js`) para verificar los cálculos del aumento de precios antes de aplicarlos.
 
-
+**Próximos Pasos al Reanudar:**
+1.  Ejecutar el script `crear_snapshot.js` para generar el cierre del `2023-12-31`.
+2.  Ejecutar el script `modificar_precios_snapshot.js` para confirmar que los cálculos de la simulación son correctos.
+3.  Tras la confirmación del usuario, modificar el script `modificar_precios_snapshot.js` para que aplique los cambios a la base de datos.
+4.  Ejecutar el script final para actualizar los precios en la base de datos.
+---
