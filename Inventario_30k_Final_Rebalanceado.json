@@ -1,0 +1,1450 @@
+[
+  {
+    "productId": 34,
+    "id": "temp-1754145423941-0.00",
+    "name": "Lima de Uñas Tiffany (Grano 100/180)",
+    "quantity": 1,
+    "unitCost": 1.12,
+    "tax_rate": 16
+  },
+  {
+    "productId": 41,
+    "id": "temp-1754145423941-0.01",
+    "name": "Finish Gel UV Tiffany (10 ml)",
+    "quantity": 13,
+    "unitCost": 3.332,
+    "tax_rate": 16
+  },
+  {
+    "productId": 47,
+    "id": "temp-1754145423941-0.02",
+    "name": "Carrusel de Balines para Uñas",
+    "quantity": 6,
+    "unitCost": 2.086,
+    "tax_rate": 16
+  },
+  {
+    "productId": 49,
+    "id": "temp-1754145423941-0.03",
+    "name": "Lámpara LED Portátil 'Jelly Canguro'",
+    "quantity": 1,
+    "unitCost": 48.4421,
+    "tax_rate": 16
+  },
+  {
+    "productId": 50,
+    "id": "temp-1754145423941-0.04",
+    "name": "Extensiones de Pestañas Nagaraku",
+    "quantity": 5,
+    "unitCost": 31.85,
+    "tax_rate": 16
+  },
+  {
+    "productId": 52,
+    "id": "temp-1754145423941-0.05",
+    "name": "Extensiones de Pestañas Pelo a Pelo (Colores)",
+    "quantity": 4,
+    "unitCost": 26.481,
+    "tax_rate": 16
+  },
+  {
+    "productId": 66,
+    "id": "temp-1754145423941-0.06",
+    "name": "Navaja de Acero Inoxidable Salon Clip",
+    "quantity": 1,
+    "unitCost": 12.495,
+    "tax_rate": 16
+  },
+  {
+    "productId": 67,
+    "id": "temp-1754145423941-0.07",
+    "name": "Carrusel de Balines para Uñas (Mixto)",
+    "quantity": 6,
+    "unitCost": 2.555,
+    "tax_rate": 16
+  },
+  {
+    "productId": 69,
+    "id": "temp-1754145423941-0.08",
+    "name": "Base Coat Tiffany (10 ml)",
+    "quantity": 2,
+    "unitCost": 3.332,
+    "tax_rate": 16
+  },
+  {
+    "productId": 73,
+    "id": "temp-1754145423941-0.09",
+    "name": "Torno de Uñas Inalámbrico",
+    "quantity": 1,
+    "unitCost": 10.976,
+    "tax_rate": 16
+  },
+  {
+    "productId": 82,
+    "id": "temp-1754145423941-0.010",
+    "name": "Cortacutículas",
+    "quantity": 12,
+    "unitCost": 26.642,
+    "tax_rate": 16
+  },
+  {
+    "productId": 85,
+    "id": "temp-1754145423941-0.011",
+    "name": "Cortacutículas (Acabado Tornasol)",
+    "quantity": 3,
+    "unitCost": 56.497,
+    "tax_rate": 16
+  },
+  {
+    "productId": 87,
+    "id": "temp-1754145423941-0.012",
+    "name": "Tips para Uñas Tiffany (Forma Coffin)",
+    "quantity": 8,
+    "unitCost": 19.929,
+    "tax_rate": 16
+  },
+  {
+    "productId": 88,
+    "id": "temp-1754145423941-0.013",
+    "name": "Brocha Taquera para Barbería",
+    "quantity": 2,
+    "unitCost": 14.413,
+    "tax_rate": 16
+  },
+  {
+    "productId": 89,
+    "id": "temp-1754145423941-0.014",
+    "name": "Esmalte de Uñas Convencional",
+    "quantity": 4,
+    "unitCost": 10.703,
+    "tax_rate": 16
+  },
+  {
+    "productId": 90,
+    "id": "temp-1754145423941-0.015",
+    "name": "Polygel Acrílico",
+    "quantity": 6,
+    "unitCost": 44.758,
+    "tax_rate": 16
+  },
+  {
+    "productId": 91,
+    "id": "temp-1754145423941-0.016",
+    "name": "Polvo Efecto Espejo (Chrome Powder)",
+    "quantity": 4,
+    "unitCost": 16.366,
+    "tax_rate": 16
+  },
+  {
+    "productId": 92,
+    "id": "temp-1754145423941-0.017",
+    "name": "Base Coat Maxglow (10 ml)",
+    "quantity": 2,
+    "unitCost": 32.487,
+    "tax_rate": 16
+  },
+  {
+    "productId": 93,
+    "id": "temp-1754145423941-0.018",
+    "name": "Kit para Cejas",
+    "quantity": 10,
+    "unitCost": 2.8826,
+    "tax_rate": 16
+  },
+  {
+    "productId": 94,
+    "id": "temp-1754145423941-0.019",
+    "name": "Gorro Térmico de Aluminio",
+    "quantity": 8,
+    "unitCost": 4.081,
+    "tax_rate": 16
+  },
+  {
+    "productId": 95,
+    "id": "temp-1754145423941-0.020",
+    "name": "Flores de Tinta en Resina para Uñas",
+    "quantity": 3,
+    "unitCost": 5.8674,
+    "tax_rate": 16
+  },
+  {
+    "productId": 96,
+    "id": "temp-1754145423941-0.021",
+    "name": "Paleta de Madera para Depilar (Grande, Curva)",
+    "quantity": 5,
+    "unitCost": 4.837,
+    "tax_rate": 16
+  },
+  {
+    "productId": 97,
+    "id": "temp-1754145423941-0.022",
+    "name": "Gel para Uñas 5 en 1",
+    "quantity": 7,
+    "unitCost": 6.454,
+    "tax_rate": 16
+  },
+  {
+    "productId": 98,
+    "id": "temp-1754145423941-0.023",
+    "name": "Pinza para Moldes Dual System (Transparente)",
+    "quantity": 9,
+    "unitCost": 1.52,
+    "tax_rate": 16
+  },
+  {
+    "productId": 99,
+    "id": "temp-1754145423941-0.024",
+    "name": "Esmalte Liner Maxglow (8 ml)",
+    "quantity": 6,
+    "unitCost": 27.076,
+    "tax_rate": 16
+  },
+  {
+    "productId": 100,
+    "id": "temp-1754145423941-0.025",
+    "name": "Esmalte Maxglow Diamond Cat Eye (10 ml, Plateado)",
+    "quantity": 8,
+    "unitCost": 23.45,
+    "tax_rate": 16
+  },
+  {
+    "productId": 101,
+    "id": "temp-1754145423941-0.026",
+    "name": "Esmalte Semipermanente Dream Cat Eye (10 ml)",
+    "quantity": 1,
+    "unitCost": 23.45,
+    "tax_rate": 16
+  },
+  {
+    "productId": 103,
+    "id": "temp-1754145423941-0.027",
+    "name": "Esmalte Semipermanente Unicorn Magic (10 ml)",
+    "quantity": 5,
+    "unitCost": 21.31,
+    "tax_rate": 16
+  },
+  {
+    "productId": 104,
+    "id": "temp-1754145423941-0.028",
+    "name": "Esmalte Semipermanente Maxglow (Efecto Azúcar)",
+    "quantity": 10,
+    "unitCost": 23.45,
+    "tax_rate": 16
+  },
+  {
+    "productId": 105,
+    "id": "temp-1754145423941-0.029",
+    "name": "Esmalte Semipermanente Maxglow (Colección Mermaid)",
+    "quantity": 1,
+    "unitCost": 21.31,
+    "tax_rate": 16
+  },
+  {
+    "productId": 106,
+    "id": "temp-1754145423941-0.030",
+    "name": "Esmalte Semipermanente Maxglow (10 ml)",
+    "quantity": 59,
+    "unitCost": 19.187,
+    "tax_rate": 16
+  },
+  {
+    "productId": 107,
+    "id": "temp-1754145423941-0.031",
+    "name": "Tips para Uñas (Forma Coffin) - Caja 500 uds",
+    "quantity": 1,
+    "unitCost": 49.672,
+    "tax_rate": 16
+  },
+  {
+    "productId": 108,
+    "id": "temp-1754145423941-0.032",
+    "name": "Tips para Uñas (Curva C, Transparentes) - Caja 500 uds",
+    "quantity": 3,
+    "unitCost": 45.192,
+    "tax_rate": 16
+  },
+  {
+    "productId": 109,
+    "id": "temp-1754145423941-0.033",
+    "name": "Protein Bond Maxglow (15 ml)",
+    "quantity": 3,
+    "unitCost": 42.854,
+    "tax_rate": 16
+  },
+  {
+    "productId": 110,
+    "id": "temp-1754145423941-0.034",
+    "name": "Base Rubber Maxglow (10 ml)",
+    "quantity": 3,
+    "unitCost": 27.076,
+    "tax_rate": 16
+  },
+  {
+    "productId": 111,
+    "id": "temp-1754145423941-0.035",
+    "name": "Kit de Tinte para Cabello Maxglow (100 ml)",
+    "quantity": 4,
+    "unitCost": 46.046,
+    "tax_rate": 16
+  },
+  {
+    "productId": 112,
+    "id": "temp-1754145423941-0.036",
+    "name": "Esterilizador de Calor Seco NV-210",
+    "quantity": 1,
+    "unitCost": 149.233,
+    "tax_rate": 16
+  },
+  {
+    "productId": 113,
+    "id": "temp-1754145423941-0.037",
+    "name": "Polvo Acrílico Maxglow Pop Color (1 oz)",
+    "quantity": 5,
+    "unitCost": 36.239,
+    "tax_rate": 16
+  },
+  {
+    "productId": 114,
+    "id": "temp-1754145423941-0.038",
+    "name": "Pegamento para Pestañas Salon Pro",
+    "quantity": 1,
+    "unitCost": 15.778,
+    "tax_rate": 16
+  },
+  {
+    "productId": 115,
+    "id": "temp-1754145423941-0.039",
+    "name": "Set de 3 Pinceles Liner para Nail Art",
+    "quantity": 2,
+    "unitCost": 18.1195,
+    "tax_rate": 16
+  },
+  {
+    "productId": 116,
+    "id": "temp-1754145423941-0.040",
+    "name": "Empujador de Cutícula (Doble Filo)",
+    "quantity": 1,
+    "unitCost": 11.935,
+    "tax_rate": 16
+  },
+  {
+    "productId": 160,
+    "id": "temp-1754145423941-0.041",
+    "name": "Base para Glitter",
+    "quantity": 1,
+    "unitCost": 236.096,
+    "tax_rate": 16
+  },
+  {
+    "productId": 161,
+    "id": "temp-1754145423941-0.042",
+    "name": "Esmalte Maxglow - Colección Confeti",
+    "quantity": 1,
+    "unitCost": 147.56,
+    "tax_rate": 16
+  },
+  {
+    "productId": 162,
+    "id": "temp-1754145423941-0.043",
+    "name": "Protein Bond (Adherente)",
+    "quantity": 1,
+    "unitCost": 107.6805358807,
+    "tax_rate": 16
+  },
+  {
+    "productId": 163,
+    "id": "temp-1754145423941-0.044",
+    "name": "Base Gel para Esmalte Semipermanente",
+    "quantity": 1,
+    "unitCost": 236.096,
+    "tax_rate": 16
+  },
+  {
+    "productId": 164,
+    "id": "temp-1754145423941-0.045",
+    "name": "Gel Nivelador (Rubber Base)",
+    "quantity": 1,
+    "unitCost": 363.88296,
+    "tax_rate": 16
+  },
+  {
+    "productId": 165,
+    "id": "temp-1754145423941-0.046",
+    "name": "Jelli Builder Gel (Gelatina Constructora)",
+    "quantity": 1,
+    "unitCost": 371.26096,
+    "tax_rate": 16
+  },
+  {
+    "productId": 166,
+    "id": "temp-1754145423941-0.047",
+    "name": "Finish Gel (Top Coat)",
+    "quantity": 1,
+    "unitCost": 221.34,
+    "tax_rate": 16
+  },
+  {
+    "productId": 167,
+    "id": "temp-1754145423941-0.048",
+    "name": "Esmalte en Gel 3 en 1",
+    "quantity": 1,
+    "unitCost": 236.096,
+    "tax_rate": 16
+  },
+  {
+    "productId": 168,
+    "id": "temp-1754145423941-0.049",
+    "name": "Esmalte Maxglow - Colección Christmas",
+    "quantity": 1,
+    "unitCost": 118.048,
+    "tax_rate": 16
+  },
+  {
+    "productId": 169,
+    "id": "temp-1754145423941-0.050",
+    "name": "Aceite para Cutícula Maxglow",
+    "quantity": 1,
+    "unitCost": 73.78,
+    "tax_rate": 16
+  },
+  {
+    "productId": 170,
+    "id": "temp-1754145423941-0.051",
+    "name": "Removedor de Cutícula Maxglow",
+    "quantity": 1,
+    "unitCost": 88.536,
+    "tax_rate": 16
+  },
+  {
+    "productId": 171,
+    "id": "temp-1754145423941-0.052",
+    "name": "Removedor de Cutícula Mombray",
+    "quantity": 1,
+    "unitCost": 88.536,
+    "tax_rate": 16
+  },
+  {
+    "productId": 172,
+    "id": "temp-1754145423941-0.053",
+    "name": "Gel Removedor de Esmalte Maxglow (Rosado)",
+    "quantity": 1,
+    "unitCost": 177.072,
+    "tax_rate": 16
+  },
+  {
+    "productId": 173,
+    "id": "temp-1754145423941-0.054",
+    "name": "Removedor de Esmalte Maxglow (Marrón)",
+    "quantity": 1,
+    "unitCost": 177.072,
+    "tax_rate": 16
+  },
+  {
+    "productId": 174,
+    "id": "temp-1754145423941-0.055",
+    "name": "Pegamento para Papel Foil",
+    "quantity": 1,
+    "unitCost": 88.536,
+    "tax_rate": 16
+  },
+  {
+    "productId": 175,
+    "id": "temp-1754145423941-0.056",
+    "name": "Monómero EMA 50 ml",
+    "quantity": 1,
+    "unitCost": 147.56,
+    "tax_rate": 16
+  },
+  {
+    "productId": 176,
+    "id": "temp-1754145423941-0.057",
+    "name": "Monómero EMA 100 ml",
+    "quantity": 1,
+    "unitCost": 265.608,
+    "tax_rate": 16
+  },
+  {
+    "productId": 177,
+    "id": "temp-1754145423941-0.058",
+    "name": "Líquido Limpia Pinceles",
+    "quantity": 1,
+    "unitCost": 132.804,
+    "tax_rate": 16
+  },
+  {
+    "productId": 178,
+    "id": "temp-1754145423941-0.059",
+    "name": "Pegamento para Uñas Salom Pro",
+    "quantity": 1,
+    "unitCost": 59.024,
+    "tax_rate": 16
+  },
+  {
+    "productId": 179,
+    "id": "temp-1754145423941-0.060",
+    "name": "Pegamento Acrílico con Brocha",
+    "quantity": 1,
+    "unitCost": 73.78,
+    "tax_rate": 16
+  },
+  {
+    "productId": 180,
+    "id": "temp-1754145423941-0.061",
+    "name": "Papel Foil Decorativo (Oro/Plata) - Caja 12 uds",
+    "quantity": 1,
+    "unitCost": 118.048,
+    "tax_rate": 16
+  },
+  {
+    "productId": 181,
+    "id": "temp-1754145423941-0.062",
+    "name": "Polvo Acrílico Maxglow - Tono Blossom",
+    "quantity": 1,
+    "unitCost": 118.048,
+    "tax_rate": 16
+  },
+  {
+    "productId": 182,
+    "id": "temp-1754145423941-0.063",
+    "name": "Polvo Acrílico Maxglow - Tono Blush",
+    "quantity": 1,
+    "unitCost": 118.048,
+    "tax_rate": 16
+  },
+  {
+    "productId": 183,
+    "id": "temp-1754145423941-0.064",
+    "name": "Polvo Acrílico Maxglow - Tono Coral",
+    "quantity": 1,
+    "unitCost": 118.048,
+    "tax_rate": 16
+  },
+  {
+    "productId": 184,
+    "id": "temp-1754145423941-0.065",
+    "name": "Polvo Acrílico Maxglow - Tono Pink",
+    "quantity": 1,
+    "unitCost": 118.048,
+    "tax_rate": 16
+  },
+  {
+    "productId": 185,
+    "id": "temp-1754145423941-0.066",
+    "name": "Polvo Acrílico Maxglow - Tono Clear",
+    "quantity": 1,
+    "unitCost": 118.048,
+    "tax_rate": 16
+  },
+  {
+    "productId": 186,
+    "id": "temp-1754145423941-0.067",
+    "name": "Kit de Polvos Acrílicos (Varios Colores)",
+    "quantity": 1,
+    "unitCost": 737.8,
+    "tax_rate": 16
+  },
+  {
+    "productId": 187,
+    "id": "temp-1754145423941-0.068",
+    "name": "Polvo Acrílico Efecto Cola de Sirena",
+    "quantity": 1,
+    "unitCost": 147.56,
+    "tax_rate": 16
+  },
+  {
+    "productId": 188,
+    "id": "temp-1754145423941-0.069",
+    "name": "Polygel Maxglow",
+    "quantity": 1,
+    "unitCost": 295.12,
+    "tax_rate": 16
+  },
+  {
+    "productId": 189,
+    "id": "temp-1754145423941-0.070",
+    "name": "Polygel Mombray",
+    "quantity": 1,
+    "unitCost": 295.12,
+    "tax_rate": 16
+  },
+  {
+    "productId": 190,
+    "id": "temp-1754145423941-0.071",
+    "name": "Líquido para Polygel (Slip Solution)",
+    "quantity": 1,
+    "unitCost": 162.316,
+    "tax_rate": 16
+  },
+  {
+    "productId": 191,
+    "id": "temp-1754145423941-0.072",
+    "name": "Gel Sólido Constructor (Jelly Builder)",
+    "quantity": 1,
+    "unitCost": 383.656,
+    "tax_rate": 16
+  },
+  {
+    "productId": 192,
+    "id": "temp-1754145423941-0.073",
+    "name": "Building Gel (Gel Constructor)",
+    "quantity": 1,
+    "unitCost": 354.144,
+    "tax_rate": 16
+  },
+  {
+    "productId": 193,
+    "id": "temp-1754145423941-0.074",
+    "name": "Espuma Limpiadora para Pestañas (Lash Shampoo)",
+    "quantity": 1,
+    "unitCost": 206.584,
+    "tax_rate": 16
+  },
+  {
+    "productId": 194,
+    "id": "temp-1754145423941-0.075",
+    "name": "Pinzas para Cabello",
+    "quantity": 2,
+    "unitCost": 46.4622679403,
+    "tax_rate": 16
+  },
+  {
+    "productId": 195,
+    "id": "temp-1754145423941-0.076",
+    "name": "Extensiones de Pestañas Pelo a Pelo (Negro)",
+    "quantity": 1,
+    "unitCost": 147.56,
+    "tax_rate": 16
+  },
+  {
+    "productId": 196,
+    "id": "temp-1754145423941-0.077",
+    "name": "Gorro Térmico para Tratamientos Capilares",
+    "quantity": 1,
+    "unitCost": 118.048,
+    "tax_rate": 16
+  },
+  {
+    "productId": 197,
+    "id": "temp-1754145423941-0.078",
+    "name": "Polvo para Uñas - Efecto Luz de Luna",
+    "quantity": 1,
+    "unitCost": 73.78,
+    "tax_rate": 16
+  },
+  {
+    "productId": 198,
+    "id": "temp-1754145423941-0.079",
+    "name": "Peines de Carbono (Antiestáticos)",
+    "quantity": 1,
+    "unitCost": 88.536,
+    "tax_rate": 16
+  },
+  {
+    "productId": 199,
+    "id": "temp-1754145423941-0.080",
+    "name": "Cortacutículas Profesional 'K'",
+    "quantity": 1,
+    "unitCost": 59.024,
+    "tax_rate": 16
+  },
+  {
+    "productId": 200,
+    "id": "temp-1754145423941-0.081",
+    "name": "Pincel para Uñas con Mango de Madera",
+    "quantity": 1,
+    "unitCost": 73.78,
+    "tax_rate": 16
+  },
+  {
+    "productId": 201,
+    "id": "temp-1754145423941-0.082",
+    "name": "Brocha para Barbero (Sacudidor)",
+    "quantity": 1,
+    "unitCost": 147.56,
+    "tax_rate": 16
+  },
+  {
+    "productId": 202,
+    "id": "temp-1754145423941-0.083",
+    "name": "Pincel para Alto Relieve (Nail Art 3D)",
+    "quantity": 1,
+    "unitCost": 103.292,
+    "tax_rate": 16
+  },
+  {
+    "productId": 203,
+    "id": "temp-1754145423941-0.084",
+    "name": "Gotas Mágicas Secantes para Uñas",
+    "quantity": 1,
+    "unitCost": 118.048,
+    "tax_rate": 16
+  },
+  {
+    "productId": 204,
+    "id": "temp-1754145423941-0.085",
+    "name": "Tijera de Peluquería (Mango Negro)",
+    "quantity": 1,
+    "unitCost": 88.536,
+    "tax_rate": 16
+  },
+  {
+    "productId": 205,
+    "id": "temp-1754145423941-0.086",
+    "name": "Tijera de Manicura (Acero Inoxidable)",
+    "quantity": 1,
+    "unitCost": 118.048,
+    "tax_rate": 16
+  },
+  {
+    "productId": 206,
+    "id": "temp-1754145423941-0.087",
+    "name": "Rollo de Formas Esculturales para Uñas",
+    "quantity": 1,
+    "unitCost": 103.292,
+    "tax_rate": 16
+  },
+  {
+    "productId": 207,
+    "id": "temp-1754145423941-0.088",
+    "name": "Parches de Hidrogel para Pestañas",
+    "quantity": 1,
+    "unitCost": 29.512,
+    "tax_rate": 16
+  },
+  {
+    "productId": 208,
+    "id": "temp-1754145423941-0.089",
+    "name": "Tips de Soft Gel (Jelly Tips) - Forma Coffin",
+    "quantity": 1,
+    "unitCost": 177.072,
+    "tax_rate": 16
+  },
+  {
+    "productId": 209,
+    "id": "temp-1754145423941-0.090",
+    "name": "Tips de Soft Gel (Jelly Tips) - Curva C",
+    "quantity": 1,
+    "unitCost": 177.072,
+    "tax_rate": 16
+  },
+  {
+    "productId": 210,
+    "id": "temp-1754145423941-0.091",
+    "name": "Base Rubber (Gel Nivelador)",
+    "quantity": 1,
+    "unitCost": 354.144,
+    "tax_rate": 16
+  },
+  {
+    "productId": 211,
+    "id": "temp-1754145423941-0.092",
+    "name": "Organizador para Decoración de Uñas (Pastillero)",
+    "quantity": 1,
+    "unitCost": 59.024,
+    "tax_rate": 16
+  },
+  {
+    "productId": 212,
+    "id": "temp-1754145423941-0.093",
+    "name": "Filtros para Extractor de Polvo de Uñas",
+    "quantity": 1,
+    "unitCost": 147.56,
+    "tax_rate": 16
+  },
+  {
+    "productId": 213,
+    "id": "temp-1754145423941-0.094",
+    "name": "Tratamiento Capilar Olaplex (Baño de Crema)",
+    "quantity": 1,
+    "unitCost": 442.68,
+    "tax_rate": 16
+  },
+  {
+    "productId": 214,
+    "id": "temp-1754145423941-0.095",
+    "name": "Monómero Super Crystal",
+    "quantity": 1,
+    "unitCost": 265.608,
+    "tax_rate": 16
+  },
+  {
+    "productId": 215,
+    "id": "temp-1754145423941-0.096",
+    "name": "Decoración para Uñas - Coronas",
+    "quantity": 1,
+    "unitCost": 73.78,
+    "tax_rate": 16
+  },
+  {
+    "productId": 216,
+    "id": "temp-1754145423941-0.097",
+    "name": "Calcomanías para Uñas (Diseños Variados)",
+    "quantity": 1,
+    "unitCost": 29.512,
+    "tax_rate": 16
+  },
+  {
+    "productId": 217,
+    "id": "temp-1754145423941-0.098",
+    "name": "Mini Ventilador para Secado de Pestañas",
+    "quantity": 1,
+    "unitCost": 206.584,
+    "tax_rate": 16
+  },
+  {
+    "productId": 218,
+    "id": "temp-1754145423941-0.099",
+    "name": "Imán para Esmalte Ojo de Gato (Cat Eye)",
+    "quantity": 1,
+    "unitCost": 59.024,
+    "tax_rate": 16
+  },
+  {
+    "productId": 219,
+    "id": "temp-1754145423941-0.0100",
+    "name": "Pinceles de Silicona para Nail Art (Rosa)",
+    "quantity": 1,
+    "unitCost": 88.536,
+    "tax_rate": 16
+  },
+  {
+    "productId": 220,
+    "id": "temp-1754145423941-0.0101",
+    "name": "Cera Depilatoria Granulada",
+    "quantity": 1,
+    "unitCost": 236.096,
+    "tax_rate": 16
+  },
+  {
+    "productId": 221,
+    "id": "temp-1754145423941-0.0102",
+    "name": "Olla Calentadora de Cera Profesional (Pro-Wax)",
+    "quantity": 1,
+    "unitCost": 442.68,
+    "tax_rate": 16
+  },
+  {
+    "productId": 222,
+    "id": "temp-1754145423941-0.0103",
+    "name": "Brocha para Tinte de Cabello",
+    "quantity": 1,
+    "unitCost": 44.268,
+    "tax_rate": 16
+  },
+  {
+    "productId": 223,
+    "id": "temp-1754145423941-0.0104",
+    "name": "Decoración para Uñas - Grapas Doradas",
+    "quantity": 1,
+    "unitCost": 59.024,
+    "tax_rate": 16
+  },
+  {
+    "productId": 224,
+    "id": "temp-1754145423941-0.0105",
+    "name": "Decoración para Uñas - Grapas de Colores",
+    "quantity": 1,
+    "unitCost": 59.024,
+    "tax_rate": 16
+  },
+  {
+    "productId": 225,
+    "id": "temp-1754145423941-0.0106",
+    "name": "Pincel Liner para Nail Art",
+    "quantity": 1,
+    "unitCost": 59.024,
+    "tax_rate": 16
+  },
+  {
+    "productId": 226,
+    "id": "temp-1754145423941-0.0107",
+    "name": "Lámpara UV/LED para Uñas (120W)",
+    "quantity": 1,
+    "unitCost": 737.8,
+    "tax_rate": 16
+  },
+  {
+    "productId": 227,
+    "id": "temp-1754145423941-0.0108",
+    "name": "Pigmentos en Polvo para Uñas",
+    "quantity": 1,
+    "unitCost": 73.78,
+    "tax_rate": 16
+  },
+  {
+    "productId": 228,
+    "id": "temp-1754145423941-0.0109",
+    "name": "Pegamento Transparente para Uñas",
+    "quantity": 1,
+    "unitCost": 59.024,
+    "tax_rate": 16
+  },
+  {
+    "productId": 229,
+    "id": "temp-1754145423941-0.0110",
+    "name": "Calcomanías Faciales (Gemas y Diseños)",
+    "quantity": 1,
+    "unitCost": 88.536,
+    "tax_rate": 16
+  },
+  {
+    "productId": 230,
+    "id": "temp-1754145423941-0.0111",
+    "name": "Balines para Uñas (Dorados/Plateados)",
+    "quantity": 1,
+    "unitCost": 44.268,
+    "tax_rate": 16
+  },
+  {
+    "productId": 231,
+    "id": "temp-1754145423941-0.0112",
+    "name": "Torno de Uñas Inalámbrico BQ-101",
+    "quantity": 1,
+    "unitCost": 1032.92,
+    "tax_rate": 16
+  },
+  {
+    "productId": 232,
+    "id": "temp-1754145423941-0.0113",
+    "name": "Lima de Uñas Tiffany (Grano 100/180)",
+    "quantity": 1,
+    "unitCost": 44.268,
+    "tax_rate": 16
+  },
+  {
+    "productId": 233,
+    "id": "temp-1754145423941-0.0114",
+    "name": "Top Coat Tiffany",
+    "quantity": 1,
+    "unitCost": 118.048,
+    "tax_rate": 16
+  },
+  {
+    "productId": 234,
+    "id": "temp-1754145423941-0.0115",
+    "name": "Base Coat Tiffany",
+    "quantity": 1,
+    "unitCost": 118.048,
+    "tax_rate": 16
+  },
+  {
+    "productId": 235,
+    "id": "temp-1754145423941-0.0116",
+    "name": "Finish Gel UV Tiffany",
+    "quantity": 1,
+    "unitCost": 132.804,
+    "tax_rate": 16
+  },
+  {
+    "productId": 236,
+    "id": "temp-1754145423941-0.0117",
+    "name": "Top Coat Reflective Glitter (10 ml)",
+    "quantity": 1,
+    "unitCost": 147.56,
+    "tax_rate": 16
+  },
+  {
+    "productId": 237,
+    "id": "temp-1754145423941-0.0118",
+    "name": "Top Gel Reforzador 6 en 1 (15 ml)",
+    "quantity": 1,
+    "unitCost": 265.608,
+    "tax_rate": 16
+  },
+  {
+    "productId": 238,
+    "id": "temp-1754145423941-0.0119",
+    "name": "Nail Prep Nivelador de pH Tiffany",
+    "quantity": 1,
+    "unitCost": 118.048,
+    "tax_rate": 16
+  },
+  {
+    "productId": 239,
+    "id": "temp-1754145423941-0.0120",
+    "name": "Pestañas Postizas (Efecto Cruzado)",
+    "quantity": 1,
+    "unitCost": 73.78,
+    "tax_rate": 16
+  },
+  {
+    "productId": 240,
+    "id": "temp-1754145423941-0.0121",
+    "name": "Esmalte Semipermanente (Color Variado)",
+    "quantity": 1,
+    "unitCost": 118.048,
+    "tax_rate": 16
+  },
+  {
+    "productId": 241,
+    "id": "temp-1754145423941-0.0122",
+    "name": "Mini Lámpara LED para Uñas (Forma de Huevo)",
+    "quantity": 1,
+    "unitCost": 147.56,
+    "tax_rate": 16
+  },
+  {
+    "productId": 242,
+    "id": "temp-1754145423941-0.0123",
+    "name": "Carrusel de Balines para Uñas (Mixto)",
+    "quantity": 1,
+    "unitCost": 59.024,
+    "tax_rate": 16
+  },
+  {
+    "productId": 243,
+    "id": "temp-1754145423941-0.0124",
+    "name": "Empujador de Cutícula de Metal con Lanza",
+    "quantity": 1,
+    "unitCost": 88.536,
+    "tax_rate": 16
+  },
+  {
+    "productId": 244,
+    "id": "temp-1754145423941-0.0125",
+    "name": "Empujador de Cutícula con Punta Triangular",
+    "quantity": 1,
+    "unitCost": 88.536,
+    "tax_rate": 16
+  },
+  {
+    "productId": 245,
+    "id": "temp-1754145423941-0.0126",
+    "name": "Spider Gel para Nail Art (Color Sangría)",
+    "quantity": 1,
+    "unitCost": 132.804,
+    "tax_rate": 16
+  },
+  {
+    "productId": 246,
+    "id": "temp-1754145423941-0.0127",
+    "name": "Punteros para Nail Art (Dotting Tool)",
+    "quantity": 1,
+    "unitCost": 59.024,
+    "tax_rate": 16
+  },
+  {
+    "productId": 247,
+    "id": "temp-1754145423941-0.0128",
+    "name": "Navaja de Afeitar de Acero Inoxidable Salom",
+    "quantity": 1,
+    "unitCost": 103.292,
+    "tax_rate": 16
+  },
+  {
+    "productId": 248,
+    "id": "temp-1754145423941-0.0129",
+    "name": "Hilo Tinturado para Diseño de Cejas (Brow Mapping)",
+    "quantity": 1,
+    "unitCost": 147.56,
+    "tax_rate": 16
+  },
+  {
+    "productId": 249,
+    "id": "temp-1754145423941-0.0130",
+    "name": "Algodón o Gasa para Manicura",
+    "quantity": 1,
+    "unitCost": 59.024,
+    "tax_rate": 16
+  },
+  {
+    "productId": 250,
+    "id": "temp-1754145423941-0.0131",
+    "name": "Atomizador de Agua para Barbería",
+    "quantity": 1,
+    "unitCost": 118.048,
+    "tax_rate": 16
+  },
+  {
+    "productId": 251,
+    "id": "temp-1754145423941-0.0132",
+    "name": "Bigudíes de Silicona para Lifting de Pestañas",
+    "quantity": 1,
+    "unitCost": 88.536,
+    "tax_rate": 16
+  },
+  {
+    "productId": 252,
+    "id": "temp-1754145423941-0.0133",
+    "name": "Bledo para Uñas (Arcoíris, Largo y Delgado)",
+    "quantity": 1,
+    "unitCost": 118.048,
+    "tax_rate": 16
+  },
+  {
+    "productId": 253,
+    "id": "temp-1754145423941-0.0134",
+    "name": "Bledo para Uñas (Arcoíris, Largo y Ancho)",
+    "quantity": 1,
+    "unitCost": 147.56,
+    "tax_rate": 16
+  },
+  {
+    "productId": 254,
+    "id": "temp-1754145423941-0.0135",
+    "name": "Bombas Efervescentes para Manicura",
+    "quantity": 1,
+    "unitCost": 44.268,
+    "tax_rate": 16
+  },
+  {
+    "productId": 255,
+    "id": "temp-1754145423941-0.0136",
+    "name": "Builder Gel Autonivelador",
+    "quantity": 1,
+    "unitCost": 354.144,
+    "tax_rate": 16
+  },
+  {
+    "productId": 256,
+    "id": "temp-1754145423941-0.0137",
+    "name": "Carta de Colores para Tinte de Cabello",
+    "quantity": 1,
+    "unitCost": 295.12,
+    "tax_rate": 16
+  },
+  {
+    "productId": 257,
+    "id": "temp-1754145423941-0.0138",
+    "name": "Cepillo Pequeño para Limpieza de Uñas",
+    "quantity": 1,
+    "unitCost": 29.512,
+    "tax_rate": 16
+  },
+  {
+    "productId": 258,
+    "id": "temp-1754145423941-0.0139",
+    "name": "Cortacutículas M.P",
+    "quantity": 1,
+    "unitCost": 59.024,
+    "tax_rate": 16
+  },
+  {
+    "productId": 259,
+    "id": "temp-1754145423941-0.0140",
+    "name": "Cortacutículas M.P.R",
+    "quantity": 1,
+    "unitCost": 59.024,
+    "tax_rate": 16
+  },
+  {
+    "productId": 260,
+    "id": "temp-1754145423941-0.0141",
+    "name": "Cortauñas (Acabado Tornasol)",
+    "quantity": 1,
+    "unitCost": 88.536,
+    "tax_rate": 16
+  },
+  {
+    "productId": 261,
+    "id": "temp-1754145423941-0.0142",
+    "name": "Cuaderno de Práctica para One Stroke",
+    "quantity": 1,
+    "unitCost": 29.512,
+    "tax_rate": 16
+  },
+  {
+    "productId": 262,
+    "id": "temp-1754145423941-0.0143",
+    "name": "Vaso Dappen de Vidrio",
+    "quantity": 1,
+    "unitCost": 29.512,
+    "tax_rate": 16
+  },
+  {
+    "productId": 263,
+    "id": "temp-1754145423941-0.0144",
+    "name": "Polvo Decolorante para Cabello Maxglow",
+    "quantity": 1,
+    "unitCost": 206.584,
+    "tax_rate": 16
+  },
+  {
+    "productId": 264,
+    "id": "temp-1754145423941-0.0145",
+    "name": "Dispensador de Acetona con Bomba",
+    "quantity": 1,
+    "unitCost": 103.292,
+    "tax_rate": 16
+  },
+  {
+    "productId": 265,
+    "id": "temp-1754145423941-0.0146",
+    "name": "Torno de Uñas Recargable (Acabado Tornasol)",
+    "quantity": 1,
+    "unitCost": 1180.48,
+    "tax_rate": 16
+  },
+  {
+    "productId": 266,
+    "id": "temp-1754145423941-0.0147",
+    "name": "Finish Gel Efecto Pavo Real (Peacock)",
+    "quantity": 1,
+    "unitCost": 147.56,
+    "tax_rate": 16
+  },
+  {
+    "productId": 267,
+    "id": "temp-1754145423941-0.0148",
+    "name": "Finish Gel Premium 'M' (15 ml)",
+    "quantity": 1,
+    "unitCost": 265.608,
+    "tax_rate": 16
+  },
+  {
+    "productId": 268,
+    "id": "temp-1754145423941-0.0149",
+    "name": "Esmalte en Gel 3 en 1 'M' (10 ml)",
+    "quantity": 1,
+    "unitCost": 177.072,
+    "tax_rate": 16
+  },
+  {
+    "productId": 269,
+    "id": "temp-1754145423941-0.0150",
+    "name": "Esmalte en Gel 3 en 1 'M' (15 ml)",
+    "quantity": 1,
+    "unitCost": 236.096,
+    "tax_rate": 16
+  },
+  {
+    "productId": 270,
+    "id": "temp-1754145423941-0.0151",
+    "name": "Gorros Desechables de Higiene",
+    "quantity": 1,
+    "unitCost": 44.268,
+    "tax_rate": 16
+  },
+  {
+    "productId": 271,
+    "id": "temp-1754145423941-0.0152",
+    "name": "Removedor de Pegamento para Pestañas",
+    "quantity": 1,
+    "unitCost": 132.804,
+    "tax_rate": 16
+  },
+  {
+    "productId": 272,
+    "id": "temp-1754145423941-0.0153",
+    "name": "Líquido Sanitizante (Antiséptico)",
+    "quantity": 1,
+    "unitCost": 88.536,
+    "tax_rate": 16
+  },
+  {
+    "productId": 273,
+    "id": "temp-1754145423941-0.0154",
+    "name": "Kit para Preparar Mascarillas Faciales",
+    "quantity": 1,
+    "unitCost": 73.78,
+    "tax_rate": 16
+  },
+  {
+    "productId": 274,
+    "id": "temp-1754145423941-0.0155",
+    "name": "Tips para Uñas (Curva C) - Caja 500 uds",
+    "quantity": 1,
+    "unitCost": 295.12,
+    "tax_rate": 16
+  },
+  {
+    "productId": 275,
+    "id": "temp-1754145423941-0.0156",
+    "name": "Tips para Uñas (Forma Coffin) - Caja 500 uds",
+    "quantity": 1,
+    "unitCost": 295.12,
+    "tax_rate": 16
+  },
+  {
+    "productId": 276,
+    "id": "temp-1754145423941-0.0157",
+    "name": "Tips de Soft Gel (Jelly Coffin) - Caja 100 uds",
+    "quantity": 1,
+    "unitCost": 236.096,
+    "tax_rate": 16
+  },
+  {
+    "productId": 277,
+    "id": "temp-1754145423941-0.0158",
+    "name": "Guillotina para Cortar Tips de Uñas",
+    "quantity": 1,
+    "unitCost": 103.292,
+    "tax_rate": 16
+  },
+  {
+    "productId": 278,
+    "id": "temp-1754145423941-0.0159",
+    "name": "Jelly Builder Gel (10 ml)",
+    "quantity": 1,
+    "unitCost": 236.096,
+    "tax_rate": 16
+  },
+  {
+    "productId": 279,
+    "id": "temp-1754145423941-0.0160",
+    "name": "Kit de Lifting para Pestañas",
+    "quantity": 1,
+    "unitCost": 442.68,
+    "tax_rate": 16
+  },
+  {
+    "productId": 280,
+    "id": "temp-1754145423941-0.0161",
+    "name": "Lámpara LED de Escritorio para Uñas (Brazo Flexible)",
+    "quantity": 1,
+    "unitCost": 531.216,
+    "tax_rate": 16
+  },
+  {
+    "productId": 281,
+    "id": "temp-1754145423941-0.0162",
+    "name": "Lámpara UV/LED para Uñas SUN X5 Plus",
+    "quantity": 1,
+    "unitCost": 590.24,
+    "tax_rate": 16
+  },
+  {
+    "productId": 282,
+    "id": "temp-1754145423941-0.0163",
+    "name": "Lima para Uñas Maxglow (Grano 80/80)",
+    "quantity": 1,
+    "unitCost": 44.268,
+    "tax_rate": 16
+  },
+  {
+    "productId": 283,
+    "id": "temp-1754145423941-0.0164",
+    "name": "Lima para Uñas Sakura (Grano 100/180)",
+    "quantity": 1,
+    "unitCost": 30.3867082386,
+    "tax_rate": 16
+  },
+  {
+    "productId": 284,
+    "id": "temp-1754145423941-0.0165",
+    "name": "Moldes Dual System (Forma U)",
+    "quantity": 1,
+    "unitCost": 147.56,
+    "tax_rate": 16
+  },
+  {
+    "productId": 285,
+    "id": "temp-1754145423941-0.0166",
+    "name": "Monómero 'M' EMA (100 ml)",
+    "quantity": 1,
+    "unitCost": 265.608,
+    "tax_rate": 16
+  },
+  {
+    "productId": 286,
+    "id": "temp-1754145423941-0.0167",
+    "name": "Monómero con Aroma Tropical (50 ml)",
+    "quantity": 1,
+    "unitCost": 147.56,
+    "tax_rate": 16
+  },
+  {
+    "productId": 287,
+    "id": "temp-1754145423941-0.0168",
+    "name": "Exhibidor de Uñas (Natural/Transparente)",
+    "quantity": 1,
+    "unitCost": 73.78,
+    "tax_rate": 16
+  },
+  {
+    "productId": 288,
+    "id": "temp-1754145423941-0.0169",
+    "name": "Painting Gel (Negro)",
+    "quantity": 1,
+    "unitCost": 118.048,
+    "tax_rate": 16
+  },
+  {
+    "productId": 289,
+    "id": "temp-1754145423941-0.0170",
+    "name": "Paleta de Madera para Depilar (Pequeña)",
+    "quantity": 1,
+    "unitCost": 14.756,
+    "tax_rate": 16
+  },
+  {
+    "productId": 290,
+    "id": "temp-1754145423941-0.0171",
+    "name": "Aplicador de Algodón (Hisopo)",
+    "quantity": 1,
+    "unitCost": 29.512,
+    "tax_rate": 16
+  },
+  {
+    "productId": 291,
+    "id": "temp-1754145423941-0.0172",
+    "name": "Palito de Naranjo para Cutículas",
+    "quantity": 1,
+    "unitCost": 29.512,
+    "tax_rate": 16
+  },
+  {
+    "productId": 292,
+    "id": "temp-1754145423941-0.0173",
+    "name": "Pegamento de Resina para Uñas",
+    "quantity": 1,
+    "unitCost": 73.78,
+    "tax_rate": 16
+  },
+  {
+    "productId": 293,
+    "id": "temp-1754145423941-0.0174",
+    "name": "Extensiones de Pestañas (Volumen Ruso)",
+    "quantity": 8,
+    "unitCost": 177.072,
+    "tax_rate": 16
+  },
+  {
+    "productId": 294,
+    "id": "temp-1754145423941-0.0175",
+    "name": "Pincel para Acrílico #10 (Color Fucsia)",
+    "quantity": 1,
+    "unitCost": 118.048,
+    "tax_rate": 16
+  },
+  {
+    "productId": 295,
+    "id": "temp-1754145423941-0.0176",
+    "name": "Pincel de Silicona para Nail Art",
+    "quantity": 1,
+    "unitCost": 88.536,
+    "tax_rate": 16
+  },
+  {
+    "productId": 296,
+    "id": "temp-1754145423941-0.0177",
+    "name": "Pinza para Moldes Dual System (Polygel)",
+    "quantity": 1,
+    "unitCost": 59.024,
+    "tax_rate": 16
+  },
+  {
+    "productId": 297,
+    "id": "temp-1754145423941-0.0178",
+    "name": "Polvo Acrílico (1 oz)",
+    "quantity": 1,
+    "unitCost": 442.68,
+    "tax_rate": 16
+  },
+  {
+    "productId": 298,
+    "id": "temp-1754145423941-0.0179",
+    "name": "Set de 6 Puntas para Manicura Rusa",
+    "quantity": 1,
+    "unitCost": 147.56,
+    "tax_rate": 16
+  },
+  {
+    "productId": 299,
+    "id": "temp-1754145423941-0.0180",
+    "name": "Set de 12 Puntas para Manicura Rusa",
+    "quantity": 1,
+    "unitCost": 265.608,
+    "tax_rate": 16
+  }
+]

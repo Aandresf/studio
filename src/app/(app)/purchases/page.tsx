@@ -270,8 +270,23 @@ export default function PurchasesPage() {
     };
 
     const handleRestorePurchase = async (purchaseToRestore: PendingPurchase) => {
-        setCart(purchaseToRestore.cart);
-        setDate(new Date(purchaseToRestore.date));
+        const restoredDate = new Date(purchaseToRestore.date);
+        const isValidDate = !isNaN(restoredDate.getTime());
+
+        const existingProductIds = new Set(products.map(p => p.id));
+        const validCartItems = purchaseToRestore.cart.filter(item => item.productId && existingProductIds.has(item.productId));
+        const missingItems = purchaseToRestore.cart.filter(item => !item.productId || !existingProductIds.has(item.productId));
+
+        if (missingItems.length > 0) {
+            const missingNames = missingItems.map(item => item.name || `ID ${item.productId}`).join(', ');
+            toastError(
+                `${missingItems.length} Producto(s) no Encontrado(s)`,
+                `Omitidos: ${missingNames}`
+            );
+        }
+
+        setCart(validCartItems.length > 0 ? validCartItems : [createEmptyCartItem()]);
+        setDate(isValidDate ? restoredDate : new Date());
         setSupplier(purchaseToRestore.supplier);
         setSupplierRif(purchaseToRestore.supplierRif);
         setInvoiceNumber(purchaseToRestore.invoiceNumber);
@@ -280,7 +295,9 @@ export default function PurchasesPage() {
             await removePendingTransaction(purchaseToRestore.id);
             toastSuccess("Compra Restaurada", "La compra ha sido cargada en el formulario.");
             triggerRefetch();
-        } catch (error) {}
+        } catch (error) {
+            // El error ya se maneja en la capa de API
+        }
     };
 
     const handleRemovePendingPurchase = async (id: string) => {
@@ -466,7 +483,7 @@ export default function PurchasesPage() {
                                     <div key={purchase.id} className="flex items-center justify-between p-2 border rounded-lg">
                                         <div>
                                             <p className="font-medium">{purchase.supplier || "Proveedor General"}</p>
-                                            <p className="text-sm text-muted-foreground">{purchase.cart.length} producto(s) - {format(purchase.createdAt, "p", { locale: es })}</p>
+                                            <p className="text-sm text-muted-foreground">{purchase.cart.length} producto(s) - {format(new Date(purchase.createdAt) || new Date(), "p", { locale: es })}</p>
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <Tooltip><TooltipTrigger asChild><Button variant="outline" size="icon" onClick={() => handleRestorePurchase(purchase)}><ListRestart className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent><p>Restaurar</p></TooltipContent></Tooltip>
