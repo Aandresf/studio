@@ -18,7 +18,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 
 import { ReportMetadata, ReportType, FullReport } from '@/lib/types';
 import { useBackendStatus } from '@/app/(app)/layout';
-import { getReports, createReport, getReportById, exportInventoryToExcel } from '@/lib/api';
+import { getReports, createReport, getReportById, exportInventoryToExcel, getHistoricalSummary } from '@/lib/api';
 
 type OutputFormat = 'excel' | 'pdf';
 
@@ -27,6 +27,100 @@ const reportOptions: { type: ReportType; label: string; icon: React.ElementType 
   { type: 'PURCHASES', label: 'Libro de Compras', icon: Package },
   { type: 'INVENTORY', label: 'Inventario', icon: Box },
 ];
+
+interface HistoricalSummary {
+    totalStock: number;
+    totalValue: number;
+}
+
+function HistoricalInventoryCard() {
+    const [date, setDate] = useState<Date | undefined>(new Date());
+    const [isLoading, setIsLoading] = useState(false);
+    const [summary, setSummary] = useState<HistoricalSummary | null>(null);
+
+    const handleGenerateSummary = async () => {
+        if (!date) {
+            toastError("Error", "Por favor, selecciona una fecha.");
+            return;
+        }
+        setIsLoading(true);
+        setSummary(null);
+        try {
+            const dateString = format(date, 'yyyy-MM-dd');
+            const result = await getHistoricalSummary(dateString);
+            setSummary({
+                totalStock: result.totalStock,
+                totalValue: result.totalValue
+            });
+        } catch (error) {
+            // Error is handled by the API layer
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Resumen de Inventario Histórico</CardTitle>
+                <CardDescription>Calcula el valor y la cantidad total de tu inventario en una fecha específica.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                <div className="flex flex-col sm:flex-row items-center gap-4">
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button
+                                variant={"outline"}
+                                className="w-full sm:w-[280px] justify-start text-left font-normal"
+                            >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {date ? format(date, 'PPP', { locale: es }) : <span>Selecciona una fecha</span>}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                            <Calendar
+                                mode="single"
+                                selected={date}
+                                onSelect={setDate}
+                                initialFocus
+                                disabled={(d) => d > new Date()}
+                            />
+                        </PopoverContent>
+                    </Popover>
+                    <Button onClick={handleGenerateSummary} disabled={isLoading || !date}>
+                        {isLoading ? 'Calculando...' : 'Calcular Resumen'}
+                    </Button>
+                </div>
+                {summary && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium">Unidades Totales en Stock</CardTitle>
+                                <Package className="h-4 w-4 text-muted-foreground" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold">
+                                    {summary.totalStock.toLocaleString('es-VE')}
+                                </div>
+                            </CardContent>
+                        </Card>
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium">Valor Total del Inventario</CardTitle>
+                                <span className="text-muted-foreground font-bold text-lg">$</span>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold">
+                                    {summary.totalValue.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+                )}
+            </CardContent>
+        </Card>
+    );
+}
 
 export default function ReportsPage() {
     const { isBackendReady, refetchKey } = useBackendStatus();
@@ -144,6 +238,8 @@ export default function ReportsPage() {
                     ))}
                 </CardContent>
             </Card>
+
+            <HistoricalInventoryCard />
 
             <Card>
                 <CardHeader>

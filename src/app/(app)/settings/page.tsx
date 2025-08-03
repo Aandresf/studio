@@ -98,7 +98,7 @@ function InventorySnapshotCard() {
                     <Skeleton className="h-6 w-1/2" />
                 ) : (
                     <p className="text-sm text-muted-foreground">
-                        Último cierre realizado: {latestSnapshotDate ? format(new Date(latestSnapshotDate), 'PPP', { locale: es }) : 'Ninguno'}
+                        Último cierre realizado: {latestSnapshotDate ? format(new Date(latestSnapshotDate + 'T00:00:00Z'), 'PPP', { locale: es }) : 'Ninguno'}
                     </p>
                 )}
                 <div className="flex flex-col sm:flex-row items-center gap-4">
@@ -134,7 +134,7 @@ function InventorySnapshotCard() {
                             <div className="space-y-4 py-4">
                                 <div className="flex justify-between">
                                     <span className="text-muted-foreground">Fecha del Cierre:</span>
-                                    <span className="font-medium">{format(new Date(snapshotResult.date), 'PPP', { locale: es })}</span>
+                                    <span className="font-medium">{format(new Date(snapshotResult.date + 'T00:00:00Z'), 'PPP', { locale: es })}</span>
                                 </div>
                                 <div className="flex justify-between">
                                     <span className="text-muted-foreground">Productos Procesados:</span>

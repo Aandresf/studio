@@ -186,6 +186,13 @@ export const createInventorySnapshot = (snapshot_date: string): Promise<{ messag
 // Reports API calls
 export const getReports = (): Promise<ReportMetadata[]> => fetchAPI('/reports');
 
+export const getHistoricalSummary = (date: string): Promise<{ date: string, totalProductCount: number, totalStock: number, totalValue: number }> => {
+    return fetchAPI('/reports/historical-summary', {
+        method: 'POST',
+        body: JSON.stringify({ date }),
+    });
+};
+
 export const createReport = (type: ReportType, startDate: string, endDate: string): Promise<FullReport> => {
     return fetchAPI(`/reports/${type.toLowerCase()}`, {
         method: 'POST',

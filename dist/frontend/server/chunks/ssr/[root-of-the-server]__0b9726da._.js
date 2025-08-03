@@ -859,6 +859,7 @@ __turbopack_context__.s({
     "deleteStore": (()=>deleteStore),
     "exportInventoryToExcel": (()=>exportInventoryToExcel),
     "getDashboardSummary": (()=>getDashboardSummary),
+    "getHistoricalSummary": (()=>getHistoricalSummary),
     "getLatestSnapshot": (()=>getLatestSnapshot),
     "getPendingTransactions": (()=>getPendingTransactions),
     "getProductMovements": (()=>getProductMovements),
@@ -1035,6 +1036,14 @@ const createInventorySnapshot = (snapshot_date)=>{
     });
 };
 const getReports = ()=>fetchAPI('/reports');
+const getHistoricalSummary = (date)=>{
+    return fetchAPI('/reports/historical-summary', {
+        method: 'POST',
+        body: JSON.stringify({
+            date
+        })
+    });
+};
 const createReport = (type, startDate, endDate)=>{
     return fetchAPI(`/reports/${type.toLowerCase()}`, {
         method: 'POST',

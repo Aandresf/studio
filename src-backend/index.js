@@ -1354,6 +1354,62 @@ app.post('/api/reports/inventory-excel', async (req, res) => {
 });
 
 
+app.post('/api/reports/historical-summary', async (req, res) => {
+    const { date } = req.body;
+    if (!date) {
+        return res.status(400).json({ error: 'Se requiere una fecha.' });
+    }
+
+    try {
+        const db = databaseManager.getActiveDb();
+        const all = util.promisify(db.all.bind(db));
+
+        const products = await all("SELECT id FROM products");
+        let totalStock = 0;
+        let totalValue = 0;
+
+        for (const product of products) {
+            const movements = await all(
+                `SELECT type, quantity, unit_cost 
+                 FROM inventory_movements 
+                 WHERE product_id = ? AND status = 'Activo' AND date(transaction_date) <= ?
+                 ORDER BY transaction_date ASC, created_at ASC`,
+                [product.id, date]
+            );
+
+            let currentStock = 0;
+            let avgCost = 0;
+
+            for (const move of movements) {
+                if (move.type === 'ENTRADA') {
+                    const currentTotalValue = currentStock * avgCost;
+                    const entryValue = move.quantity * (move.unit_cost || 0);
+                    currentStock += move.quantity;
+                    avgCost = currentStock > 0 ? (currentTotalValue + entryValue) / currentStock : 0;
+                } else {
+                    currentStock -= move.quantity;
+                }
+            }
+            
+            if (currentStock > 0) {
+                totalStock += currentStock;
+                totalValue += currentStock * avgCost;
+            }
+        }
+        
+        res.json({
+            date,
+            totalProductCount: products.length,
+            totalStock,
+            totalValue
+        });
+
+    } catch (error) {
+        console.error(`Error calculando el resumen histórico para la fecha ${date}:`, error);
+        res.status(500).json({ error: 'Error interno al calcular el resumen.' });
+    }
+});
+
 app.post('/api/reports/:type', async (req, res) => {
     const { type } = req.params;
     const { startDate, endDate } = req.body;
@@ -1404,6 +1460,7 @@ app.post('/api/reports/historical-summary', async (req, res) => {
 
     try {
         const db = databaseManager.getActiveDb();
+        const get = util.promisify(db.get.bind(db));
         const all = util.promisify(db.all.bind(db));
 
         const products = await all("SELECT id FROM products");
@@ -1411,16 +1468,32 @@ app.post('/api/reports/historical-summary', async (req, res) => {
         let totalValue = 0;
 
         for (const product of products) {
-            const movements = await all(
-                `SELECT type, quantity, unit_cost 
-                 FROM inventory_movements 
-                 WHERE product_id = ? AND status = 'Activo' AND date(transaction_date) <= ?
-                 ORDER BY transaction_date ASC, created_at ASC`,
+            const latestSnapshot = await get(
+                `SELECT snapshot_date, closing_stock, closing_average_cost 
+                 FROM inventory_snapshots
+                 WHERE product_id = ? AND date(snapshot_date) <= ?
+                 ORDER BY snapshot_date DESC
+                 LIMIT 1`,
                 [product.id, date]
             );
 
             let currentStock = 0;
             let avgCost = 0;
+            let calculationStartDate = '1970-01-01';
+
+            if (latestSnapshot) {
+                currentStock = latestSnapshot.closing_stock;
+                avgCost = latestSnapshot.closing_average_cost;
+                calculationStartDate = latestSnapshot.snapshot_date;
+            }
+
+            const movements = await all(
+                `SELECT type, quantity, unit_cost 
+                 FROM inventory_movements 
+                 WHERE product_id = ? AND status = 'Activo' AND date(transaction_date) > ? AND date(transaction_date) <= ?
+                 ORDER BY transaction_date ASC, created_at ASC`,
+                [product.id, calculationStartDate, date]
+            );
 
             for (const move of movements) {
                 if (move.type === 'ENTRADA') {
