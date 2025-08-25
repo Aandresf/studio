@@ -77,55 +77,55 @@ El proyecto se encuentra en la **fase de desarrollo e implementación activa**. 
 
 ---
 
-## Últimas Actualizaciones (9 de Julio de 2025)
 
-Se ha realizado una revisión y refactorización exhaustiva de varios endpoints del backend para asegurar la consistencia de los datos y prevenir errores en el frontend.
+## Propuesta de Evolución: Gestión de Variantes de Productos (Tallas, Colores, etc.)
 
-1.  **Alineación de Datos (Producto):**
-    *   Se modificaron los endpoints `GET /api/products` y `GET /api/products/:id`.
-    *   Ahora devuelven los campos `stock` y `price` (usando alias de SQL) en lugar de `current_stock` y `average_cost`, que es lo que el frontend esperaba. Esto solucionó un error crítico que impedía renderizar la página de productos.
+Para manejar de forma óptima productos con variantes (ropa, colonias, joyería), el sistema necesita evolucionar de su modelo actual **"1 Producto = 1 SKU"** a un modelo más flexible y robusto: **"1 Producto Base agrupa Múltiples Variantes (SKUs)"**.
 
-2.  **Robustecimiento del Backend:**
-    *   Se revisaron los endpoints del Dashboard (`/api/dashboard/summary` y `/api/dashboard/recent-sales`) para que el backend maneje los valores nulos o indefinidos.
-    *   Los cálculos y los datos de marcador de posición (placeholders) ahora se resuelven en el servidor, enviando una estructura de datos limpia y predecible al cliente.
+Esto representa un cambio estructural significativo que impactará la base de datos, el backend y el frontend.
 
-3.  **Nuevos Endpoints (Compras y Ventas):**
-    *   Se crearon los endpoints `GET /api/purchases` y `GET /api/sales`.
-    *   Estos endpoints proporcionan listas dedicadas para el historial de compras (`ENTRADA`) y ventas (`SALIDA`), filtrando la tabla `inventory_movements`. Esto permite que las páginas de Compras y Ventas del frontend funcionen correctamente.
+### 1. Cambios Fundamentales en la Base de Datos
 
-4.  **Implementación del Estado de Productos y Corrección de Errores:**
-    *   Se solucionó un error crítico (`SQLITE_ERROR: no such column: status`) que impedía la carga de las páginas de productos, compras y ventas.
-    *   Se añadió una columna `status` a la tabla `products` en la base de datos (`schema.sql`) para gestionar si un producto está 'Activo' o 'Inactivo'.
-    *   Se actualizaron los endpoints del backend (`POST`, `PUT`, `GET` para productos) para que sean compatibles con el nuevo campo `status`.
-    *   Se refactorizó por completo la página de productos del frontend (`products/page.tsx`) para implementar la funcionalidad de **edición**, que no existía.
-    *   El diálogo de productos ahora sirve tanto para crear como para editar, y utiliza un componente `Switch` para cambiar el estado del producto.
-    *   Se actualizaron las definiciones de tipos (`Product`) y las llamadas a la API (`createProduct`, `updateProduct`) para alinearlas con los cambios.
----
+Se debe modificar el `schema.sql` para adoptar un modelo relacional jerárquico.
 
-## Decisiones de Arquitectura y Lecciones Aprendidas
+*   **Tabla `products` (Producto Base):**
+    *   Se convierte en un "contenedor" o plantilla.
+    *   **Mantendrá:** `id`, `name`, `description`, `category`.
+    *   **Se añadirá:** `brand_id` (para estandarizar marcas).
+    *   **Se eliminarán:** `current_stock`, `cost_price`, `sale_price`. Estos datos ahora pertenecen a la variante.
 
-### Manejo de Operaciones de Lote (Batch Operations)
+*   **Nueva Tabla: `product_variants` (Variantes / SKUs):**
+    *   Será la tabla principal para el inventario. Cada fila es un artículo único y vendible.
+    *   **Columnas:** `id`, `product_id` (FK a `products`), `sku`, `cost_price`, `sale_price`, `current_stock`, `status`.
 
-**Fecha:** 10 de Julio de 2025
+*   **Nuevas Tablas para Atributos Dinámicos:**
+    *   **`attributes`**: Define los tipos de atributos (ej. "Talla", "Color", "Material", "Volumen").
+    *   **`attribute_values`**: Define los valores posibles (ej. "Pequeño", "Rojo", "Oro", "100ml").
+    *   **`variant_attribute_values` (Tabla Pivote):** Vincula una variante con sus valores de atributo (ej. `variant_id` 1 se vincula con `attribute_value_id` para "Rojo" y "Pequeño").
 
-**Lección:** Se detectó un error crítico al procesar operaciones que involucran múltiples registros, como una compra con varios productos.
+### 2. Actualizaciones del Backend (API)
 
-*   **El Problema:** Al registrar una compra, el frontend enviaba múltiples peticiones en paralelo al backend (una por cada producto). El backend intentaba abrir una transacción de base de datos (`BEGIN TRANSACTION`) para cada petición, resultando en el error `SQLITE_ERROR: cannot start a transaction within a transaction` porque SQLite no permite transacciones anidadas o concurrentes de esta manera.
+Los endpoints actuales deben ser rediseñados para reflejar el nuevo modelo de datos.
 
-*   **La Solución:** Se refactorizó el backend para manejar la operación completa como un lote atómico.
-    1.  Se creó un nuevo endpoint de lote: `POST /api/purchases`.
-    2.  Este endpoint acepta un array con todos los productos de la compra en **una sola llamada a la API**.
-    3.  El método del backend envuelve todo el proceso (recorrer los productos, actualizar el stock de cada uno, registrar los movimientos) dentro de una **única transacción** (`BEGIN`...`COMMIT`). Si un solo producto falla, se revierten todos los cambios (`ROLLBACK`), garantizando la integridad de los datos.
+*   **Endpoints de Productos:** `GET /api/products` deberá devolver los productos base, anidando un array con todas sus variantes. La creación (`POST`) será más compleja, aceptando el producto base y un array de variantes en una sola transacción.
+*   **Endpoints de Movimientos:** `POST /api/purchases` y `POST /api/sales` operarán con un `variant_id` en lugar de un `product_id`.
+*   **Nuevos Endpoints:** Se necesitarán endpoints para gestionar los atributos (`/api/attributes` y `/api/attribute-values`).
 
-*   **Acción Requerida para la Página de Ventas:** Se debe replicar la funcionalidad completa de la sección de Compras en la sección de Ventas, incluyendo:
-    1.  **Operaciones de Lote:** Crear un endpoint `POST /api/sales` que procese la venta completa en una única transacción para evitar errores de concurrencia.
-    2.  **Historial y Recibos:** Implementar un modal de "Historial de Ventas" que permita visualizar ventas pasadas y reimprimir sus respectivos recibos.
-    3.  **Edición Segura:** Añadir la capacidad de editar ventas desde el historial. El backend (`PUT /api/sales`) debe seguir el patrón de **anulación y re-creación** para garantizar la integridad del inventario y mantener un rastro de auditoría.
-    4.  **Interfaz de Usuario Pulida:** Reemplazar los botones de texto en los modales de historial y recibo por **botones de icono con tooltips** (para acciones como Editar, Ver Recibo, Imprimir, etc.), manteniendo la consistencia visual con la sección de Compras.
+### 3. Modificaciones del Frontend (UI/UX)
 
----
+La experiencia de usuario para la gestión de productos y ventas cambiará significativamente.
 
-**Estado Actual:**
+*   **Gestión de Atributos:** Una nueva sección en "Configuración" para que el usuario defina sus propios atributos y valores.
+*   **Formulario de Producto Rediseñado:** Un flujo de varios pasos:
+    1.  Introducir datos del producto base (nombre, marca).
+    2.  Seleccionar los atributos aplicables (Talla, Color).
+    3.  Usar un **"Generador de Variantes"** para crear todas las combinaciones y asignarles SKU, stock y precios.
+*   **Flujo de Venta/Compra:**
+    1.  Buscar y seleccionar el producto base.
+    2.  Un modal o paso intermedio solicitará la selección de la variante específica (Talla, Color) antes de añadir al carrito.
 
+### 4. Plan de Implementación por Fases
 
----
+1.  **Fase 1 (Fundamento):** Crear un **script de migración de datos** para pasar del esquema antiguo al nuevo sin perder información. Refactorizar todo el backend (capa de datos, API) y actualizar las pruebas de Jest.
+2.  **Fase 2 (UI):** Implementar la gestión de atributos y rediseñar por completo el formulario de productos y los flujos de compra/venta.
+3.  **Fase 3 (Módulos Dependientes):** Reconstruir la lógica de generación de reportes y ajustar el dashboard para que funcionen con el nuevo esquema.
