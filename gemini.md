@@ -11,13 +11,6 @@ El objetivo es crear una aplicación de escritorio nativa usando Tauri como lanz
 2.  **Backend (Node.js):** Un servidor Express.js que se ejecuta localmente. Este servidor se conecta a la base de datos SQLite y expone una API REST local (ej. `http://localhost:3001/api/...`) para que el frontend la consuma.
 3.  **Frontend (React):** La interfaz de usuario existente. Realizará llamadas `fetch` a la API del backend de Node.js para obtener y enviar datos.
 
-## Plan de Implementación
-
-1.  **Configurar el Entorno:** Preparar la estructura de carpetas (`src-backend`), instalar dependencias de Node.js (`express`, `sqlite3`) y configurar Tauri para permitir la ejecución de procesos sidecar.
-2.  **Codificar el Backend:** Desarrollar la API en Node.js con endpoints para todas las operaciones CRUD (Productos, Compras, Ventas) y la generación de reportes.
-3.  **Conectar el Frontend:** Modificar los componentes de React para que se comuniquen con la API del backend local en lugar de usar datos estáticos.
-4.  **Implementar el Lanzador:** Escribir el código en `main.rs` (Rust) para iniciar y detener el servidor de Node.js junto con la aplicación.
-
 ## Plan de Base de Datos (SQLite)
 
 El archivo `database.sql` define el esquema. El backend de Node.js será el único que interactúe con esta base de datos.
@@ -71,7 +64,7 @@ A continuación se detallan los endpoints necesarios para dar vida al frontend.
 
 La estructura inicial del proyecto ya ha sido creada, siguiendo la arquitectura definida en este documento. Existen los archivos base para el backend de Node.js (`src-backend`), el frontend de Next.js (`src`) y el lanzador de Tauri (`src-tauri`).
 
-El proyecto se encuentra en la **fase de desarrollo e implementación activa**. El trabajo futuro debe centrarse en desarrollar los endpoints de la API y conectar los componentes del frontend, en lugar de volver a generar el código base.
+La fase de implementación inicial ha concluido. El enfoque de desarrollo se centra ahora en la **evolución del sistema hacia la gestión de variantes de productos**.
 
 **Última acción:** Se implementó un sistema de "pre-arranque" o pantalla de carga. El frontend ahora sondea el nuevo endpoint `/api/health` en el backend y muestra una pantalla de espera. La interfaz de usuario principal no se renderizará hasta que el backend confirme que está completamente operativo, evitando así errores de renderizado y mejorando la experiencia de inicio de la aplicación.
 
@@ -88,10 +81,14 @@ Esto representa un cambio estructural significativo que impactará la base de da
 
 Se debe modificar el `schema.sql` para adoptar un modelo relacional jerárquico.
 
+*   **Nueva Tabla: `brands` (Marcas):**
+    *   Gestionará las marcas de forma centralizada para evitar duplicados y estandarizar datos.
+    *   **Columnas:** `id`, `name` (único).
+
 *   **Tabla `products` (Producto Base):**
     *   Se convierte en un "contenedor" o plantilla.
     *   **Mantendrá:** `id`, `name`, `description`, `category`.
-    *   **Se añadirá:** `brand_id` (para estandarizar marcas).
+    *   **Se añadirá:** `brand_id` (FK a `brands`).
     *   **Se eliminarán:** `current_stock`, `cost_price`, `sale_price`. Estos datos ahora pertenecen a la variante.
 
 *   **Nueva Tabla: `product_variants` (Variantes / SKUs):**
@@ -109,15 +106,15 @@ Los endpoints actuales deben ser rediseñados para reflejar el nuevo modelo de d
 
 *   **Endpoints de Productos:** `GET /api/products` deberá devolver los productos base, anidando un array con todas sus variantes. La creación (`POST`) será más compleja, aceptando el producto base y un array de variantes en una sola transacción.
 *   **Endpoints de Movimientos:** `POST /api/purchases` y `POST /api/sales` operarán con un `variant_id` en lugar de un `product_id`.
-*   **Nuevos Endpoints:** Se necesitarán endpoints para gestionar los atributos (`/api/attributes` y `/api/attribute-values`).
+*   **Nuevos Endpoints:** Se necesitarán endpoints para gestionar las marcas (`/api/brands`), los atributos (`/api/attributes` y `/api/attribute-values`).
 
 ### 3. Modificaciones del Frontend (UI/UX)
 
 La experiencia de usuario para la gestión de productos y ventas cambiará significativamente.
 
-*   **Gestión de Atributos:** Una nueva sección en "Configuración" para que el usuario defina sus propios atributos y valores.
+*   **Gestión de Atributos y Marcas:** Una nueva sección en "Configuración" para que el usuario defina sus propios atributos, valores y también para gestionar las marcas.
 *   **Formulario de Producto Rediseñado:** Un flujo de varios pasos:
-    1.  Introducir datos del producto base (nombre, marca).
+    1.  Introducir datos del producto base (nombre, descripción, categoría y selección de marca desde una lista).
     2.  Seleccionar los atributos aplicables (Talla, Color).
     3.  Usar un **"Generador de Variantes"** para crear todas las combinaciones y asignarles SKU, stock y precios.
 *   **Flujo de Venta/Compra:**
