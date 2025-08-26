@@ -203,6 +203,12 @@ export default function PurchasesPage() {
         setCart(newCart);
     };
 
+    const handleCostChange = (index: number, newCost: number) => {
+        const updatedCart = [...cart];
+        updatedCart[index].unitCost = newCost;
+        setCart(updatedCart);
+    };
+
     const removeCartItem = (index: number) => {
         setCart(cart.filter((_, i) => i !== index));
     };
@@ -387,7 +393,14 @@ export default function PurchasesPage() {
                                                 <TableRow key={item.id}>
                                                     <TableCell><p className="font-medium">{item.productName}</p><p className="text-xs text-muted-foreground">{item.variantName} ({item.sku})</p></TableCell>
                                                     <TableCell>{item.quantity}</TableCell>
-                                                    <TableCell>${item.unitCost.toFixed(2)}</TableCell>
+                                                    <TableCell>
+                                                        <Input
+                                                            type="number"
+                                                            value={item.unitCost}
+                                                            onChange={(e) => handleCostChange(index, parseFloat(e.target.value) || 0)}
+                                                            className="text-right w-24"
+                                                        />
+                                                    </TableCell>
                                                     <TableCell>${(item.quantity * item.unitCost).toFixed(2)}</TableCell>
                                                     <TableCell><Button variant="ghost" size="icon" onClick={() => removeCartItem(index)}><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell>
                                                 </TableRow>

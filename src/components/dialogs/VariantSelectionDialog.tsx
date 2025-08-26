@@ -69,7 +69,9 @@ export function VariantSelectionDialog({ open, onOpenChange, product, onVariants
               </TableHeader>
               <TableBody>
                 {product?.variants && product.variants.length > 0 ? (
-                  product.variants.map(variant => (
+                  product.variants
+                  .filter(variant => variant.current_stock > 0)
+                  .map(variant => (
                     <TableRow key={variant.id}>
                       <TableCell className="font-medium">
                         {variant.attribute_values?.map(v => v.value).join(' / ') || 'Estándar'}
