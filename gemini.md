@@ -134,4 +134,4 @@ La experiencia de usuario para la gestión de productos y ventas cambiará signi
 
 *   **- REALIZADO - Dividir el panel de creación de productos en 3 pestañas:** Datos Principales, Atributos, y Costo/Precio. Esto evitará saturar la vista en un solo panel.
 *   ** Optimizar la selección en los combobox de compra y venta:** Especialmente en el de compra, para permitir cambiar el coste de los productos nuevos de forma más directa.
-* ** form para departmaento y subdepartamento en la confiduracion:** Creacion del crud en la pestañá catalogo en configuracion para el departamento y subdepartamento, ya la creacion se esta implementando desde el acceso rapido en productDialog pero falta la modificacion e inactivacion y lectura
+* ** corregir el fomr de departmaento y subdepartamento en la confiduracion:** el departamento queda muy apretado, mueve los botones de accion del deprtamento a la derecha

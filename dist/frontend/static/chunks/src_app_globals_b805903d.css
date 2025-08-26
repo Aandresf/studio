@@ -1546,6 +1546,10 @@ body {
   padding-top: 1rem;
 }
 
+.pl-6 {
+  padding-left: 1.5rem;
+}
+
 .text-left {
   text-align: left;
 }
@@ -1954,6 +1958,10 @@ body {
 
 .hover\:bg-secondary\/80:hover {
   background-color: hsl(var(--secondary) / .8);
+}
+
+.hover\:bg-accent\/50:hover {
+  background-color: hsl(var(--accent) / .5);
 }
 
 .hover\:text-accent-foreground:hover {

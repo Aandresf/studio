@@ -16,25 +16,28 @@ interface SubdepartmentDialogProps {
   onSuccess: () => void;
   subdepartment: Subdepartment | null;
   departments: Department[];
+  preselectedDepartmentId?: number | null;
 }
 
-export function SubdepartmentDialog({ isOpen, onOpenChange, onSuccess, subdepartment, departments }: SubdepartmentDialogProps) {
+export function SubdepartmentDialog({ isOpen, onOpenChange, onSuccess, subdepartment, departments, preselectedDepartmentId }: SubdepartmentDialogProps) {
   const [name, setName] = useState('');
   const [abbreviation, setAbbreviation] = useState('');
   const [departmentId, setDepartmentId] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    if (subdepartment) {
-      setName(subdepartment.name);
-      setAbbreviation(subdepartment.abbreviation);
-      setDepartmentId(String(subdepartment.department_id));
-    } else {
-      setName('');
-      setAbbreviation('');
-      setDepartmentId('');
+    if (isOpen) {
+      if (subdepartment) {
+        setName(subdepartment.name);
+        setAbbreviation(subdepartment.abbreviation);
+        setDepartmentId(String(subdepartment.department_id));
+      } else {
+        setName('');
+        setAbbreviation('');
+        setDepartmentId(preselectedDepartmentId ? String(preselectedDepartmentId) : '');
+      }
     }
-  }, [subdepartment]);
+  }, [isOpen, subdepartment, preselectedDepartmentId]);
 
   const handleSubmit = async () => {
     if (!departmentId) {
