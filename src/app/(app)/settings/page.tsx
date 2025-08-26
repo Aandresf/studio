@@ -21,6 +21,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { BrandsManagementCard } from '@/components/settings/brands-management';
 import { AttributesManagementCard } from '@/components/settings/attributes-management';
+import { DepartmentsManagementCard } from '@/components/settings/departments-management';
 
 interface Store {
   id: string;
@@ -374,6 +375,9 @@ export default function SettingsPage() {
             <div className="grid md:grid-cols-2 gap-6">
                 <BrandsManagementCard />
                 <AttributesManagementCard />
+            </div>
+            <div className="mt-6">
+                <DepartmentsManagementCard />
             </div>
         </TabsContent>
         <TabsContent value="appearance">

@@ -5,6 +5,20 @@ export interface Brand {
   name: string;
 }
 
+export interface Department {
+  id: number;
+  name: string;
+  abbreviation: string;
+}
+
+export interface Subdepartment {
+  id: number;
+  name: string;
+  abbreviation: string;
+  department_id: number;
+  department_name: string;
+}
+
 export interface Attribute {
   id: number;
   name: string;

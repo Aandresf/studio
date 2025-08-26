@@ -164,14 +164,34 @@ export const deleteAttributeValue = (attributeId: number, valueId: number): Prom
 
 // Department & Subdepartment API calls
 export const getDepartments = (): Promise<{ id: number; name: string; abbreviation: string }[]> => fetchAPI('/departments');
+
 export const createDepartment = (data: { name: string; abbreviation: string }): Promise<{ id: number; name: string; abbreviation: string }> => {
     return fetchAPI('/departments', { method: 'POST', body: JSON.stringify(data) });
 };
-export const getSubdepartments = (departmentId: number): Promise<{ id: number; name: string; abbreviation: string }[]> => {
-    return fetchAPI(`/subdepartments?departmentId=${departmentId}`);
+
+export const updateDepartment = (id: number, data: { name: string; abbreviation: string }): Promise<{ message: string }> => {
+    return fetchAPI(`/departments/${id}`, { method: 'PUT', body: JSON.stringify(data) });
 };
+
+export const deleteDepartment = (id: number): Promise<null> => {
+    return fetchAPI(`/departments/${id}`, { method: 'DELETE' });
+};
+
+export const getSubdepartments = (departmentId?: number): Promise<{ id: number; name: string; abbreviation: string; department_id: number; department_name: string }[]> => {
+    const endpoint = departmentId ? `/subdepartments?departmentId=${departmentId}` : '/subdepartments';
+    return fetchAPI(endpoint);
+};
+
 export const createSubdepartment = (data: { name: string; abbreviation: string; department_id: number }): Promise<{ id: number; name: string; abbreviation: string }> => {
     return fetchAPI('/subdepartments', { method: 'POST', body: JSON.stringify(data) });
+};
+
+export const updateSubdepartment = (id: number, data: { name: string; abbreviation: string; department_id: number }): Promise<{ message: string }> => {
+    return fetchAPI(`/subdepartments/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+};
+
+export const deleteSubdepartment = (id: number): Promise<null> => {
+    return fetchAPI(`/subdepartments/${id}`, { method: 'DELETE' });
 };
 
 // SKU Generation API

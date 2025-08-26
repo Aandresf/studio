@@ -718,11 +718,18 @@ app.get('/api/departments', async (req, res) => {
 
 app.post('/api/departments', (req, res) => {
     const { name, abbreviation } = req.body;
-    if (!name || !abbreviation) return res.status(400).json({ error: 'Name and abbreviation are required.' });
+    if (!name || !abbreviation) {
+        return res.status(400).json({ error: 'Name and abbreviation are required.' });
+    }
     try {
         const db = databaseManager.getActiveDb();
         db.run(`INSERT INTO departments (name, abbreviation) VALUES (?, ?)`, [name, abbreviation], function(err) {
-            if (err) return res.status(500).json({ error: err.message });
+            if (err) {
+                if (err.message.includes('UNIQUE constraint failed')) {
+                    return res.status(409).json({ error: 'Department name or abbreviation already exists.' });
+                }
+                return res.status(500).json({ error: err.message });
+            }
             res.status(201).json({ id: this.lastID, name, abbreviation });
         });
     } catch (error) {
@@ -730,16 +737,64 @@ app.post('/api/departments', (req, res) => {
     }
 });
 
+app.put('/api/departments/:id', (req, res) => {
+    const { id } = req.params;
+    const { name, abbreviation } = req.body;
+    if (!name || !abbreviation) {
+        return res.status(400).json({ error: 'Name and abbreviation are required.' });
+    }
+    try {
+        const db = databaseManager.getActiveDb();
+        db.run(`UPDATE departments SET name = ?, abbreviation = ? WHERE id = ?`, [name, abbreviation, id], function(err) {
+            if (err) {
+                if (err.message.includes('UNIQUE constraint failed')) {
+                    return res.status(409).json({ error: 'Department name or abbreviation already exists.' });
+                }
+                return res.status(500).json({ error: err.message });
+            }
+            if (this.changes === 0) {
+                return res.status(404).json({ error: 'Department not found' });
+            }
+            res.json({ message: 'Department updated successfully' });
+        });
+    } catch (error) {
+        res.status(500).json({ error: `Failed to update department: ${error.message}` });
+    }
+});
+
+app.delete('/api/departments/:id', (req, res) => {
+    const { id } = req.params;
+    try {
+        const db = databaseManager.getActiveDb();
+        db.run('DELETE FROM departments WHERE id = ?', [id], function(err) {
+            if (err) {
+                return res.status(500).json({ error: err.message });
+            }
+            if (this.changes === 0) {
+                return res.status(404).json({ error: 'Department not found' });
+            }
+            res.status(204).send();
+        });
+    } catch (error) {
+        res.status(500).json({ error: `Failed to delete department: ${error.message}` });
+    }
+});
+
+
 // --- SUBDEPARTMENTS API ---
 app.get('/api/subdepartments', async (req, res) => {
     const { departmentId } = req.query;
-    let query = "SELECT * FROM subdepartments";
+    let query = `
+    SELECT s.*, d.name as department_name 
+    FROM subdepartments s
+    JOIN departments d ON s.department_id = d.id
+  `;
     const params = [];
     if (departmentId) {
-        query += " WHERE department_id = ?";
+        query += " WHERE s.department_id = ?";
         params.push(departmentId);
     }
-    query += " ORDER BY name ASC";
+    query += " ORDER BY d.name, s.name ASC";
     
     try {
         const db = databaseManager.getActiveDb();
@@ -752,15 +807,65 @@ app.get('/api/subdepartments', async (req, res) => {
 
 app.post('/api/subdepartments', (req, res) => {
     const { name, abbreviation, department_id } = req.body;
-    if (!name || !abbreviation || !department_id) return res.status(400).json({ error: 'Name, abbreviation, and department_id are required.' });
+    if (!name || !abbreviation || !department_id) {
+        return res.status(400).json({ error: 'Name, abbreviation, and department_id are required.' });
+    }
     try {
         const db = databaseManager.getActiveDb();
         db.run(`INSERT INTO subdepartments (name, abbreviation, department_id) VALUES (?, ?, ?)`, [name, abbreviation, department_id], function(err) {
-            if (err) return res.status(500).json({ error: err.message });
+            if (err) {
+                if (err.message.includes('UNIQUE constraint failed')) {
+                    return res.status(409).json({ error: 'Subdepartment name or abbreviation already exists for this department.' });
+                }
+                return res.status(500).json({ error: err.message });
+            }
             res.status(201).json({ id: this.lastID, name, abbreviation, department_id });
         });
     } catch (error) {
         res.status(500).json({ error: `Failed to create subdepartment: ${error.message}` });
+    }
+});
+
+app.put('/api/subdepartments/:id', (req, res) => {
+    const { id } = req.params;
+    const { name, abbreviation, department_id } = req.body;
+    if (!name || !abbreviation || !department_id) {
+        return res.status(400).json({ error: 'Name, abbreviation, and department_id are required.' });
+    }
+    try {
+        const db = databaseManager.getActiveDb();
+        db.run(`UPDATE subdepartments SET name = ?, abbreviation = ?, department_id = ? WHERE id = ?`, [name, abbreviation, department_id, id], function(err) {
+            if (err) {
+                if (err.message.includes('UNIQUE constraint failed')) {
+                    return res.status(409).json({ error: 'Subdepartment name or abbreviation already exists for this department.' });
+                }
+                return res.status(500).json({ error: err.message });
+            }
+            if (this.changes === 0) {
+                return res.status(404).json({ error: 'Subdepartment not found' });
+            }
+            res.json({ message: 'Subdepartment updated successfully' });
+        });
+    } catch (error) {
+        res.status(500).json({ error: `Failed to update subdepartment: ${error.message}` });
+    }
+});
+
+app.delete('/api/subdepartments/:id', (req, res) => {
+    const { id } = req.params;
+    try {
+        const db = databaseManager.getActiveDb();
+        db.run('DELETE FROM subdepartments WHERE id = ?', [id], function(err) {
+            if (err) {
+                return res.status(500).json({ error: err.message });
+            }
+            if (this.changes === 0) {
+                return res.status(404).json({ error: 'Subdepartment not found' });
+            }
+            res.status(204).send();
+        });
+    } catch (error) {
+        res.status(500).json({ error: `Failed to delete subdepartment: ${error.message}` });
     }
 });
 

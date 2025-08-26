@@ -863,8 +863,10 @@ __turbopack_context__.s({
     "deleteAttribute": (()=>deleteAttribute),
     "deleteAttributeValue": (()=>deleteAttributeValue),
     "deleteBrand": (()=>deleteBrand),
+    "deleteDepartment": (()=>deleteDepartment),
     "deleteProduct": (()=>deleteProduct),
     "deleteStore": (()=>deleteStore),
+    "deleteSubdepartment": (()=>deleteSubdepartment),
     "exportInventoryToExcel": (()=>exportInventoryToExcel),
     "getAttributeValues": (()=>getAttributeValues),
     "getAttributes": (()=>getAttributes),
@@ -894,11 +896,13 @@ __turbopack_context__.s({
     "updateAttribute": (()=>updateAttribute),
     "updateAttributeValue": (()=>updateAttributeValue),
     "updateBrand": (()=>updateBrand),
+    "updateDepartment": (()=>updateDepartment),
     "updateProduct": (()=>updateProduct),
     "updatePurchase": (()=>updatePurchase),
     "updateSale": (()=>updateSale),
     "updateStoreDetails": (()=>updateStoreDetails),
-    "updateStoreSettings": (()=>updateStoreSettings)
+    "updateStoreSettings": (()=>updateStoreSettings),
+    "updateSubdepartment": (()=>updateSubdepartment)
 });
 var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$use$2d$toast$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/hooks/use-toast.tsx [app-ssr] (ecmascript)");
 ;
@@ -1055,13 +1059,36 @@ const createDepartment = (data)=>{
         body: JSON.stringify(data)
     });
 };
+const updateDepartment = (id, data)=>{
+    return fetchAPI(`/departments/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data)
+    });
+};
+const deleteDepartment = (id)=>{
+    return fetchAPI(`/departments/${id}`, {
+        method: 'DELETE'
+    });
+};
 const getSubdepartments = (departmentId)=>{
-    return fetchAPI(`/subdepartments?departmentId=${departmentId}`);
+    const endpoint = departmentId ? `/subdepartments?departmentId=${departmentId}` : '/subdepartments';
+    return fetchAPI(endpoint);
 };
 const createSubdepartment = (data)=>{
     return fetchAPI('/subdepartments', {
         method: 'POST',
         body: JSON.stringify(data)
+    });
+};
+const updateSubdepartment = (id, data)=>{
+    return fetchAPI(`/subdepartments/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data)
+    });
+};
+const deleteSubdepartment = (id)=>{
+    return fetchAPI(`/subdepartments/${id}`, {
+        method: 'DELETE'
     });
 };
 const getNextSku = (depId, subId)=>{
