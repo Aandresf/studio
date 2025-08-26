@@ -366,15 +366,14 @@ app.get('/api/products/:id', async (req, res) => {
 
 app.put('/api/products/:id', async (req, res) => {
     const { id } = req.params;
-    const { name, description, brand_id, category, subcategory, status = 'Activo', variants } = req.body;
+    const { name, description, brand_id, status = 'Activo', variants, variantsToDelete } = req.body;
 
     if (!name || !variants || !Array.isArray(variants)) {
-        return res.status(400).json({ error: 'Faltan datos requeridos.' });
+        return res.status(400).json({ error: 'Faltan datos requeridos (nombre, variantes).' });
     }
 
     const db = databaseManager.getActiveDb();
     const run = util.promisify(db.run.bind(db));
-    const all = util.promisify(db.all.bind(db));
 
     try {
         await run('BEGIN TRANSACTION');
@@ -382,38 +381,50 @@ app.put('/api/products/:id', async (req, res) => {
         // 1. Actualizar el producto base
         const productSql = `
             UPDATE products 
-            SET name = ?, description = ?, brand_id = ?, category = ?, subcategory = ?, status = ?, updated_at = strftime('%Y-%m-%d %H:%M:%S', 'now') 
+            SET name = ?, description = ?, brand_id = ?, status = ?, updated_at = strftime('%Y-%m-%d %H:%M:%S', 'now') 
             WHERE id = ?
         `;
-        await run(productSql, [name, description, brand_id, category, subcategory, status, id]);
+        await run(productSql, [name, description, brand_id, status, id]);
 
-        // 2. Obtener los IDs de las variantes viejas para borrarlas
-        const oldVariantIds = await all('SELECT id FROM product_variants WHERE product_id = ?', [id]);
-        const idsToDelete = oldVariantIds.map(v => v.id);
-
-        if (idsToDelete.length > 0) {
-            // Borrar las relaciones en la tabla pivote
-            await run(`DELETE FROM variant_attribute_values WHERE variant_id IN (${idsToDelete.join(',')})`);
-            // Borrar las variantes viejas
-            await run(`DELETE FROM product_variants WHERE id IN (${idsToDelete.join(',')})`);
+        // 2. Eliminar las variantes marcadas para borrado
+        if (variantsToDelete && variantsToDelete.length > 0) {
+            const idsToDelete = variantsToDelete.join(',');
+            await run(`DELETE FROM variant_attribute_values WHERE variant_id IN (${idsToDelete})`);
+            await run(`DELETE FROM product_variants WHERE id IN (${idsToDelete})`);
         }
 
-        // 3. Re-crear las variantes con la nueva información
+        // 3. Iterar sobre las variantes para actualizar o crear
         for (const variant of variants) {
-            const { sku, cost_price, sale_price, current_stock, attribute_values } = variant;
-            
-            const variantSql = `INSERT INTO product_variants (product_id, sku, cost_price, sale_price, current_stock, status) VALUES (?, ?, ?, ?, ?, ?)`;
-            const variantResult = await new Promise((resolve, reject) => {
-                db.run(variantSql, [id, sku, cost_price, sale_price, current_stock, status], function(err) {
-                    if (err) reject(err); else resolve({ lastID: this.lastID });
-                });
-            });
-            const variantId = variantResult.lastID;
+            const { id: variantId, sku, cost_price, sale_price, current_stock, attribute_values } = variant;
 
-            if (attribute_values && Array.isArray(attribute_values)) {
-                const pivotSql = `INSERT INTO variant_attribute_values (variant_id, attribute_value_id) VALUES (?, ?)`;
-                for (const attrValue of attribute_values) {
-                    await run(pivotSql, [variantId, attrValue.id]);
+            if (variantId) {
+                // Si tiene ID, es una variante existente -> ACTUALIZAR
+                const updateVariantSql = `
+                    UPDATE product_variants 
+                    SET sku = ?, cost_price = ?, sale_price = ?, current_stock = ?, status = ?
+                    WHERE id = ?
+                `;
+                await run(updateVariantSql, [sku, cost_price, sale_price, current_stock, status, variantId]);
+                
+                // No es necesario tocar los atributos si la variante ya existe,
+                // ya que la combinación de atributos es lo que la define.
+                // Si esto cambiara, se necesitaría una lógica más compleja aquí.
+
+            } else {
+                // Si no tiene ID, es una variante nueva -> INSERTAR
+                const insertVariantSql = `INSERT INTO product_variants (product_id, sku, cost_price, sale_price, current_stock, status) VALUES (?, ?, ?, ?, ?, ?)`;
+                const variantResult = await new Promise((resolve, reject) => {
+                    db.run(insertVariantSql, [id, sku, cost_price, sale_price, current_stock, status], function(err) {
+                        if (err) reject(err); else resolve({ lastID: this.lastID });
+                    });
+                });
+                const newVariantId = variantResult.lastID;
+
+                if (attribute_values && Array.isArray(attribute_values)) {
+                    const pivotSql = `INSERT INTO variant_attribute_values (variant_id, attribute_value_id) VALUES (?, ?)`;
+                    for (const attrValue of attribute_values) {
+                        await run(pivotSql, [newVariantId, attrValue.id]);
+                    }
                 }
             }
         }

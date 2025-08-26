@@ -74,22 +74,64 @@ export function ProductDialog({ open, onOpenChange, product, onProductSaved }: P
   const fetchAttributes = useCallback(async () => { setAttributes(await getAttributes()); }, []);
 
   useEffect(() => {
-    if (open) {
-      fetchBrands();
-      fetchDepartments();
-      fetchAttributes();
-      if (product) {
-        setProductBase(product);
-        setVariants(product.variants || []);
-        // TODO: Pre-populate selectedAttributes and selectedValues if editing
-      } else {
-        setProductBase({});
-        setVariants([]);
-        setSelectedAttributes({});
-        setSelectedValues({});
+    const initializeState = async () => {
+      if (open) {
+        // Carga siempre los datos maestros
+        await Promise.all([fetchBrands(), fetchDepartments(), fetchAttributes()]);
+
+        if (product && product.id) { // Asegurarse que es un producto para editar
+          setProductBase(product);
+          setVariants(product.variants || []);
+
+          if (product.variants && product.variants.length > 0) {
+            const allValueIds = new Set<number>();
+            const attributeIds = new Set<number>();
+            product.variants.forEach(variant => {
+              variant.attribute_values?.forEach(attrValue => {
+                attributeIds.add(attrValue.attribute_id);
+                allValueIds.add(attrValue.id);
+              });
+            });
+
+            const newSelectedAttributes: Record<number, SelectedAttributesData> = {};
+            for (const attrId of Array.from(attributeIds)) {
+              const attribute = attributes.find(a => a.id === attrId) || await (async () => {
+                // Fallback por si attributes no se ha actualizado aún
+                const allAttrs = await getAttributes();
+                return allAttrs.find(a => a.id === attrId);
+              })();
+
+              if (attribute) {
+                const values = await getAttributeValues(attrId);
+                newSelectedAttributes[attrId] = { name: attribute.name, values: values };
+              }
+            }
+            
+            const newSelectedValues: Record<string, boolean> = {};
+            for (const attrId of Array.from(attributeIds)) {
+                const values = newSelectedAttributes[attrId]?.values || [];
+                values.forEach(value => {
+                    if (allValueIds.has(value.id)) {
+                        newSelectedValues[`${attrId}-${value.id}`] = true;
+                    }
+                });
+            }
+
+            setSelectedAttributes(newSelectedAttributes);
+            setSelectedValues(newSelectedValues);
+          }
+        } else {
+          // Resetea para un producto nuevo
+          setProductBase({});
+          setVariants([]);
+          setSelectedAttributes({});
+          setSelectedValues({});
+          setVariantsToDelete([]);
+        }
       }
-    }
-  }, [open, product, fetchBrands, fetchDepartments, fetchAttributes]);
+    };
+    initializeState();
+  }, [open, product]);
 
   useEffect(() => {
     if (productBase.department_id) {
@@ -152,10 +194,11 @@ export function ProductDialog({ open, onOpenChange, product, onProductSaved }: P
     } catch (error) {}
   };
 
+  const [variantsToDelete, setVariantsToDelete] = useState<number[]>([]);
+
   const handleGenerateVariants = () => {
-    const existingVariants = [...variants];
-    const existingVariantsMap = new Map(
-      existingVariants.map(variant => {
+    const oldVariantsMap = new Map(
+      variants.map(variant => {
         const key = variant.attribute_values?.map(v => v.id).sort().join('-') || 'standard';
         return [key, variant];
       })
@@ -166,34 +209,45 @@ export function ProductDialog({ open, onOpenChange, product, onProductSaved }: P
     );
 
     if (arraysOfSelectedValues.every(arr => arr.length === 0)) {
-        if (!existingVariantsMap.has('standard')) {
-            setVariants([{
-                sku: productBase.base_sku,
-                sale_price: 0, cost_price: 0, current_stock: 0,
-                attribute_values: [],
-            }]);
-        }
-        toastSuccess("Aviso", "No se seleccionaron atributos. Se mantendrá la variante estándar.");
+        toastSuccess("Aviso", "No se seleccionaron atributos. Se creará una variante estándar.");
+        const standardVariant = oldVariantsMap.get('standard') || {
+            sku: productBase.base_sku,
+            sale_price: 0, cost_price: 0, current_stock: 0,
+            attribute_values: [],
+        };
+        setVariants([standardVariant]);
         setCurrentTab('pricing');
         return;
     }
 
     const combinations = getCombinations(arraysOfSelectedValues);
-    const newVariants = combinations.map(combo => {
+    const newVariants: Partial<ProductVariant>[] = [];
+    const newKeys = new Set<string>();
+
+    combinations.forEach(combo => {
       const key = combo.map(v => v.id).sort().join('-');
-      const existingVariant = existingVariantsMap.get(key);
+      newKeys.add(key);
+      const existingVariant = oldVariantsMap.get(key);
 
       if (existingVariant) {
-        return existingVariant;
+        newVariants.push(existingVariant);
+      } else {
+        const skuSuffix = combo.map(v => (v.value.substring(0,3))).join('-');
+        newVariants.push({
+          sku: `${productBase.base_sku}-${skuSuffix}`,
+          sale_price: 0, cost_price: 0, current_stock: 0,
+          attribute_values: combo,
+        });
       }
-      
-      const skuSuffix = combo.map(v => (v.value.substring(0,3))).join('-');
-      return {
-        sku: `${productBase.base_sku}-${skuSuffix}`,
-        sale_price: 0, cost_price: 0, current_stock: 0,
-        attribute_values: combo,
-      };
     });
+    
+    const variantsMarkedForDeletion: number[] = [];
+    oldVariantsMap.forEach((variant, key) => {
+      if (!newKeys.has(key) && variant.id) {
+        variantsMarkedForDeletion.push(variant.id);
+      }
+    });
+    setVariantsToDelete(vtd => [...vtd, ...variantsMarkedForDeletion]);
 
     setVariants(newVariants);
     setCurrentTab('pricing');
@@ -201,7 +255,7 @@ export function ProductDialog({ open, onOpenChange, product, onProductSaved }: P
   
   const handleSave = async () => {
     const { base_sku, ...productData } = productBase;
-    const payload = { ...productData, variants };
+    const payload = { ...productData, variants, variantsToDelete };
     try {
       let savedProduct;
       if (payload.id) {
