@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -48,6 +49,7 @@ interface ProductDialogProps {
 
 interface SelectedAttributesData { name: string; values: AttributeValue[]; }
 type QuickAddType = 'brand' | 'department' | 'subdepartment' | 'attribute' | 'attributeValue';
+type TabValue = 'data' | 'attributes' | 'pricing';
 
 export function ProductDialog({ open, onOpenChange, product, onProductSaved }: ProductDialogProps) {
   const [productBase, setProductBase] = useState<Partial<Product>>({});
@@ -64,6 +66,7 @@ export function ProductDialog({ open, onOpenChange, product, onProductSaved }: P
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [quickAddType, setQuickAddType] = useState<QuickAddType | null>(null);
   const [activeAttributeId, setActiveAttributeId] = useState<number | null>(null);
+  const [currentTab, setCurrentTab] = useState<TabValue>('data');
 
   const fetchBrands = useCallback(async () => { setBrands(await getBrands()); }, []);
   const fetchDepartments = useCallback(async () => { setDepartments(await getDepartments()); }, []);
@@ -143,7 +146,13 @@ export function ProductDialog({ open, onOpenChange, product, onProductSaved }: P
         attrData.values.filter(value => selectedValues[`${attrId}-${value.id}`])
     );
     if (arraysOfSelectedValues.every(arr => arr.length === 0)) {
-        toastError("Aviso", "Selecciona al menos un valor.");
+        setVariants([{
+            sku: productBase.base_sku,
+            sale_price: 0, cost_price: 0, current_stock: 0,
+            attribute_values: [],
+        }]);
+        toastSuccess("Aviso", "No se seleccionaron atributos. Se creará una única variante estándar.");
+        setCurrentTab('pricing');
         return;
     }
     const combinations = getCombinations(arraysOfSelectedValues);
@@ -156,6 +165,7 @@ export function ProductDialog({ open, onOpenChange, product, onProductSaved }: P
       };
     });
     setVariants(newVariants);
+    setCurrentTab('pricing');
   };
   
   const handleSave = async () => {
@@ -189,6 +199,17 @@ export function ProductDialog({ open, onOpenChange, product, onProductSaved }: P
     }
   };
 
+  const renderFooter = () => {
+    return (
+      <DialogFooter>
+        <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+        {currentTab !== 'data' && <Button variant="ghost" onClick={() => setCurrentTab(currentTab === 'pricing' ? 'attributes' : 'data')}>Anterior</Button>}
+        {currentTab !== 'pricing' && <Button onClick={() => setCurrentTab(currentTab === 'data' ? 'attributes' : 'pricing')}>Siguiente</Button>}
+        {currentTab === 'pricing' && <Button onClick={handleSave}>Guardar Producto</Button>}
+      </DialogFooter>
+    );
+  }
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -196,88 +217,107 @@ export function ProductDialog({ open, onOpenChange, product, onProductSaved }: P
           <DialogHeader>
             <DialogTitle>Crear Nuevo Producto</DialogTitle>
             <DialogDescription>
-              Rellena los datos base, genera las variantes y establece sus precios y stock.
+              Sigue los pasos para configurar tu nuevo producto y sus variantes.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid md:grid-cols-2 gap-8 py-4">
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium border-b pb-2">Datos del Producto</h3>
-              <div>
-                <Label>Departamento</Label>
-                <div className="flex items-center gap-2">
-                  <Select value={String(productBase.department_id ?? '')} onValueChange={val => setProductBase(p => ({ ...p, department_id: Number(val), subdepartment_id: undefined, base_sku: '' }))}>
-                    <SelectTrigger><SelectValue placeholder="Selecciona..." /></SelectTrigger>
-                    <SelectContent>{departments.map(d => <SelectItem key={d.id} value={String(d.id)}>{d.name}</SelectItem>)}</SelectContent>
-                  </Select>
-                  <Button variant="outline" size="icon" onClick={() => handleQuickAdd('department')}><PlusCircle className="h-4 w-4 text-green-600"/></Button>
-                </div>
-              </div>
-              <div>
-                <Label>Sub-departamento</Label>
-                <div className="flex items-center gap-2">
-                  <Select value={String(productBase.subdepartment_id ?? '')} onValueChange={handleSubdepartmentChange} disabled={!productBase.department_id}>
-                    <SelectTrigger><SelectValue placeholder="Selecciona..." /></SelectTrigger>
-                    <SelectContent>{subdepartments.map(s => <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}</SelectContent>
-                  </Select>
-                  <Button variant="outline" size="icon" onClick={() => handleQuickAdd('subdepartment')} disabled={!productBase.department_id}><PlusCircle className="h-4 w-4 text-green-600"/></Button>
-                </div>
-              </div>
-              <div><Label>Nombre del Producto</Label><Input value={productBase.name ?? ''} onChange={e => setProductBase(p => ({ ...p, name: e.target.value }))} /></div>
-              <div><Label>SKU Base (Autogenerado)</Label><Input value={productBase.base_sku ?? ''} readOnly disabled /></div>
-              <div><Label>Descripción</Label><Textarea value={productBase.description ?? ''} onChange={e => setProductBase(p => ({ ...p, description: e.target.value }))} /></div>
-              <div>
-                <Label>Marca</Label>
-                <div className="flex items-center gap-2">
-                  <Select value={String(productBase.brand_id ?? '')} onValueChange={val => setProductBase(p => ({ ...p, brand_id: Number(val) }))}>
-                    <SelectTrigger><SelectValue placeholder="Selecciona..." /></SelectTrigger>
-                    <SelectContent>{brands.map(b => <SelectItem key={b.id} value={String(b.id)}>{b.name}</SelectItem>)}</SelectContent>
-                  </Select>
-                  <Button variant="outline" size="icon" onClick={() => handleQuickAdd('brand')}><PlusCircle className="h-4 w-4 text-green-600"/></Button>
-                </div>
-              </div>
-            </div>
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium border-b pb-2">Atributos y Variantes</h3>
-              <div>
-                <div className="flex items-center justify-between">
-                  <Label>Atributos Aplicables</Label>
-                  <Button variant="ghost" size="sm" onClick={() => handleQuickAdd('attribute')}><PlusCircle className="mr-2 h-4 w-4"/>Añadir Atributo</Button>
-                </div>
-                <div className="flex flex-wrap gap-2 mt-2">{attributes.map(attr => (<Button key={attr.id} variant={selectedAttributes[attr.id] ? 'secondary' : 'outline'} onClick={() => handleAttributeSelection(attr)}>{selectedAttributes[attr.id] ? '✓ ' : ''}{attr.name}</Button>))}</div>
-              </div>
-              {Object.keys(selectedAttributes).length > 0 && (
-                <div className="space-y-2 border rounded-md p-2 max-h-48 overflow-y-auto">
-                  {Object.entries(selectedAttributes).map(([attrId, attrData]) => (
-                    <div key={attrId}>
-                      <div className="flex items-center justify-between">
-                        <Label className="font-semibold">{attrData.name}</Label>
-                        <Button variant="ghost" size="sm" onClick={() => handleQuickAdd('attributeValue', Number(attrId))}><PlusCircle className="mr-2 h-4 w-4"/>Añadir Valor</Button>
-                      </div>
-                      <div className="grid grid-cols-3 gap-2 mt-1">{attrData.values.map(value => (<div key={value.id} className="flex items-center space-x-2"><Checkbox id={`v-${value.id}`} checked={!!selectedValues[`${attrId}-${value.id}`]} onCheckedChange={c => handleValueSelection(attrId, value.id, !!c)} /><Label htmlFor={`v-${value.id}`} className="font-normal">{value.value}</Label></div>))}</div>
+          
+          <Tabs value={currentTab} onValueChange={(value) => setCurrentTab(value as TabValue)} className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="data">1. Datos Principales</TabsTrigger>
+              <TabsTrigger value="attributes">2. Atributos y Variantes</TabsTrigger>
+              <TabsTrigger value="pricing">3. Costos y Precios</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="data" className="py-4">
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium border-b pb-2">Datos del Producto</h3>
+                <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                        <Label>Departamento</Label>
+                        <div className="flex items-center gap-2">
+                        <Select value={String(productBase.department_id ?? '')} onValueChange={val => setProductBase(p => ({ ...p, department_id: Number(val), subdepartment_id: undefined, base_sku: '' }))}>
+                            <SelectTrigger><SelectValue placeholder="Selecciona..." /></SelectTrigger>
+                            <SelectContent>{departments.map(d => <SelectItem key={d.id} value={String(d.id)}>{d.name}</SelectItem>)}</SelectContent>
+                        </Select>
+                        <Button variant="outline" size="icon" onClick={() => handleQuickAdd('department')}><PlusCircle className="h-4 w-4 text-green-600"/></Button>
+                        </div>
                     </div>
-                  ))}
+                    <div>
+                        <Label>Sub-departamento</Label>
+                        <div className="flex items-center gap-2">
+                        <Select value={String(productBase.subdepartment_id ?? '')} onValueChange={handleSubdepartmentChange} disabled={!productBase.department_id}>
+                            <SelectTrigger><SelectValue placeholder="Selecciona..." /></SelectTrigger>
+                            <SelectContent>{subdepartments.map(s => <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}</SelectContent>
+                        </Select>
+                        <Button variant="outline" size="icon" onClick={() => handleQuickAdd('subdepartment')} disabled={!productBase.department_id}><PlusCircle className="h-4 w-4 text-green-600"/></Button>
+                        </div>
+                    </div>
                 </div>
-              )}
-              <Button onClick={handleGenerateVariants} className="w-full"><PlusCircle className="mr-2 h-4 w-4" />Generar Variantes</Button>
-              <div className="border rounded-md max-h-64 overflow-y-auto">
-                <Table>
-                  <TableHeader><TableRow><TableHead>Variante</TableHead><TableHead>SKU</TableHead><TableHead>Costo</TableHead><TableHead>Precio</TableHead><TableHead>Stock</TableHead></TableRow></TableHeader>
-                  <TableBody>
-                    {variants.map((variant, index) => (
-                      <TableRow key={index}>
-                        <TableCell className="font-medium text-sm">{variant.attribute_values?.map(v => v.value).join(' / ')}</TableCell>
-                        <TableCell><Input type="text" value={variant.sku ?? ''} onChange={e => handleVariantChange(index, 'sku', e.target.value)} className="w-32" /></TableCell>
-                        <TableCell><Input type="number" value={variant.cost_price ?? ''} onChange={e => handleVariantChange(index, 'cost_price', parseFloat(e.target.value))} className="w-20" /></TableCell>
-                        <TableCell><Input type="number" value={variant.sale_price ?? ''} onChange={e => handleVariantChange(index, 'sale_price', parseFloat(e.target.value))} className="w-20" /></TableCell>
-                        <TableCell><Input type="number" value={variant.current_stock ?? ''} onChange={e => handleVariantChange(index, 'current_stock', parseInt(e.target.value, 10))} className="w-20" /></TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <div><Label>Nombre del Producto</Label><Input value={productBase.name ?? ''} onChange={e => setProductBase(p => ({ ...p, name: e.target.value }))} /></div>
+                <div><Label>SKU Base (Autogenerado)</Label><Input value={productBase.base_sku ?? ''} readOnly disabled /></div>
+                <div><Label>Descripción</Label><Textarea value={productBase.description ?? ''} onChange={e => setProductBase(p => ({ ...p, description: e.target.value }))} /></div>
+                <div>
+                    <Label>Marca</Label>
+                    <div className="flex items-center gap-2">
+                    <Select value={String(productBase.brand_id ?? '')} onValueChange={val => setProductBase(p => ({ ...p, brand_id: Number(val) }))}>
+                        <SelectTrigger><SelectValue placeholder="Selecciona..." /></SelectTrigger>
+                        <SelectContent>{brands.map(b => <SelectItem key={b.id} value={String(b.id)}>{b.name}</SelectItem>)}</SelectContent>
+                    </Select>
+                    <Button variant="outline" size="icon" onClick={() => handleQuickAdd('brand')}><PlusCircle className="h-4 w-4 text-green-600"/></Button>
+                    </div>
+                </div>
               </div>
-            </div>
-          </div>
-          <DialogFooter><Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button><Button onClick={handleSave}>Guardar Producto</Button></DialogFooter>
+            </TabsContent>
+
+            <TabsContent value="attributes" className="py-4">
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium border-b pb-2">Atributos y Variantes</h3>
+                <div>
+                  <div className="flex items-center justify-between">
+                    <Label>Atributos Aplicables</Label>
+                    <Button variant="ghost" size="sm" onClick={() => handleQuickAdd('attribute')}><PlusCircle className="mr-2 h-4 w-4"/>Añadir Atributo</Button>
+                  </div>
+                  <div className="flex flex-wrap gap-2 mt-2">{attributes.map(attr => (<Button key={attr.id} variant={selectedAttributes[attr.id] ? 'secondary' : 'outline'} onClick={() => handleAttributeSelection(attr)}>{selectedAttributes[attr.id] ? '✓ ' : ''}{attr.name}</Button>))}</div>
+                </div>
+                {Object.keys(selectedAttributes).length > 0 && (
+                  <div className="space-y-2 border rounded-md p-2 max-h-48 overflow-y-auto">
+                    {Object.entries(selectedAttributes).map(([attrId, attrData]) => (
+                      <div key={attrId}>
+                        <div className="flex items-center justify-between">
+                          <Label className="font-semibold">{attrData.name}</Label>
+                          <Button variant="ghost" size="sm" onClick={() => handleQuickAdd('attributeValue', Number(attrId))}><PlusCircle className="mr-2 h-4 w-4"/>Añadir Valor</Button>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2 mt-1">{attrData.values.map(value => (<div key={value.id} className="flex items-center space-x-2"><Checkbox id={`v-${value.id}`} checked={!!selectedValues[`${attrId}-${value.id}`]} onCheckedChange={c => handleValueSelection(attrId, value.id, !!c)} /><Label htmlFor={`v-${value.id}`} className="font-normal">{value.value}</Label></div>))}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <Button onClick={handleGenerateVariants} className="w-full"><PlusCircle className="mr-2 h-4 w-4" />Generar Variantes y Continuar</Button>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="pricing" className="py-4">
+                <h3 className="text-lg font-medium border-b pb-2">Costos, Precios y Stock Inicial</h3>
+                <div className="border rounded-md max-h-96 overflow-y-auto mt-4">
+                    <Table>
+                    <TableHeader><TableRow><TableHead>Variante</TableHead><TableHead>SKU</TableHead><TableHead>Costo</TableHead><TableHead>Precio</TableHead><TableHead>Stock</TableHead></TableRow></TableHeader>
+                    <TableBody>
+                        {variants.map((variant, index) => (
+                        <TableRow key={index}>
+                            <TableCell className="font-medium text-sm">{variant.attribute_values?.map(v => v.value).join(' / ') || 'Estándar'}</TableCell>
+                            <TableCell><Input type="text" value={variant.sku ?? ''} onChange={e => handleVariantChange(index, 'sku', e.target.value)} className="w-32" /></TableCell>
+                            <TableCell><Input type="number" value={variant.cost_price ?? ''} onChange={e => handleVariantChange(index, 'cost_price', parseFloat(e.target.value))} className="w-20" /></TableCell>
+                            <TableCell><Input type="number" value={variant.sale_price ?? ''} onChange={e => handleVariantChange(index, 'sale_price', parseFloat(e.target.value))} className="w-20" /></TableCell>
+                            <TableCell><Input type="number" value={variant.current_stock ?? ''} onChange={e => handleVariantChange(index, 'current_stock', parseInt(e.target.value, 10))} className="w-20" /></TableCell>
+                        </TableRow>
+                        ))}
+                    </TableBody>
+                    </Table>
+                </div>
+            </TabsContent>
+          </Tabs>
+          
+          {renderFooter()}
         </DialogContent>
       </Dialog>
       {quickAddType && <QuickAddDialog
