@@ -111,11 +111,11 @@ export function DepartmentsManagementCard() {
             <Accordion type="single" collapsible className="w-full">
               {departments.map((dept) => (
                 <AccordionItem value={`dept-${dept.id}`} key={dept.id} className="border-b">
-                  <div className="flex items-center w-full hover:bg-accent/50">
-                    <AccordionTrigger className="flex-1 text-left p-4 hover:no-underline">
+                  <div className="flex items-center w-full hover:bg-accent/50 justify-between">
+                    <AccordionTrigger className="flex-1 text-left p-4 hover:no-underline gap-4">
                       <div>
                         <p className="font-semibold">{dept.name}</p>
-                        <p className="text-sm text-muted-foreground">SKU: {dept.abbreviation}-...</p>
+                        <p className="text-sm text-muted-foreground">SKU: {dept.abbreviation} -... </p>
                       </div>
                     </AccordionTrigger>
                     <div className="flex items-center gap-1 pr-4">
