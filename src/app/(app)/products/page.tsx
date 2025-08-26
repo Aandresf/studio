@@ -75,6 +75,8 @@ export default function ProductsPage() {
                     getProducts(),
                     getStoreDetails(activeStoreId)
                 ]);
+                console.log(productsData);
+
                 setProducts(productsData);
                 setStoreSettings(settingsData || {});
             } catch (e: any) {
@@ -120,7 +122,7 @@ export default function ProductsPage() {
         setIsDetailDialogOpen(false); // Close detail view
         setIsCreateOrEditDialogOpen(true); // Open edit view
     };
-    
+
     const handleRowClick = (product: Product) => {
         setSelectedProduct(product);
         setIsDetailDialogOpen(true);
@@ -183,7 +185,7 @@ export default function ProductsPage() {
                                         <TableHead className="hidden w-[100px] sm:table-cell">Imagen</TableHead>
                                         <TableHead>Código</TableHead>
                                         <TableHead>Nombre</TableHead>
-                                        <TableHead className="hidden md:table-cell">Precio</TableHead>
+                                        <TableHead className="hidden md:table-cell">Atributos</TableHead>
                                         <TableHead className="hidden md:table-cell">Stock</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -199,10 +201,38 @@ export default function ProductsPage() {
                                                     width="64"
                                                 />
                                             </TableCell>
-                                            <TableCell>{product.sku}</TableCell>
+                                            <TableCell>{product.base_sku}</TableCell>
                                             <TableCell className="font-medium">{product.name}</TableCell>
-                                            <TableCell className="hidden md:table-cell">${product.price?.toFixed(2) ?? '0.00'}</TableCell>
-                                            <TableCell className="hidden md:table-cell">{product.stock}</TableCell>
+                                            <TableCell className="hidden md:table-cell">{
+                                                (() => {
+                                                    const productAttributes = product.variants.reduce((acc, variant) => {
+                                                        if (variant.current_stock > 0 && variant.attribute_values){
+                                                            variant.attribute_values.forEach(av => {
+                                                                const attributeName = av.attribute_name;
+                                                                if (!acc[attributeName]) {
+                                                                    acc[attributeName] = new Set();
+                                                                }
+                                                                acc[attributeName].add(av.value)
+                                                            });
+                                                        }
+                                                        return acc;
+                                                    }, {});
+                                                    const attributesForDisplay = {};
+                                                    for (const name in productAttributes){
+                                                        attributesForDisplay[name] = Array.from(productAttributes[name]).join(', ');
+                                                    }
+                                                    // Mostrar los atributos y valores
+                                                    return Object.entries(attributesForDisplay).length > 0
+                                                        ? Object.entries(attributesForDisplay).map(([name, values]) => (
+                                                            <div key={name}><b>{name}:</b> {values}</div>
+                                                        ))
+                                                        : <span className="text-muted-foreground">Sin atributos</span>;
+                                                })()
+                                            }</TableCell>
+                                            <TableCell className="hidden md:table-cell">{
+                                                product.variants?.map(v => v.current_stock).reduce((a, b) => a + b, 0) ?? 'Sin Stock'
+
+                                            }</TableCell>
                                         </TableRow>
                                     ))}
                                 </TableBody>
