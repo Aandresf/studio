@@ -157,6 +157,16 @@ function toastError(title: string, description: string) {
   });
 }
 
+function toastInfo(title: string, description: string) {
+  toast({
+    title: title,
+    description: <ErrorDescription text={description} />,
+    duration: 5000,
+    variant: "informative",
+    icon: <XCircle className="h-6 w-6" />,
+  });
+}
+
 function useToast() {
   const [state, setState] = React.useState<State>(memoryState);
 
@@ -177,4 +187,4 @@ function useToast() {
   };
 }
 
-export { useToast, toast, toastSuccess, toastError };
+export { useToast, toast, toastSuccess, toastError, toastInfo };

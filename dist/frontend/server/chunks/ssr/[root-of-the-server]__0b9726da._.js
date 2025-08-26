@@ -903,6 +903,15 @@ __turbopack_context__.s({
 var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$use$2d$toast$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/hooks/use-toast.tsx [app-ssr] (ecmascript)");
 ;
 const API_BASE_URL = 'http://localhost:3001/api';
+// Definimos una clase de error personalizada para manejar errores de la API
+class ApiError extends Error {
+    status;
+    details;
+    constructor(message, status, details){
+        super(message), this.status = status, this.details = details;
+        this.name = 'ApiError';
+    }
+}
 // Generic fetch function
 async function fetchAPI(endpoint, options = {}) {
     const url = `${API_BASE_URL}${endpoint}`;
@@ -914,11 +923,6 @@ async function fetchAPI(endpoint, options = {}) {
         ...options,
         headers
     };
-    console.log(`--- API Request ---
-    URL: ${url}
-    Method: ${config.method || 'GET'}
-    Body: ${config.body ? config.body : 'No Body'}
-    -------------------`);
     try {
         const response = await fetch(url, config);
         const responseBody = await response.text();
@@ -933,37 +937,28 @@ async function fetchAPI(endpoint, options = {}) {
                 };
             }
             const errorMessage = errorData.error || `Error HTTP: ${response.status}`;
-            console.error(`--- API Error Response ---
-            URL: ${url}
-            Status: ${response.status}
-            Body: ${responseBody}
-            ------------------------`);
-            (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$use$2d$toast$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["toastError"])("Error de API", errorMessage);
-            throw new Error(errorMessage);
+            // Lanzamos nuestro error personalizado
+            throw new ApiError(errorMessage, response.status, errorData.details);
         }
         if (response.status === 204 || responseBody.length === 0) {
-            console.log(`--- API Success Response (No Content) ---
-            URL: ${url}
-            Status: 204
-            ---------------------------------------`);
             return null;
         }
-        const jsonData = JSON.parse(responseBody);
-        console.log(`--- API Success Response ---
-        URL: ${url}
-        Status: ${response.status}
-        Response Body:`, jsonData, `\n----------------------------`);
-        return jsonData;
+        return JSON.parse(responseBody);
     } catch (error) {
-        if (!(error instanceof Error && error.message.includes('Error de API'))) {
-            const message = error instanceof Error ? error.message : 'Ocurrió un error de red o de conexión.';
-            console.error(`--- Network or Parsing Error ---
-            URL: ${url}
-            Error: ${message}
-            --------------------------------`);
-            (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$use$2d$toast$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["toastError"])("Error de Conexión", message);
+        // Si el error ya es una instancia de ApiError, significa que ya lo hemos procesado.
+        // Lo volvemos a lanzar para que el componente que llama lo maneje.
+        if (error instanceof ApiError) {
+            // No mostramos un toast aquí para evitar duplicados. El componente decidirá.
+            throw error;
         }
-        throw error;
+        // Si no es un ApiError, probablemente sea un error de red.
+        const message = error instanceof Error ? error.message : 'Ocurrió un error de red o de conexión.';
+        console.error(`--- Network or Parsing Error ---
+        URL: ${url}
+        Error: ${message}
+        --------------------------------`);
+        (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$use$2d$toast$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["toastError"])("Error de Conexión", message);
+        throw error; // Lo lanzamos para que la lógica de la aplicación pueda reaccionar.
     }
 }
 const getProducts = ()=>fetchAPI('/products');

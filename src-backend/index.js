@@ -393,7 +393,31 @@ app.put('/api/products/:id', async (req, res) => {
                 const variant = await get('SELECT current_stock FROM product_variants WHERE id = ?', [variantId]);
                 
                 if (variant && variant.current_stock > 0) {
-                    throw new Error(`No se puede eliminar la variante (ID: ${variantId}) porque tiene ${variant.current_stock} unidades en stock.`);
+                    // Obtener detalles de la variante para un mensaje de error más claro
+                    const variantDetails = await get(`
+                        SELECT p.name as product_name, GROUP_CONCAT(av.value, ' / ') as variant_name
+                        FROM product_variants pv
+                        JOIN products p ON pv.product_id = p.id
+                        LEFT JOIN variant_attribute_values vav ON vav.variant_id = pv.id
+                        LEFT JOIN attribute_values av ON vav.attribute_value_id = av.id
+                        WHERE pv.id = ?
+                        GROUP BY pv.id
+                    `, [variantId]);
+
+                    const errorPayload = {
+                        message: `No se puede desactivar la variante "${variantDetails.variant_name || 'Estándar'}" del producto "${variantDetails.product_name}" porque tiene stock.`,
+                        details: {
+                            variantId: variantId,
+                            stock: variant.current_stock,
+                            variantName: variantDetails.variant_name,
+                            productName: variantDetails.product_name
+                        },
+                        code: 'VARIANT_IN_STOCK'
+                    };
+                    // Lanzamos un error con un objeto para identificarlo fácilmente
+                    const err = new Error(errorPayload.message);
+                    err.details = errorPayload;
+                    throw err;
                 }
                 
                 // Si no tiene stock, se desactiva en lugar de borrar.
@@ -443,6 +467,11 @@ app.put('/api/products/:id', async (req, res) => {
     } catch (err) {
         console.error('Error al actualizar producto con variantes:', err.message);
         await run('ROLLBACK');
+        
+        if (err.details && err.details.code === 'VARIANT_IN_STOCK') {
+            return res.status(409).json({ error: err.details.message, details: err.details });
+        }
+
         res.status(500).json({ error: `Error en la transacción: ${err.message}` });
     }
 });

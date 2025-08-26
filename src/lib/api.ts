@@ -1,8 +1,16 @@
 
-import { toastError } from "@/hooks/use-toast";
+import { toastError, toastInfo } from "@/hooks/use-toast";
 import { Product, DashboardSummary, RecentSale, InventoryMovement, ReportMetadata, FullReport, ReportType, StoreSettings, PurchasePayload, SalePayload, PurchaseHistoryMovement, SalesHistoryMovement } from './types';
 
 const API_BASE_URL = 'http://localhost:3001/api';
+
+// Definimos una clase de error personalizada para manejar errores de la API
+class ApiError extends Error {
+  constructor(message: string, public status: number, public details?: any) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
 
 // Generic fetch function
 async function fetchAPI(endpoint: string, options: RequestInit = {}) {
@@ -15,12 +23,6 @@ async function fetchAPI(endpoint: string, options: RequestInit = {}) {
         ...options,
         headers,
     };
-
-    console.log(`--- API Request ---
-    URL: ${url}
-    Method: ${config.method || 'GET'}
-    Body: ${config.body ? config.body : 'No Body'}
-    -------------------`);
 
     try {
         const response = await fetch(url, config);
@@ -35,42 +37,32 @@ async function fetchAPI(endpoint: string, options: RequestInit = {}) {
             }
             const errorMessage = errorData.error || `Error HTTP: ${response.status}`;
             
-            console.error(`--- API Error Response ---
-            URL: ${url}
-            Status: ${response.status}
-            Body: ${responseBody}
-            ------------------------`);
-            
-            toastError("Error de API", errorMessage);
-            throw new Error(errorMessage);
+            // Lanzamos nuestro error personalizado
+            throw new ApiError(errorMessage, response.status, errorData.details);
         }
 
         if (response.status === 204 || responseBody.length === 0) {
-            console.log(`--- API Success Response (No Content) ---
-            URL: ${url}
-            Status: 204
-            ---------------------------------------`);
             return null;
         }
 
-        const jsonData = JSON.parse(responseBody);
-        console.log(`--- API Success Response ---
-        URL: ${url}
-        Status: ${response.status}
-        Response Body:`, jsonData,
-        `\n----------------------------`);
+        return JSON.parse(responseBody);
 
-        return jsonData;
     } catch (error) {
-        if (!(error instanceof Error && error.message.includes('Error de API'))) {
-            const message = error instanceof Error ? error.message : 'Ocurrió un error de red o de conexión.';
-            console.error(`--- Network or Parsing Error ---
-            URL: ${url}
-            Error: ${message}
-            --------------------------------`);
-            toastError("Error de Conexión", message);
+        // Si el error ya es una instancia de ApiError, significa que ya lo hemos procesado.
+        // Lo volvemos a lanzar para que el componente que llama lo maneje.
+        if (error instanceof ApiError) {
+            // No mostramos un toast aquí para evitar duplicados. El componente decidirá.
+            throw error;
         }
-        throw error;
+
+        // Si no es un ApiError, probablemente sea un error de red.
+        const message = error instanceof Error ? error.message : 'Ocurrió un error de red o de conexión.';
+        console.error(`--- Network or Parsing Error ---
+        URL: ${url}
+        Error: ${message}
+        --------------------------------`);
+        toastError("Error de Conexión", message);
+        throw error; // Lo lanzamos para que la lógica de la aplicación pueda reaccionar.
     }
 }
 

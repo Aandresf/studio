@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
 import { PlusCircle } from 'lucide-react';
-import { toastSuccess, toastError } from '@/hooks/use-toast';
+import { toastSuccess, toastError, toastInfo } from '@/hooks/use-toast';
 import { 
     getBrands, createBrand, 
     getAttributes, createAttribute, 
@@ -275,8 +275,15 @@ export function ProductDialog({ open, onOpenChange, product, onProductSaved }: P
       }
       onProductSaved(savedProduct as Product);
       onOpenChange(false);
-    } catch (e) {
-      // El toast de error ya se muestra en fetchAPI
+    } catch (error: any) {
+      // Si el error es de tipo ApiError y tiene el status 409, es nuestro error de stock.
+      if (error.name === 'ApiError' && error.status === 409) {
+        toastInfo("Operación no permitida", error.message);
+      } else {
+        // Para cualquier otro error, mostramos un toast de error genérico.
+        const errorMessage = error.message || "Ocurrió un error inesperado.";
+        toastError("Error al guardar", errorMessage);
+      }
     }
   };
 

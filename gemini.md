@@ -121,7 +121,7 @@ La experiencia de usuario para la gestión de productos y ventas cambiará signi
     1.  Buscar y seleccionar el producto base.
     2.  Un modal o paso intermedio solicitará la selección de la variante específica (Talla, Color) antes de añadir al carrito.
 
-    PENDIENTE - las varientes se eliminan de la bd, corrige para que se desactiven. como se hace con el stock de la variante al eliminarla? encuentra una forma, ya sea inhabilitando la eliminacion de una variante con stock o similar. necesito eliminar el boton de generar variantes, en su lugar al seleccionar la pestaña costo precio o dar en el boton continuar el front va a generar las variantes con los atributos seleccionados
+    PENDIENTE - al crear una marca desde el acceo directo en la creacion de un producto, no se actualiza la lista de marcas en el select
 
 ### 4. Plan de Implementación por Fases
 
