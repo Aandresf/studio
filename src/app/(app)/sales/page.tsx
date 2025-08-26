@@ -3,11 +3,11 @@
 import * as React from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Calendar as CalendarIcon, PlusCircle, Trash2, History, Loader2, ListRestart, Trash } from 'lucide-react';
+import { Calendar as CalendarIcon, PlusCircle, Trash2, History, Loader2, ListRestart, Trash, XCircle, TableProperties } from 'lucide-react';
 
 import { useBackendStatus } from '@/app/(app)/layout';
-import { getProducts, createSale, getPendingTransactions, addPendingTransaction, removePendingTransaction } from '@/lib/api';
-import { Product, SalePayload, ProductVariant, TransactionItemPayload } from '@/lib/types';
+import { getProducts, createSale, getPendingTransactions, addPendingTransaction, removePendingTransaction, updateSale } from '@/lib/api';
+import { Product, SalePayload, ProductVariant, TransactionItemPayload, GroupedSale } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { toastSuccess, toastError } from '@/hooks/use-toast';
 
@@ -70,6 +70,7 @@ export default function SalesPage() {
     const [isConfirmationOpen, setIsConfirmationOpen] = React.useState(false);
     const [consolidatedItems, setConsolidatedItems] = React.useState<(TransactionItemPayload & { name: string })[]>([]);
     const [selectedTransactionId, setSelectedTransactionId] = React.useState<string | null>(null);
+    const [editingTransactionId, setEditingTransactionId] = React.useState<string | null>(null);
 
     const { isBackendReady, refetchKey, triggerRefetch } = useBackendStatus();
 
@@ -84,9 +85,7 @@ export default function SalesPage() {
                 ]);
                 setProducts(productsData);
                 setPendingSales(pendingData.sales || []);
-            } catch (error) {
-                console.error('Error fetching initial sales data:', error);
-            } finally {
+            } catch (error) {} finally {
                 setIsLoadingProducts(false);
             }
         };
@@ -107,6 +106,7 @@ export default function SalesPage() {
         setClientDni('');
         setInvoiceNumber('');
         setCart([]);
+        setEditingTransactionId(null);
     };
 
     const handleProductSelect = (productId: string) => {
@@ -126,7 +126,7 @@ export default function SalesPage() {
             variantName: variant.attribute_values?.map(v => v.value).join(' / ') || 'Estándar',
             quantity: variant.quantity,
             price: variant.sale_price,
-            tax_rate: 16.00, // TODO
+            tax_rate: 16.00,
             availableStock: variant.current_stock,
             sku: variant.sku,
         }));
@@ -173,14 +173,21 @@ export default function SalesPage() {
         };
 
         try {
-            const response = await createSale(salePayload);
-            toastSuccess("Venta Registrada", "La venta se ha guardado exitosamente.");
-            setSelectedTransactionId(response.transaction_id);
+            let response;
+            if (editingTransactionId) {
+                response = await updateSale({ transaction_id: editingTransactionId, saleData: salePayload });
+                toastSuccess("Venta Actualizada", "La venta se ha modificado exitosamente.");
+                setSelectedTransactionId(editingTransactionId);
+            } else {
+                response = await createSale(salePayload);
+                toastSuccess("Venta Registrada", "La venta se ha guardado exitosamente.");
+                setSelectedTransactionId(response.transaction_id);
+            }
+            
             setIsReceiptOpen(true);
             triggerRefetch();
             resetForm();
         } catch (error) {
-            // API layer handles toast
         } finally {
             setIsLoading(false);
             setIsConfirmationOpen(false);
@@ -194,12 +201,7 @@ export default function SalesPage() {
         }
         const newPendingSale: PendingSale = { 
             id: `pending-sale-${Date.now()}`, 
-            cart, 
-            date, 
-            clientName, 
-            clientDni, 
-            invoiceNumber, 
-            createdAt: new Date() 
+            cart, date, clientName, clientDni, invoiceNumber, createdAt: new Date() 
         };
         
         try {
@@ -219,7 +221,7 @@ export default function SalesPage() {
         
         try {
             await removePendingTransaction(saleToRestore.id);
-            toastSuccess("Venta Restaurada", "La venta ha sido cargada en el formulario.");
+            toastSuccess("Venta Restaurada", "La venta ha sido cargada.");
             triggerRefetch();
         } catch (error) {}
     };
@@ -230,6 +232,36 @@ export default function SalesPage() {
             toastSuccess("Venta Descartada", "La venta en espera ha sido eliminada.");
             triggerRefetch();
         } catch (error) {}
+    };
+
+    const handleViewReceiptFromHistory = (sale: GroupedSale) => {
+        setSelectedTransactionId(sale.transaction_id);
+        setIsReceiptOpen(true);
+    };
+
+    const handleEditSale = (sale: GroupedSale) => {
+        setDate(new Date(sale.transaction_date));
+        setClientName(sale.entity_name);
+        setClientDni(sale.entity_document);
+        setInvoiceNumber(sale.document_number);
+        setEditingTransactionId(sale.transaction_id);
+
+        const newCart: CartItem[] = sale.movements.map(m => ({
+            id: `edit-${m.variantId}-${Math.random()}`,
+            variantId: m.variantId,
+            // @ts-ignore
+            productId: m.productId,
+            productName: m.productName,
+            variantName: m.variantName,
+            quantity: m.quantity,
+            price: m.unit_price || 0,
+            tax_rate: 16.00, // TODO
+            sku: m.sku,
+            // @ts-ignore
+            availableStock: 0,
+        }));
+        setCart(newCart);
+        setIsHistoryOpen(false);
     };
 
     const subtotal = cart.reduce((acc, item) => acc + item.quantity * item.price, 0);
@@ -244,14 +276,16 @@ export default function SalesPage() {
             <div className="flex items-center justify-between">
                 <div className="flex-1">
                     <h1 className="font-semibold text-lg md:text-2xl">Ventas</h1>
-                    <p className="text-sm text-muted-foreground">Crea y gestiona facturas de venta.</p>
+                    <p className="text-sm text-muted-foreground">{editingTransactionId ? `Editando venta a ${clientName}` : "Crea y gestiona facturas de venta."}</p>
                 </div>
-                <Button variant="outline" onClick={() => setIsHistoryOpen(true)}><History className="mr-2 h-4 w-4" />Historial</Button>
+                <Button variant="outline" onClick={() => setIsHistoryOpen(true)} disabled={editingTransactionId !== null}>
+                    <History className="mr-2 h-4 w-4" />Historial
+                </Button>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
                 <div className="lg:col-span-2 space-y-6">
                     <Card>
-                        <CardHeader><CardTitle>Nueva Venta</CardTitle></CardHeader>
+                        <CardHeader><CardTitle>{editingTransactionId ? "Editar Venta" : "Nueva Venta"}</CardTitle></CardHeader>
                         <CardContent className="space-y-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="grid gap-2"><Label htmlFor="clientName">Cliente</Label><Input id="clientName" value={clientName} onChange={e => setClientName(e.target.value)} placeholder="Nombre del cliente" /></div>
@@ -263,50 +297,31 @@ export default function SalesPage() {
                                     options={productOptions} 
                                     value={""}
                                     onChange={handleProductSelect} 
-                                    placeholder={isLoadingProducts ? "Cargando..." : "Buscar producto por nombre..."} 
+                                    placeholder={isLoadingProducts ? "Cargando..." : "Buscar producto..."} 
                                     searchPlaceholder="Buscar..." 
                                     emptyMessage="No se encontraron productos." 
                                     disabled={isLoadingProducts}
                                 />
                             </div>
                             <div className="border rounded-md">
-                                
                                 <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Cantidad</TableHead>
-                                            <TableHead>Producto</TableHead>
-                                            <TableHead>Precio Unit.</TableHead>
-                                            <TableHead>Total</TableHead>
-                                            <TableHead></TableHead>
-                                        </TableRow>
-                                    </TableHeader>
+                                    <TableHeader><TableRow><TableHead>Producto</TableHead><TableHead>Cantidad</TableHead><TableHead>Precio Unit.</TableHead><TableHead>Total</TableHead><TableHead></TableHead></TableRow></TableHeader>
                                     <TableBody>
                                         {cart.length > 0 ? cart.map((item, index) => (
                                             <TableRow key={item.id}>
+                                                <TableCell><p className="font-medium">{item.productName}</p><p className="text-xs text-muted-foreground">{item.variantName} ({item.sku})</p></TableCell>
                                                 <TableCell>{item.quantity}</TableCell>
-                                                <TableCell>
-                                                    <p className="font-medium">{item.productName}</p>
-                                                    <p className="text-xs text-muted-foreground">{item.variantName} ({item.sku})</p>
-                                                </TableCell>
                                                 <TableCell>${item.price.toFixed(2)}</TableCell>
                                                 <TableCell>${(item.quantity * item.price).toFixed(2)}</TableCell>
-                                                <TableCell>
-                                                    <Button variant="ghost" size="icon" onClick={() => removeCartItem(index)}>
-                                                        <Trash2 className="h-4 w-4 text-destructive"/>
-                                                    </Button>
-                                                </TableCell>
+                                                <TableCell><Button variant="ghost" size="icon" onClick={() => removeCartItem(index)}><Trash2 className="h-4 w-4 text-destructive"/></Button></TableCell>
                                             </TableRow>
-                                        )) : (
-                                            <TableRow><TableCell colSpan={5} className="text-center h-24">El carrito está vacío.</TableCell></TableRow>
-                                        )}
+                                        )) : (<TableRow><TableCell colSpan={5} className="text-center h-24">El carrito está vacío.</TableCell></TableRow>)}
                                     </TableBody>
                                 </Table>
                             </div>
                         </CardContent>
                     </Card>
                 </div>
-
                 <div className="space-y-6">
                     <Card>
                         <CardHeader><CardTitle>Configuración</CardTitle></CardHeader>
@@ -315,7 +330,6 @@ export default function SalesPage() {
                             <div className="grid gap-2"><Label htmlFor="invoiceNumber">Nº de Factura</Label><Input id="invoiceNumber" value={invoiceNumber} onChange={e => setInvoiceNumber(e.target.value)} placeholder="Opcional" /></div>
                         </CardContent>
                     </Card>
-
                     <Card>
                         <CardHeader><CardTitle>Resumen</CardTitle></CardHeader>
                         <CardContent className="grid gap-4">
@@ -325,15 +339,14 @@ export default function SalesPage() {
                             <div className="flex justify-between font-semibold text-lg"><span>Total</span><span>${total.toFixed(2)}</span></div>
                         </CardContent>
                     </Card>
-
                     <div className="flex flex-col gap-2">
                          <Button onClick={handleOpenConfirmation} disabled={isSubmitDisabled} size="lg">
                             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            {isLoading ? "Procesando..." : "Registrar Venta"}
+                            {isLoading ? "Procesando..." : (editingTransactionId ? "Guardar Cambios" : "Registrar Venta")}
                         </Button>
-                        <Button variant="secondary" onClick={handleHoldSale}>Poner en Espera</Button>
+                        {editingTransactionId && (<Button variant="ghost" size="sm" onClick={resetForm}><XCircle className="mr-2 h-4 w-4" />Cancelar Edición</Button>)}
+                        <Button variant="secondary" onClick={handleHoldSale} disabled={editingTransactionId !== null}>Poner en Espera</Button>
                     </div>
-
                     {pendingSales.length > 0 && (
                         <Card>
                             <CardHeader><CardTitle>Ventas en Espera</CardTitle><CardDescription>Restaura o elimina las ventas pendientes.</CardDescription></CardHeader>
@@ -356,32 +369,10 @@ export default function SalesPage() {
                 </div>
             </div>
         </div>
-        
-        <VariantSelectionDialog
-            open={isVariantDialogOpen}
-            onOpenChange={setIsVariantDialogOpen}
-            product={selectedProductForVariants}
-            onVariantsSelected={handleVariantsSelected}
-        />
-        <SalesHistoryDialog 
-            open={isHistoryOpen} 
-            onOpenChange={setIsHistoryOpen} 
-            onViewReceipt={() => {}} 
-            onEditSale={() => {}} 
-            refetchKey={refetchKey}
-        />
-        <SalesReceiptDialog 
-            open={isReceiptOpen} 
-            onOpenChange={(open) => !open && setSelectedTransactionId(null)} 
-            transactionId={selectedTransactionId} 
-        />
-        <SalesConfirmationDialog 
-            open={isConfirmationOpen} 
-            onOpenChange={setIsConfirmationOpen}
-            saleItems={consolidatedItems}
-            onConfirm={handleFormSubmit}
-            isSaving={isLoading}
-        />
+        <VariantSelectionDialog open={isVariantDialogOpen} onOpenChange={setIsVariantDialogOpen} product={selectedProductForVariants} onVariantsSelected={handleVariantsSelected} />
+        <SalesHistoryDialog open={isHistoryOpen} onOpenChange={setIsHistoryOpen} onViewReceipt={handleViewReceiptFromHistory} onEditSale={handleEditSale} refetchKey={refetchKey} />
+        <SalesReceiptDialog open={isReceiptOpen} onOpenChange={(open) => { if (!open) setSelectedTransactionId(null); setIsReceiptOpen(open); }} transactionId={selectedTransactionId} />
+        <SalesConfirmationDialog open={isConfirmationOpen} onOpenChange={setIsConfirmationOpen} saleItems={consolidatedItems} onConfirm={handleFormSubmit} isSaving={isLoading} />
         </TooltipProvider>
     )
 }

@@ -655,6 +655,66 @@ app.delete('/api/attributes/:attributeId/values/:valueId', (req, res) => {
     }
 });
 
+// --- TRANSACTION ANNULMENT API ---
+app.delete('/api/sales/:transactionId', async (req, res) => {
+    const { transactionId } = req.params;
+    const db = databaseManager.getActiveDb();
+    const run = util.promisify(db.run.bind(db));
+    const all = util.promisify(db.all.bind(db));
+
+    try {
+        await run('BEGIN TRANSACTION');
+        const movements = await all(`SELECT * FROM inventory_movements WHERE transaction_id = ? AND status = 'Activo' AND type = 'SALIDA'`, [transactionId]);
+        if (movements.length === 0) throw new Error('No se encontraron movimientos de venta activos para anular.');
+
+        for (const move of movements) {
+            await run('UPDATE product_variants SET current_stock = current_stock + ? WHERE id = ?', [move.quantity, move.variant_id]);
+        }
+        await run("UPDATE inventory_movements SET status = 'Anulado' WHERE transaction_id = ? AND status = 'Activo'", [transactionId]);
+        
+        await run('COMMIT');
+        res.status(200).json({ message: 'Venta anulada correctamente.' });
+    } catch (err) {
+        await run('ROLLBACK');
+        res.status(500).json({ error: `Error en la anulación: ${err.message}` });
+    }
+});
+
+app.delete('/api/purchases/:transactionId', async (req, res) => {
+    const { transactionId } = req.params;
+    const db = databaseManager.getActiveDb();
+    const run = util.promisify(db.run.bind(db));
+    const all = util.promisify(db.all.bind(db));
+    const get = util.promisify(db.get.bind(db));
+
+    try {
+        await run('BEGIN TRANSACTION');
+        const movements = await all(`SELECT * FROM inventory_movements WHERE transaction_id = ? AND status = 'Activo' AND type = 'ENTRADA'`, [transactionId]);
+        if (movements.length === 0) throw new Error('No se encontraron movimientos de compra activos para anular.');
+
+        for (const move of movements) {
+            const variant = await get('SELECT current_stock, cost_price FROM product_variants WHERE id = ?', [move.variant_id]);
+            if (!variant) throw new Error(`Variante ${move.variant_id} no encontrada.`);
+
+            const stock_before = variant.current_stock - move.quantity;
+            let cost_before = 0;
+            if (stock_before > 0) {
+                const total_value_current = variant.current_stock * variant.cost_price;
+                const entry_value = move.quantity * move.unit_cost;
+                cost_before = (total_value_current - entry_value) / stock_before;
+            }
+            await run('UPDATE product_variants SET current_stock = ?, cost_price = ? WHERE id = ?', [stock_before, cost_before, move.variant_id]);
+        }
+        await run("UPDATE inventory_movements SET status = 'Anulado' WHERE transaction_id = ? AND status = 'Activo'", [transactionId]);
+
+        await run('COMMIT');
+        res.status(200).json({ message: 'Compra anulada correctamente.' });
+    } catch (err) {
+        await run('ROLLBACK');
+        res.status(500).json({ error: `Error en la anulación: ${err.message}` });
+    }
+});
+
 
 app.get('/api/products/:id/movements', async (req, res) => {
   const { id } = req.params;
@@ -933,9 +993,8 @@ app.post('/api/purchases', async (req, res) => {
 
 app.put('/api/purchases', async (req, res) => {
     const { transaction_id, purchaseData } = req.body;
-
     if (!transaction_id || !purchaseData || !purchaseData.items) {
-        return res.status(400).json({ error: 'Faltan datos para la edición: transaction_id y purchaseData son requeridos.' });
+        return res.status(400).json({ error: 'Faltan datos para la edición.' });
     }
 
     const db = databaseManager.getActiveDb();
@@ -946,66 +1005,51 @@ app.put('/api/purchases', async (req, res) => {
     try {
         await run('BEGIN TRANSACTION');
 
-        // 1. ANULACIÓN: Revertir los movimientos originales usando el transaction_id
-        const originalMovements = await all(
-            `SELECT * FROM inventory_movements WHERE transaction_id = ? AND status = 'Activo'`,
-            [transaction_id]
-        );
-
-        if (originalMovements.length === 0) {
-            throw new Error('No se encontraron movimientos activos para la transacción a editar.');
-        }
+        const originalMovements = await all(`SELECT * FROM inventory_movements WHERE transaction_id = ? AND status = 'Activo'`, [transaction_id]);
+        if (originalMovements.length === 0) throw new Error('No se encontraron movimientos de compra activos para editar.');
 
         for (const move of originalMovements) {
-            const product = await get('SELECT current_stock, average_cost FROM products WHERE id = ?', [move.product_id]);
-            if (!product) throw new Error(`Producto con ID ${move.product_id} no encontrado durante la anulación.`);
+            const variant = await get('SELECT current_stock, cost_price FROM product_variants WHERE id = ?', [move.variant_id]);
+            if (!variant) throw new Error(`Variante con ID ${move.variant_id} no encontrada.`);
 
-            const stock_before_entry = product.current_stock - move.quantity;
-            let avg_cost_before_entry = 0;
-
-            if (stock_before_entry > 0) {
-                const current_total_value = product.current_stock * product.average_cost;
+            const stock_before = variant.current_stock - move.quantity;
+            let cost_before = 0;
+            if (stock_before > 0) {
+                const total_value_current = variant.current_stock * variant.cost_price;
                 const entry_value = move.quantity * move.unit_cost;
-                avg_cost_before_entry = (current_total_value - entry_value) / stock_before_entry;
+                cost_before = (total_value_current - entry_value) / stock_before;
             }
-
-            await run('UPDATE products SET current_stock = ?, average_cost = ? WHERE id = ?', [stock_before_entry, avg_cost_before_entry, move.product_id]);
+            
+            await run('UPDATE product_variants SET current_stock = ?, cost_price = ? WHERE id = ?', [stock_before, cost_before, move.variant_id]);
             await run("UPDATE inventory_movements SET status = 'Reemplazado' WHERE id = ?", [move.id]);
         }
 
-        // 2. RE-CREACIÓN: Crear los nuevos movimientos con el mismo transaction_id
         const { transaction_date, entity_name, entity_document, document_number, items } = purchaseData;
 
         for (const item of items) {
-            const product = await get('SELECT current_stock, average_cost FROM products WHERE id = ?', [item.productId]);
-            if (!product) throw new Error(`Producto con ID ${item.productId} no encontrado durante la re-creación.`);
+            const variant = await get('SELECT current_stock, cost_price FROM product_variants WHERE id = ?', [item.variantId]);
+            if (!variant) throw new Error(`Variante con ID ${item.variantId} no encontrada.`);
 
-            const new_stock = product.current_stock + item.quantity;
-            const current_total_value = product.current_stock * product.average_cost;
+            const new_stock = variant.current_stock + item.quantity;
+            const current_total_value = variant.current_stock * variant.cost_price;
             const entry_value = item.quantity * item.unitCost;
             const new_avg_cost = new_stock > 0 ? (current_total_value + entry_value) / new_stock : 0;
 
             await run(
-                `INSERT INTO inventory_movements 
-                (product_id, transaction_id, transaction_date, entity_name, entity_document, document_number, type, quantity, unit_cost, description, status) 
-                VALUES (?, ?, ?, ?, ?, ?, 'ENTRADA', ?, ?, ?, 'Activo')`,
-                [item.productId, transaction_id, transaction_date, entity_name, entity_document, document_number, item.quantity, item.unitCost, item.description]
+                `INSERT INTO inventory_movements (variant_id, transaction_id, transaction_date, entity_name, entity_document, document_number, type, quantity, unit_cost, status) 
+                VALUES (?, ?, ?, ?, ?, ?, 'ENTRADA', ?, ?, 'Activo')`,
+                [item.variantId, transaction_id, transaction_date, entity_name, entity_document, document_number, item.quantity, item.unitCost]
             );
-            await run('UPDATE products SET current_stock = ?, average_cost = ? WHERE id = ?', [new_stock, new_avg_cost, item.productId]);
+            await run('UPDATE product_variants SET current_stock = ?, cost_price = ? WHERE id = ?', [new_stock, new_avg_cost, item.variantId]);
         }
 
         await run('COMMIT');
         res.status(200).json({ message: 'Compra actualizada exitosamente' });
 
     } catch (err) {
-        console.error('Error durante la transacción de edición:', err.message);
-        try {
-            await run('ROLLBACK');
-            res.status(500).json({ error: `Error en la transacción: ${err.message}` });
-        } catch (rollbackErr) {
-            console.error('Fatal: No se pudo revertir la transacción', rollbackErr);
-            res.status(500).json({ error: 'Error fatal en la base de datos durante el rollback.' });
-        }
+        console.error('Error durante la edición de compra:', err.message);
+        await run('ROLLBACK');
+        res.status(500).json({ error: `Error en la transacción: ${err.message}` });
     }
 });
 
@@ -1070,24 +1114,31 @@ app.get('/api/purchases', async (req, res) => {
         const db = databaseManager.getActiveDb();
         const dbAll = util.promisify(db.all.bind(db));
         const query = `
-        SELECT 
-            im.id as movementId,
-            p.id as productId,
-            im.transaction_id,
-            im.transaction_date,
-            im.entity_name,
-            im.entity_document,
-            im.document_number,
-            im.status,
-            im.created_at,
-            p.name as productName,
-            im.quantity,
-            im.unit_cost
-        FROM inventory_movements im
-        JOIN products p ON im.product_id = p.id
-        WHERE im.type = 'ENTRADA'
-        ORDER BY im.transaction_date DESC, im.transaction_id;
-    `;
+            SELECT 
+                im.transaction_id,
+                im.transaction_date,
+                im.entity_name,
+                im.entity_document,
+                im.document_number,
+                im.status,
+                im.created_at,
+                p.name as productName,
+                pv.sku,
+                im.quantity,
+                im.unit_cost,
+                im.variant_id as variantId,
+                (
+                    SELECT GROUP_CONCAT(av.value, ' / ')
+                    FROM variant_attribute_values vav
+                    JOIN attribute_values av ON vav.attribute_value_id = av.id
+                    WHERE vav.variant_id = im.variant_id
+                ) as variantName
+            FROM inventory_movements im
+            JOIN product_variants pv ON im.variant_id = pv.id
+            JOIN products p ON pv.product_id = p.id
+            WHERE im.type = 'ENTRADA'
+            ORDER BY im.transaction_date DESC, im.transaction_id;
+        `;
         const rows = await dbAll(query, []);
         
         const grouped = rows.reduce((acc, row) => {
@@ -1098,43 +1149,33 @@ app.get('/api/purchases', async (req, res) => {
                     entity_name: row.entity_name,
                     entity_document: row.entity_document,
                     document_number: row.document_number,
-                    status: 'Unknown', // Se determinará después
+                    status: 'Unknown',
                     total_cost: 0,
                     movements: [],
                 };
             }
-            // Mapear explícitamente para asegurar la estructura del objeto
             const movement = {
-                movementId: row.movementId,
-                productId: row.productId,
+                variantId: row.variantId,
                 productName: row.productName,
+                variantName: row.variantName || 'Estándar',
+                sku: row.sku,
                 quantity: row.quantity,
                 unit_cost: row.unit_cost,
                 status: row.status,
-                created_at: row.created_at
             };
             acc[row.transaction_id].movements.push(movement);
             return acc;
         }, {});
 
-        // Post-procesamiento para determinar el estado final y filtrar los movimientos
         Object.values(grouped).forEach(transaction => {
             const active = transaction.movements.filter(m => m.status === 'Activo');
-            const annulled = transaction.movements.filter(m => m.status === 'Anulado');
-
             if (active.length > 0) {
                 transaction.status = 'Activo';
                 transaction.movements = active;
-            } else if (annulled.length > 0) {
+            } else {
+                // Simplified logic for now
                 transaction.status = 'Anulado';
-                transaction.movements = annulled;
-            } else { // Solo quedan 'Reemplazado'
-                transaction.status = 'Reemplazado';
-                const lastDate = transaction.movements.reduce((max, m) => (m.created_at > max ? m.created_at : max), '');
-                transaction.movements = transaction.movements.filter(m => m.created_at === lastDate);
             }
-
-            // Recalcular el total basado solo en los movimientos filtrados
             transaction.total_cost = transaction.movements.reduce((sum, m) => sum + (m.quantity * m.unit_cost), 0);
         });
 
@@ -1155,17 +1196,10 @@ app.get('/api/purchases/details', async (req, res) => {
         const dbAll = util.promisify(db.all.bind(db));
         const sql = `
             SELECT
-                im.variant_id as variantId,
-                p.name as productName,
-                pv.sku,
-                im.quantity,
-                im.unit_cost as unitCost,
-                im.transaction_date,
-                im.entity_name,
-                im.entity_document,
-                im.document_number,
-                im.status,
-                im.created_at,
+                im.variant_id as variantId, p.name as productName, pv.sku,
+                im.quantity, im.unit_cost as unitCost, im.transaction_date,
+                im.entity_name, im.entity_document, im.document_number,
+                im.status, im.created_at,
                 (
                     SELECT GROUP_CONCAT(av.value, ' / ')
                     FROM variant_attribute_values vav
@@ -1180,34 +1214,30 @@ app.get('/api/purchases/details', async (req, res) => {
         const allItems = await dbAll(sql, [transactionId]);
         if (allItems.length === 0) return res.status(404).json({ error: 'Compra no encontrada' });
 
-        // Lógica para mostrar los items correctos (activos, anulados o reemplazados)
         let itemsToShow = allItems.filter(item => item.status === 'Activo');
+        
         if (itemsToShow.length === 0) {
+            // Si no hay activos, es porque fue anulada o editada. Priorizamos mostrar los anulados.
             itemsToShow = allItems.filter(item => item.status === 'Anulado');
         }
+        
         if (itemsToShow.length === 0) {
+            // Si tampoco hay anulados, significa que solo fue editada. Mostramos la última versión.
             const lastDate = allItems.reduce((max, i) => (i.created_at > max ? i.created_at : max), '');
             itemsToShow = allItems.filter(item => item.created_at === lastDate);
         }
 
-        if (itemsToShow.length === 0) {
-            return res.status(404).json({ error: 'No se encontraron items para esta transacción.' });
-        }
+        if (itemsToShow.length === 0) return res.status(404).json({ error: 'No se encontraron items válidos para esta transacción.' });
 
         const firstItem = itemsToShow[0];
-        
         const purchasePayload = {
             transaction_date: firstItem.transaction_date,
             entity_name: firstItem.entity_name,
             entity_document: firstItem.entity_document,
             document_number: firstItem.document_number,
             items: itemsToShow.map(i => ({
-                variantId: i.variantId,
-                productName: i.productName,
-                variantName: i.variantName || 'Estándar',
-                sku: i.sku,
-                quantity: i.quantity,
-                unitCost: i.unitCost,
+                variantId: i.variantId, productName: i.productName, variantName: i.variantName || 'Estándar',
+                sku: i.sku, quantity: i.quantity, unitCost: i.unitCost,
             }))
         };
 
@@ -1223,24 +1253,31 @@ app.get('/api/sales', async (req, res) => {
         const db = databaseManager.getActiveDb();
         const dbAll = util.promisify(db.all.bind(db));
         const query = `
-        SELECT 
-            im.id as movementId,
-            p.id as productId,
-            im.transaction_id,
-            im.transaction_date,
-            im.entity_name,
-            im.entity_document,
-            im.document_number,
-            im.status,
-            im.created_at,
-            p.name as productName,
-            im.quantity,
-            im.price as unit_price
-        FROM inventory_movements im
-        JOIN products p ON im.product_id = p.id
-        WHERE im.type = 'SALIDA'
-        ORDER BY im.transaction_date DESC, im.transaction_id;
-    `;
+            SELECT 
+                im.transaction_id,
+                im.transaction_date,
+                im.entity_name,
+                im.entity_document,
+                im.document_number,
+                im.status,
+                im.created_at,
+                p.name as productName,
+                pv.sku,
+                im.quantity,
+                im.price as unit_price,
+                im.variant_id as variantId,
+                (
+                    SELECT GROUP_CONCAT(av.value, ' / ')
+                    FROM variant_attribute_values vav
+                    JOIN attribute_values av ON vav.attribute_value_id = av.id
+                    WHERE vav.variant_id = im.variant_id
+                ) as variantName
+            FROM inventory_movements im
+            JOIN product_variants pv ON im.variant_id = pv.id
+            JOIN products p ON pv.product_id = p.id
+            WHERE im.type = 'SALIDA'
+            ORDER BY im.transaction_date DESC, im.transaction_id;
+        `;
         const rows = await dbAll(query, []);
         
         const grouped = rows.reduce((acc, row) => {
@@ -1257,13 +1294,13 @@ app.get('/api/sales', async (req, res) => {
                 };
             }
             const movement = {
-                movementId: row.movementId,
-                productId: row.productId,
+                variantId: row.variantId,
                 productName: row.productName,
+                variantName: row.variantName || 'Estándar',
+                sku: row.sku,
                 quantity: row.quantity,
                 unit_price: row.unit_price,
                 status: row.status,
-                created_at: row.created_at
             };
             acc[row.transaction_id].movements.push(movement);
             return acc;
@@ -1271,18 +1308,11 @@ app.get('/api/sales', async (req, res) => {
 
         Object.values(grouped).forEach(transaction => {
             const active = transaction.movements.filter(m => m.status === 'Activo');
-            const annulled = transaction.movements.filter(m => m.status === 'Anulado');
-
             if (active.length > 0) {
                 transaction.status = 'Activo';
                 transaction.movements = active;
-            } else if (annulled.length > 0) {
-                transaction.status = 'Anulado';
-                transaction.movements = annulled;
             } else {
-                const lastDate = transaction.movements.reduce((max, m) => (m.created_at > max ? m.created_at : max), '');
-                transaction.movements = transaction.movements.filter(m => m.created_at === lastDate);
-                transaction.status = 'Reemplazado';
+                transaction.status = 'Anulado';
             }
             transaction.total = transaction.movements.reduce((sum, m) => sum + (m.quantity * m.unit_price), 0);
         });
@@ -1304,17 +1334,10 @@ app.get('/api/sales/details', async (req, res) => {
         const dbAll = util.promisify(db.all.bind(db));
         const sql = `
             SELECT
-                im.variant_id as variantId,
-                p.name as productName,
-                pv.sku,
-                im.quantity,
-                im.price as unitPrice,
-                im.transaction_date,
-                im.entity_name,
-                im.entity_document,
-                im.document_number,
-                im.status,
-                im.created_at,
+                im.variant_id as variantId, p.name as productName, pv.sku,
+                im.quantity, im.price as unitPrice, im.transaction_date,
+                im.entity_name, im.entity_document, im.document_number,
+                im.status, im.created_at,
                 (
                     SELECT GROUP_CONCAT(av.value, ' / ')
                     FROM variant_attribute_values vav
@@ -1330,32 +1353,27 @@ app.get('/api/sales/details', async (req, res) => {
         if (allItems.length === 0) return res.status(404).json({ error: 'Venta no encontrada' });
 
         let itemsToShow = allItems.filter(item => item.status === 'Activo');
+        
         if (itemsToShow.length === 0) {
             itemsToShow = allItems.filter(item => item.status === 'Anulado');
         }
+        
         if (itemsToShow.length === 0) {
             const lastDate = allItems.reduce((max, i) => (i.created_at > max ? i.created_at : max), '');
             itemsToShow = allItems.filter(item => item.created_at === lastDate);
         }
 
-        if (itemsToShow.length === 0) {
-            return res.status(404).json({ error: 'No se encontraron items para esta transacción.' });
-        }
+        if (itemsToShow.length === 0) return res.status(404).json({ error: 'No se encontraron items válidos para esta transacción.' });
 
         const firstItem = itemsToShow[0];
-        
         const salePayload = {
             transaction_date: firstItem.transaction_date,
             entity_name: firstItem.entity_name,
             entity_document: firstItem.entity_document,
             document_number: firstItem.document_number,
             items: itemsToShow.map(i => ({
-                variantId: i.variantId,
-                productName: i.productName,
-                variantName: i.variantName || 'Estándar',
-                sku: i.sku,
-                quantity: i.quantity,
-                unitPrice: i.unitPrice,
+                variantId: i.variantId, productName: i.productName, variantName: i.variantName || 'Estándar',
+                sku: i.sku, quantity: i.quantity, unitPrice: i.unitPrice,
             }))
         };
 
@@ -1444,9 +1462,8 @@ app.post('/api/sales', async (req, res) => {
 
 app.put('/api/sales', async (req, res) => {
     const { transaction_id, saleData } = req.body;
-
     if (!transaction_id || !saleData || !saleData.items) {
-        return res.status(400).json({ error: 'Faltan datos para la edición: transaction_id y saleData son requeridos.' });
+        return res.status(400).json({ error: 'Faltan datos para la edición.' });
     }
 
     const db = databaseManager.getActiveDb();
@@ -1457,58 +1474,34 @@ app.put('/api/sales', async (req, res) => {
     try {
         await run('BEGIN TRANSACTION');
 
-        // --- Obtener configuración de la tienda ---
-        const activeStoreId = databaseManager.getStoresConfig().activeStoreId;
-        const settingsPath = path.join(dataDir, `database_${activeStoreId}_settings.json`);
-        let settings = { advanced: {} }; // Default settings
-        if (fs.existsSync(settingsPath)) {
-            settings = { ...settings, ...JSON.parse(fs.readFileSync(settingsPath, 'utf8')) };
-        }
-        // --- Fin de obtener configuración ---
-
-        // 1. ANULACIÓN: Revertir el stock de los movimientos originales
         const originalMovements = await all(`SELECT * FROM inventory_movements WHERE transaction_id = ? AND status = 'Activo'`, [transaction_id]);
-
-        if (originalMovements.length === 0) {
-            throw new Error('No se encontraron movimientos de venta activos para editar.');
-        }
+        if (originalMovements.length === 0) throw new Error('No se encontraron movimientos de venta activos para editar.');
 
         for (const move of originalMovements) {
-            await run('UPDATE products SET current_stock = current_stock + ? WHERE id = ?', [move.quantity, move.product_id]);
+            await run('UPDATE product_variants SET current_stock = current_stock + ? WHERE id = ?', [move.quantity, move.variant_id]);
             await run("UPDATE inventory_movements SET status = 'Reemplazado' WHERE id = ?", [move.id]);
         }
 
-        // 2. RE-CREACIÓN: Crear los nuevos movimientos con el mismo transaction_id
         const { transaction_date, entity_document, document_number, items } = saleData;
         const entity_name = saleData.entity_name || 'Cliente General';
 
         for (const item of items) {
-            const product = await get('SELECT current_stock, average_cost FROM products WHERE id = ?', [item.productId]);
-            if (!product) throw new Error(`Producto con ID ${item.productId} no encontrado.`);
+            const variant = await get('SELECT current_stock, cost_price FROM product_variants WHERE id = ?', [item.variantId]);
+            if (!variant) throw new Error(`Variante con ID ${item.variantId} no encontrada.`);
             
-            // --- Validaciones Condicionales ---
-            if (!settings.advanced?.allowNegativeStock && product.current_stock < item.quantity) {
-                throw new Error(`Stock insuficiente para el producto ID ${item.productId}.`);
-            }
-            if (!settings.advanced?.allowSellBelowCost && item.unitPrice < product.average_cost) {
-                throw new Error(`El precio de venta del producto ID ${item.productId} (${item.unitPrice}) no puede ser inferior a su costo (${product.average_cost}).`);
-            }
-            // --- Fin de Validaciones ---
-
             await run(
-                `INSERT INTO inventory_movements 
-                (product_id, transaction_id, transaction_date, entity_name, entity_document, document_number, type, quantity, unit_cost, price, description, status) 
-                VALUES (?, ?, ?, ?, ?, ?, 'SALIDA', ?, ?, ?, ?, 'Activo')`,
-                [item.productId, transaction_id, transaction_date, entity_name, entity_document, document_number, item.quantity, product.average_cost, item.unitPrice, item.description]
+                `INSERT INTO inventory_movements (variant_id, transaction_id, transaction_date, entity_name, entity_document, document_number, type, quantity, unit_cost, price, status) 
+                VALUES (?, ?, ?, ?, ?, ?, 'SALIDA', ?, ?, ?, 'Activo')`,
+                [item.variantId, transaction_id, transaction_date, entity_name, entity_document, document_number, item.quantity, variant.cost_price, item.unitPrice]
             );
-            await run('UPDATE products SET current_stock = current_stock - ? WHERE id = ?', [item.quantity, item.productId]);
+            await run('UPDATE product_variants SET current_stock = current_stock - ? WHERE id = ?', [item.quantity, item.variantId]);
         }
 
         await run('COMMIT');
         res.status(200).json({ message: 'Venta actualizada exitosamente' });
 
     } catch (err) {
-        console.error('Error durante la transacción de edición de venta:', err.message);
+        console.error('Error durante la edición de venta:', err.message);
         await run('ROLLBACK');
         res.status(500).json({ error: `Error en la transacción: ${err.message}` });
     }
@@ -1884,47 +1877,30 @@ app.get('/api/reports', async (req, res) => {
 
 app.get('/api/dashboard/summary', async (req, res) => {
     try {
-        const config = databaseManager.getStoresConfig();
-        if (!config.activeStoreId) {
-            // Si no hay tienda activa, devolver valores por defecto.
-            return res.json({
-                totalRevenue: { value: 0, change: 0 },
-                sales: { value: 0, change: 0 },
-                totalProducts: { value: 0, change: 0 },
-                newCustomers: { value: 0, change: 0 }
-            });
-        }
         const db = databaseManager.getActiveDb();
         const get = util.promisify(db.get.bind(db));
 
         const now = new Date();
-        const thirtyDaysAgo = formatISO(subDays(now, 30));
-        const sixtyDaysAgo = formatISO(subDays(now, 60));
+        const thirtyDaysAgo = formatISO(subDays(now, 30), { representation: 'date' });
+        const sixtyDaysAgo = formatISO(subDays(now, 60), { representation: 'date' });
 
         const salesQuery = `
             SELECT
-                SUM(CASE WHEN transaction_date >= ? THEN quantity * price ELSE 0 END) as currentRevenue,
-                COUNT(CASE WHEN transaction_date >= ? THEN 1 ELSE NULL END) as currentSalesCount,
-                SUM(CASE WHEN transaction_date >= ? AND transaction_date < ? THEN quantity * price ELSE 0 END) as previousRevenue,
-                COUNT(CASE WHEN transaction_date >= ? AND transaction_date < ? THEN 1 ELSE NULL END) as previousSalesCount
+                SUM(CASE WHEN date(transaction_date) >= ? THEN quantity * price ELSE 0 END) as currentRevenue,
+                COUNT(DISTINCT CASE WHEN date(transaction_date) >= ? THEN transaction_id ELSE NULL END) as currentSalesCount,
+                SUM(CASE WHEN date(transaction_date) >= ? AND date(transaction_date) < ? THEN quantity * price ELSE 0 END) as previousRevenue,
+                COUNT(DISTINCT CASE WHEN date(transaction_date) >= ? AND date(transaction_date) < ? THEN transaction_id ELSE NULL END) as previousSalesCount
             FROM inventory_movements
-            WHERE type = 'SALIDA' AND status = 'Activo' AND transaction_date >= ?
+            WHERE type = 'SALIDA' AND status = 'Activo' AND date(transaction_date) >= ?
         `;
-
-        const productQuery = `
-            SELECT
-                COUNT(*) as totalProducts
-            FROM products
-            WHERE status = 'Activo'
-        `;
-
+        
+        const productQuery = `SELECT COUNT(*) as totalProducts FROM products WHERE status = 'Activo'`;
+        
         const salesData = await get(salesQuery, [thirtyDaysAgo, thirtyDaysAgo, sixtyDaysAgo, thirtyDaysAgo, sixtyDaysAgo, thirtyDaysAgo, sixtyDaysAgo]);
         const productData = await get(productQuery);
 
         const calculateChange = (current, previous) => {
-            if (previous === 0) {
-                return current > 0 ? 100.0 : 0.0;
-            }
+            if (previous === 0) return current > 0 ? 100.0 : 0.0;
             return ((current - previous) / previous) * 100;
         };
 
@@ -1939,12 +1915,9 @@ app.get('/api/dashboard/summary', async (req, res) => {
             },
             totalProducts: {
                 value: productData.totalProducts || 0,
-                change: 0 // Not implemented yet
-            },
-            newCustomers: {
-                value: 0, // Not implemented yet
                 change: 0
-            }
+            },
+            newCustomers: { value: 0, change: 0 } // Placeholder
         };
 
         res.json(summary);
@@ -1958,30 +1931,36 @@ app.get('/api/dashboard/summary', async (req, res) => {
 
 app.get('/api/dashboard/recent-sales', async (req, res) => {
     try {
-        const config = databaseManager.getStoresConfig();
-        if (!config.activeStoreId) {
-            return res.json([]); // Si no hay tienda, devolver un array vacío
-        }
         const db = databaseManager.getActiveDb();
         const dbAll = util.promisify(db.all.bind(db));
         const sql = `
-        SELECT
-            transaction_id as id,
-            SUM(im.quantity * im.price) as amount,
-            MAX(im.transaction_date) as date,
-            entity_name as customerName
-        FROM inventory_movements im
-        WHERE im.type = 'SALIDA' AND im.status = 'Activo'
-        GROUP BY transaction_id
-        ORDER BY date DESC
-        LIMIT 5
-    `;
+            SELECT
+                im.transaction_id as id,
+                SUM(im.quantity * im.price) as amount,
+                MAX(im.transaction_date) as date,
+                im.entity_name as customerName,
+                p.name as productName,
+                (
+                    SELECT GROUP_CONCAT(av.value, ' / ')
+                    FROM variant_attribute_values vav
+                    JOIN attribute_values av ON vav.attribute_value_id = av.id
+                    WHERE vav.variant_id = im.variant_id
+                ) as variantName
+            FROM inventory_movements im
+            JOIN product_variants pv ON im.variant_id = pv.id
+            JOIN products p ON pv.product_id = p.id
+            WHERE im.type = 'SALIDA' AND im.status = 'Activo'
+            GROUP BY im.transaction_id
+            ORDER BY date DESC
+            LIMIT 5
+        `;
         const rows = await dbAll(sql, []);
 
         const salesData = rows.map(row => ({
             id: row.id,
             customerName: row.customerName || 'Venta de mostrador',
-            customerEmail: '',
+            // Combinamos el nombre del producto y la variante para mayor claridad
+            productName: row.variantName ? `${row.productName} (${row.variantName})` : row.productName,
             status: 'Completado',
             date: row.date,
             amount: row.amount || 0

@@ -1,33 +1,18 @@
-"use client";
+'use client';
 
-import * as React from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
-import { annulSale, getSalesHistory } from "@/lib/api";
-import { SalesHistoryMovement, GroupedSale } from "@/lib/types";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { FileText, Pencil, Search, XCircle } from "lucide-react";
-import { toastSuccess } from "@/hooks/use-toast";
+import * as React from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { getSalesHistory, annulSale } from '@/lib/api';
+import { GroupedSale } from '@/lib/types';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { Eye, Edit, Trash2 } from 'lucide-react';
+import { toastSuccess } from '@/hooks/use-toast';
 
 interface SalesHistoryDialogProps {
   open: boolean;
@@ -40,134 +25,78 @@ interface SalesHistoryDialogProps {
 export function SalesHistoryDialog({ open, onOpenChange, onViewReceipt, onEditSale, refetchKey }: SalesHistoryDialogProps) {
   const [history, setHistory] = React.useState<GroupedSale[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
-  const [searchQuery, setSearchQuery] = React.useState("");
 
-  const fetchHistory = React.useCallback(() => {
+  const fetchHistory = React.useCallback(async () => {
     setIsLoading(true);
-    getSalesHistory()
-      .then(groupedSales => {
-          setHistory(groupedSales);
-      })
-      .catch(() => {})
-      .finally(() => setIsLoading(false));
+    try {
+      const data = await getSalesHistory();
+      setHistory(data);
+    } catch (error) {
+      // handled in api layer
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
   React.useEffect(() => {
     if (open) {
       fetchHistory();
     }
-  }, [open, fetchHistory, refetchKey]);
+  }, [open, refetchKey, fetchHistory]);
 
-  const handleAnnul = async (sale: GroupedSale) => {
-    if (!window.confirm("¿Estás seguro de que quieres anular esta venta? El stock de los productos se restaurará.")) return;
-
+  const handleAnnul = async (transactionId: string) => {
     try {
-        await annulSale({ transaction_id: sale.transaction_id });
-        toastSuccess("Venta Anulada", "La venta ha sido anulada correctamente.");
-        fetchHistory(); // Refresh list
-    } catch (error) {}
+      await annulSale(transactionId);
+      toastSuccess("Venta Anulada", "La venta ha sido anulada y el stock revertido.");
+      fetchHistory(); // Refresh the list
+    } catch (error) {
+      // Error toast is handled by the API layer
+    }
   };
-
-  const filteredHistory = history.filter(s => {
-      const query = searchQuery.toLowerCase();
-      const entityName = s.entity_name || "";
-      const documentNumber = s.document_number || "";
-      return entityName.toLowerCase().includes(query) || documentNumber.toLowerCase().includes(query);
-  });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl">
         <DialogHeader>
           <DialogTitle>Historial de Ventas</DialogTitle>
-          <DialogDescription>
-            Aquí puedes ver, editar y anular las ventas registradas.
-          </DialogDescription>
+          <DialogDescription>Consulta, edita o anula tus ventas pasadas.</DialogDescription>
         </DialogHeader>
-        <div className="relative">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-                placeholder="Buscar por cliente o factura..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8"
-            />
-        </div>
-        <ScrollArea className="h-[60vh] pr-6">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Estado</TableHead>
-                <TableHead>Fecha</TableHead>
-                <TableHead>Cliente</TableHead>
-                <TableHead>Factura Nº</TableHead>
-                <TableHead className="text-right">Total</TableHead>
-                <TableHead className="text-center">Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                Array.from({ length: 5 }).map((_, i) => (
-                    <TableRow key={i}>
-                        <TableCell colSpan={6}><Skeleton className="h-8 w-full" /></TableCell>
-                    </TableRow>
-                ))
-              ) : filteredHistory.length > 0 ? (
-                filteredHistory.map((sale) => {
-                  const isAnnulled = sale.status === 'Anulado';
-                  return (
-                    <TableRow key={sale.transaction_id} className={isAnnulled ? "opacity-50" : ""}>
-                      <TableCell>
-                        {isAnnulled && <Badge variant="destructive">Anulada</Badge>}
-                      </TableCell>
-                      <TableCell className={isAnnulled ? "line-through" : ""}>
-                        {format(new Date(sale.transaction_date), "dd/MM/yyyy HH:mm", { locale: es })}
-                      </TableCell>
-                      <TableCell className={isAnnulled ? "line-through" : ""}>{sale.entity_name}</TableCell>
-                      <TableCell className={isAnnulled ? "line-through" : ""}>{sale.document_number}</TableCell>
-                      <TableCell className={`text-right ${isAnnulled ? "line-through" : ""}`}>${sale.total.toFixed(2)}</TableCell>
-                      <TableCell className="text-center">
-                        <TooltipProvider>
-                          <div className="flex justify-center items-center space-x-1">
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button variant="ghost" size="icon" onClick={() => onViewReceipt(sale)}>
-                                  <FileText className="h-4 w-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent><p>Ver Recibo</p></TooltipContent>
-                            </Tooltip>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button variant="ghost" size="icon" onClick={() => onEditSale(sale)} disabled={isAnnulled}>
-                                  <Pencil className="h-4 w-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent><p>Editar Venta</p></TooltipContent>
-                            </Tooltip>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button variant="ghost" size="icon" onClick={() => handleAnnul(sale)} disabled={isAnnulled} className="text-destructive hover:text-destructive">
-                                  <XCircle className="h-4 w-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent><p>Anular Venta</p></TooltipContent>
-                            </Tooltip>
-                          </div>
-                        </TooltipProvider>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center">
-                    No se encontraron ventas.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+        <ScrollArea className="h-[60vh] pr-4">
+          {isLoading ? (
+            <div className="space-y-2">
+              {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
+            </div>
+          ) : history.length > 0 ? (
+            <Accordion type="single" collapsible className="w-full">
+              {history.map((sale) => (
+                <AccordionItem value={sale.transaction_id} key={sale.transaction_id}>
+                  <AccordionTrigger className="hover:no-underline">
+                    <div className="flex justify-between w-full items-center">
+                      <div className="text-left">
+                        <p className="font-semibold">{sale.entity_name || 'Cliente General'}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {format(new Date(sale.transaction_date), 'PPP', { locale: es })} - {sale.document_number}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-4 pr-4">
+                        <Badge variant={sale.status === 'Activo' ? 'default' : 'destructive'}>{sale.status}</Badge>
+                        <span className="font-bold text-lg">${sale.total.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <div className="flex justify-end gap-2 pt-2">
+                        <Button variant="outline" size="sm" onClick={() => onViewReceipt(sale)}><Eye className="mr-2 h-4 w-4" />Ver Recibo</Button>
+                        <Button variant="secondary" size="sm" onClick={() => onEditSale(sale)} disabled={sale.status !== 'Activo'}><Edit className="mr-2 h-4 w-4" />Editar</Button>
+                        <Button variant="destructive" size="sm" onClick={() => handleAnnul(sale.transaction_id)} disabled={sale.status !== 'Activo'}><Trash2 className="mr-2 h-4 w-4" />Anular</Button>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          ) : (
+            <p className="text-center py-10">No se encontraron ventas en el historial.</p>
+          )}
         </ScrollArea>
       </DialogContent>
     </Dialog>

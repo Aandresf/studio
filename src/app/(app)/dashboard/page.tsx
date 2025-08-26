@@ -198,7 +198,7 @@ export default function Dashboard() {
                                     <TableRow key={sale.id} onClick={() => setSelectedTransactionId(sale.id)} className="cursor-pointer hover:bg-muted/50">
                                         <TableCell>
                                             <div className="font-medium">{sale.customerName}</div>
-                                            <div className="text-sm text-muted-foreground">{sale.customerEmail}</div>
+                                            <div className="text-sm text-muted-foreground">{sale.productName}</div>
                                         </TableCell>
                                         <TableCell><Badge variant={sale.status === 'Pending' ? 'secondary' : 'default'}>{sale.status}</Badge></TableCell>
                                         <TableCell>{new Date(sale.date).toLocaleDateString()}</TableCell>

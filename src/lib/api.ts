@@ -191,10 +191,9 @@ export const updatePurchase = (payload: { transaction_id: string, purchaseData: 
     });
 };
 
-export const annulPurchase = (payload: { transaction_id: string }): Promise<{ message: string }> => {
-    return fetchAPI('/purchases', {
+export const annulPurchase = (transactionId: string): Promise<{ message: string }> => {
+    return fetchAPI(`/purchases/${transactionId}`, {
         method: 'DELETE',
-        body: JSON.stringify(payload),
     });
 };
 
@@ -223,10 +222,9 @@ export const updateSale = (payload: { transaction_id: string, saleData: SalePayl
     });
 };
 
-export const annulSale = (payload: { transaction_id: string }): Promise<{ message: string }> => {
-    return fetchAPI('/sales', {
+export const annulSale = (transactionId: string): Promise<{ message: string }> => {
+    return fetchAPI(`/sales/${transactionId}`, {
         method: 'DELETE',
-        body: JSON.stringify(payload),
     });
 };
 

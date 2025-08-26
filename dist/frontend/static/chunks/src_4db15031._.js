@@ -1157,10 +1157,9 @@ const updatePurchase = (payload)=>{
         body: JSON.stringify(payload)
     });
 };
-const annulPurchase = (payload)=>{
-    return fetchAPI('/purchases', {
-        method: 'DELETE',
-        body: JSON.stringify(payload)
+const annulPurchase = (transactionId)=>{
+    return fetchAPI(`/purchases/${transactionId}`, {
+        method: 'DELETE'
     });
 };
 const getPurchaseDetails = (transactionId)=>{
@@ -1182,10 +1181,9 @@ const updateSale = (payload)=>{
         body: JSON.stringify(payload)
     });
 };
-const annulSale = (payload)=>{
-    return fetchAPI('/sales', {
-        method: 'DELETE',
-        body: JSON.stringify(payload)
+const annulSale = (transactionId)=>{
+    return fetchAPI(`/sales/${transactionId}`, {
+        method: 'DELETE'
     });
 };
 const getDashboardSummary = ()=>fetchAPI('/dashboard/summary');

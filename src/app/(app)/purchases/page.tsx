@@ -6,8 +6,8 @@ import { es } from 'date-fns/locale';
 import { Calendar as CalendarIcon, PlusCircle, Trash2, History, Loader2, ListRestart, Trash, XCircle } from 'lucide-react';
 
 import { useBackendStatus } from '@/app/(app)/layout';
-import { getProducts, createPurchase, getPendingTransactions, addPendingTransaction, removePendingTransaction } from '@/lib/api';
-import { Product, PurchasePayload, ProductVariant, TransactionItemPayload } from '@/lib/types';
+import { getProducts, createPurchase, getPendingTransactions, addPendingTransaction, removePendingTransaction, updatePurchase } from '@/lib/api';
+import { Product, PurchasePayload, ProductVariant, TransactionItemPayload, GroupedPurchase } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { toastSuccess, toastError } from '@/hooks/use-toast';
 
@@ -45,7 +45,7 @@ interface PendingPurchase {
     date: Date;
     supplier: string;
     supplierRif: string;
-    invoiceNumber: string;
+invoiceNumber: string;
     createdAt: Date;
 }
 
@@ -70,6 +70,7 @@ export default function PurchasesPage() {
     const [isConfirmationOpen, setIsConfirmationOpen] = React.useState(false);
     const [consolidatedItems, setConsolidatedItems] = React.useState<(TransactionItemPayload & { name: string })[]>([]);
     const [selectedTransactionId, setSelectedTransactionId] = React.useState<string | null>(null);
+    const [editingTransactionId, setEditingTransactionId] = React.useState<string | null>(null);
     const [isProductDialogOpen, setIsProductDialogOpen] = React.useState(false);
 
     const { isBackendReady, refetchKey, triggerRefetch } = useBackendStatus();
@@ -84,9 +85,7 @@ export default function PurchasesPage() {
             ]);
             setProducts(productsData);
             setPendingPurchases(pendingData.purchases || []);
-        } catch (error) {
-            // handled in api layer
-        } finally {
+        } catch (error) {} finally {
             setIsLoadingProducts(false);
         }
     }, [isBackendReady]);
@@ -109,6 +108,7 @@ export default function PurchasesPage() {
         setSupplierRif('');
         setInvoiceNumber('');
         setCart([]);
+        setEditingTransactionId(null);
     };
 
     const handleProductSelect = (productId: string) => {
@@ -128,7 +128,7 @@ export default function PurchasesPage() {
             variantName: variant.attribute_values?.map(v => v.value).join(' / ') || 'Estándar',
             quantity: variant.quantity,
             unitCost: variant.cost_price,
-            tax_rate: 16.00, // TODO: Get from product base or settings
+            tax_rate: 16.00,
             sku: variant.sku,
         }));
 
@@ -174,14 +174,21 @@ export default function PurchasesPage() {
         };
 
         try {
-            const response = await createPurchase(purchasePayload);
-            toastSuccess("Compra Registrada", "La compra se ha guardado exitosamente.");
-            setSelectedTransactionId(response.transaction_id);
+            let response;
+            if (editingTransactionId) {
+                response = await updatePurchase({ transaction_id: editingTransactionId, purchaseData: purchasePayload });
+                toastSuccess("Compra Actualizada", "La compra se ha modificado exitosamente.");
+                setSelectedTransactionId(editingTransactionId);
+            } else {
+                response = await createPurchase(purchasePayload);
+                toastSuccess("Compra Registrada", "La compra se ha guardado exitosamente.");
+                setSelectedTransactionId(response.transaction_id);
+            }
+            
             setIsReceiptOpen(true);
             triggerRefetch();
             resetForm();
         } catch (error) {
-            // API layer handles toast
         } finally {
             setIsLoading(false);
             setIsConfirmationOpen(false);
@@ -190,7 +197,7 @@ export default function PurchasesPage() {
     
     const handleProductSaved = (savedProduct: Product) => {
         triggerRefetch();
-        toastSuccess("Producto Creado", `El producto "${savedProduct.name}" ya está disponible para la compra.`);
+        toastSuccess("Producto Creado", `El producto "${savedProduct.name}" ya está disponible.`);
         setIsProductDialogOpen(false);
     };
 
@@ -201,12 +208,7 @@ export default function PurchasesPage() {
         }
         const newPendingPurchase: PendingPurchase = { 
             id: `pending-purchase-${Date.now()}`, 
-            cart, 
-            date, 
-            supplier, 
-            supplierRif, 
-            invoiceNumber, 
-            createdAt: new Date() 
+            cart, date, supplier, supplierRif, invoiceNumber, createdAt: new Date() 
         };
         
         try {
@@ -226,7 +228,7 @@ export default function PurchasesPage() {
         
         try {
             await removePendingTransaction(purchaseToRestore.id);
-            toastSuccess("Compra Restaurada", "La compra ha sido cargada en el formulario.");
+            toastSuccess("Compra Restaurada", "La compra ha sido cargada.");
             triggerRefetch();
         } catch (error) {}
     };
@@ -237,6 +239,36 @@ export default function PurchasesPage() {
             toastSuccess("Compra Descartada", "La compra en espera ha sido eliminada.");
             triggerRefetch();
         } catch (error) {}
+    };
+
+    const handleViewReceiptFromHistory = (purchase: GroupedPurchase) => {
+        setSelectedTransactionId(purchase.transaction_id);
+        setIsReceiptOpen(true);
+    };
+
+    const handleEditPurchase = (purchase: GroupedPurchase) => {
+        setDate(new Date(purchase.transaction_date));
+        setSupplier(purchase.entity_name);
+        setSupplierRif(purchase.entity_document);
+        setInvoiceNumber(purchase.document_number);
+        setEditingTransactionId(purchase.transaction_id);
+
+        const newCart: CartItem[] = purchase.movements.map(m => ({
+            id: `edit-${m.variantId}-${Math.random()}`,
+            variantId: m.variantId,
+            // @ts-ignore
+            productId: m.productId, 
+            productName: m.productName,
+            variantName: m.variantName,
+            quantity: m.quantity,
+            unitCost: m.unit_cost || 0,
+            tax_rate: 16.00, // TODO
+            sku: m.sku,
+            // @ts-ignore
+            availableStock: 0, // No es crucial para editar
+        }));
+        setCart(newCart);
+        setIsHistoryOpen(false);
     };
 
     const subtotal = cart.reduce((acc, item) => acc + item.quantity * item.unitCost, 0);
@@ -251,14 +283,16 @@ export default function PurchasesPage() {
             <div className="flex items-center justify-between">
                 <div className="flex-1">
                     <h1 className="font-semibold text-lg md:text-2xl">Compras</h1>
-                    <p className="text-sm text-muted-foreground">Registra nuevas órdenes de compra.</p>
+                    <p className="text-sm text-muted-foreground">{editingTransactionId ? `Editando compra a ${supplier}` : "Registra nuevas órdenes de compra."}</p>
                 </div>
-                <Button variant="outline" onClick={() => setIsHistoryOpen(true)}><History className="mr-2 h-4 w-4" />Historial</Button>
+                <Button variant="outline" onClick={() => setIsHistoryOpen(true)} disabled={editingTransactionId !== null}>
+                    <History className="mr-2 h-4 w-4" />Historial
+                </Button>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
                 <div className="lg:col-span-2 space-y-6">
                     <Card>
-                        <CardHeader><CardTitle>Nueva Orden de Compra</CardTitle></CardHeader>
+                        <CardHeader><CardTitle>{editingTransactionId ? "Editar Orden de Compra" : "Nueva Orden de Compra"}</CardTitle></CardHeader>
                         <CardContent className="space-y-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="grid gap-2"><Label htmlFor="supplier">Proveedor</Label><Input id="supplier" value={supplier} onChange={e => setSupplier(e.target.value)} placeholder="Nombre del proveedor" /></div>
@@ -271,7 +305,7 @@ export default function PurchasesPage() {
                                         options={productOptions} 
                                         value={""}
                                         onChange={handleProductSelect} 
-                                        placeholder={isLoadingProducts ? "Cargando..." : "Buscar producto por nombre..."} 
+                                        placeholder={isLoadingProducts ? "Cargando..." : "Buscar producto..."} 
                                         searchPlaceholder="Buscar..." 
                                         emptyMessage="No se encontraron productos." 
                                         disabled={isLoadingProducts}
@@ -282,42 +316,25 @@ export default function PurchasesPage() {
                                 </Button>
                             </div>
                             <div className="border rounded-md">
+                                
                                 <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Cantidad</TableHead>
-                                            <TableHead>Producto</TableHead>
-                                            <TableHead>Costo Unit.</TableHead>
-                                            <TableHead>Total</TableHead>
-                                            <TableHead></TableHead>
-                                        </TableRow>
-                                    </TableHeader>
+                                    <TableHeader><TableRow><TableHead>Producto</TableHead><TableHead>Cantidad</TableHead><TableHead>Costo Unit.</TableHead><TableHead>Total</TableHead><TableHead></TableHead></TableRow></TableHeader>
                                     <TableBody>
                                         {cart.length > 0 ? cart.map((item, index) => (
                                             <TableRow key={item.id}>
+                                                <TableCell><p className="font-medium">{item.productName}</p><p className="text-xs text-muted-foreground">{item.variantName} ({item.sku})</p></TableCell>
                                                 <TableCell>{item.quantity}</TableCell>
-                                                <TableCell>
-                                                    <p className="font-medium">{item.productName}</p>
-                                                    <p className="text-xs text-muted-foreground">{item.variantName} ({item.sku})</p>
-                                                </TableCell>
                                                 <TableCell>${item.unitCost.toFixed(2)}</TableCell>
                                                 <TableCell>${(item.quantity * item.unitCost).toFixed(2)}</TableCell>
-                                                <TableCell>
-                                                    <Button variant="ghost" size="icon" onClick={() => removeCartItem(index)}>
-                                                        <Trash2 className="h-4 w-4 text-destructive"/>
-                                                    </Button>
-                                                </TableCell>
+                                                <TableCell><Button variant="ghost" size="icon" onClick={() => removeCartItem(index)}><Trash2 className="h-4 w-4 text-destructive"/></Button></TableCell>
                                             </TableRow>
-                                        )) : (
-                                            <TableRow><TableCell colSpan={5} className="text-center h-24">Añade productos a la compra.</TableCell></TableRow>
-                                        )}
+                                        )) : (<TableRow><TableCell colSpan={5} className="text-center h-24">Añade productos a la compra.</TableCell></TableRow>)}
                                     </TableBody>
                                 </Table>
                             </div>
                         </CardContent>
                     </Card>
                 </div>
-
                 <div className="space-y-6">
                     <Card>
                         <CardHeader><CardTitle>Configuración</CardTitle></CardHeader>
@@ -326,7 +343,6 @@ export default function PurchasesPage() {
                             <div className="grid gap-2"><Label htmlFor="invoiceNumber">Nº de Factura</Label><Input id="invoiceNumber" value={invoiceNumber} onChange={e => setInvoiceNumber(e.target.value)} placeholder="Opcional" /></div>
                         </CardContent>
                     </Card>
-
                     <Card>
                         <CardHeader><CardTitle>Resumen de Compra</CardTitle></CardHeader>
                         <CardContent className="grid gap-4">
@@ -336,15 +352,14 @@ export default function PurchasesPage() {
                             <div className="flex justify-between font-semibold text-lg"><span>Total</span><span>${total.toFixed(2)}</span></div>
                         </CardContent>
                     </Card>
-
                     <div className="flex flex-col gap-2">
                          <Button onClick={handleOpenConfirmation} disabled={isSubmitDisabled} size="lg">
                             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            {isLoading ? "Procesando..." : "Registrar Compra"}
+                            {isLoading ? "Procesando..." : (editingTransactionId ? "Guardar Cambios" : "Registrar Compra")}
                         </Button>
-                        <Button variant="secondary" onClick={handleHoldPurchase}>Poner en Espera</Button>
+                        {editingTransactionId && (<Button variant="ghost" size="sm" onClick={resetForm}><XCircle className="mr-2 h-4 w-4" />Cancelar Edición</Button>)}
+                        <Button variant="secondary" onClick={handleHoldPurchase} disabled={editingTransactionId !== null}>Poner en Espera</Button>
                     </div>
-
                     {pendingPurchases.length > 0 && (
                         <Card>
                             <CardHeader><CardTitle>Compras en Espera</CardTitle><CardDescription>Restaura o elimina las compras pendientes.</CardDescription></CardHeader>
@@ -367,32 +382,11 @@ export default function PurchasesPage() {
                 </div>
             </div>
         </div>
-        
-        <VariantSelectionDialog
-            open={isVariantDialogOpen}
-            onOpenChange={setIsVariantDialogOpen}
-            product={selectedProductForVariants}
-            onVariantsSelected={handleVariantsSelected}
-        />
-        <ProductDialog 
-            open={isProductDialogOpen} 
-            onOpenChange={setIsProductDialogOpen} 
-            product={null} 
-            onProductSaved={handleProductSaved} 
-        />
-        <PurchaseHistoryDialog open={isHistoryOpen} onOpenChange={setIsHistoryOpen} onViewReceipt={() => {}} onEditPurchase={() => {}} />
-        <PurchaseReceiptDialog 
-            open={isReceiptOpen} 
-            onOpenChange={(open) => !open && setSelectedTransactionId(null)} 
-            transactionId={selectedTransactionId} 
-        />
-        <PurchaseConfirmationDialog 
-            open={isConfirmationOpen} 
-            onOpenChange={setIsConfirmationOpen}
-            purchaseItems={consolidatedItems}
-            onConfirm={handleFormSubmit}
-            isSaving={isLoading}
-        />
+        <VariantSelectionDialog open={isVariantDialogOpen} onOpenChange={setIsVariantDialogOpen} product={selectedProductForVariants} onVariantsSelected={handleVariantsSelected} />
+        <ProductDialog open={isProductDialogOpen} onOpenChange={setIsProductDialogOpen} product={null} onProductSaved={handleProductSaved} />
+        <PurchaseHistoryDialog open={isHistoryOpen} onOpenChange={setIsHistoryOpen} onViewReceipt={handleViewReceiptFromHistory} onEditPurchase={handleEditPurchase} />
+        <PurchaseReceiptDialog open={isReceiptOpen} onOpenChange={(open) => { if (!open) setSelectedTransactionId(null); setIsReceiptOpen(open); }} transactionId={selectedTransactionId} />
+        <PurchaseConfirmationDialog open={isConfirmationOpen} onOpenChange={setIsConfirmationOpen} purchaseItems={consolidatedItems} onConfirm={handleFormSubmit} isSaving={isLoading} />
         </TooltipProvider>
     )
 }
