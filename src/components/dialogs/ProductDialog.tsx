@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Trash2, PlusCircle } from 'lucide-react';
+import { PlusCircle } from 'lucide-react';
 import { toastSuccess, toastError } from '@/hooks/use-toast';
 import { 
     getBrands, createBrand, 
@@ -19,7 +19,8 @@ import {
     getDepartments, createDepartment,
     getSubdepartments, createSubdepartment,
     getNextSku,
-    createProduct
+    createProduct,
+    updateProduct
 } from '@/lib/api';
 import { Product, Brand, Attribute, AttributeValue, ProductVariant, Department, Subdepartment } from '@/lib/types';
 import { QuickAddDialog } from './QuickAddDialog';
@@ -77,8 +78,18 @@ export function ProductDialog({ open, onOpenChange, product, onProductSaved }: P
       fetchBrands();
       fetchDepartments();
       fetchAttributes();
+      if (product) {
+        setProductBase(product);
+        setVariants(product.variants || []);
+        // TODO: Pre-populate selectedAttributes and selectedValues if editing
+      } else {
+        setProductBase({});
+        setVariants([]);
+        setSelectedAttributes({});
+        setSelectedValues({});
+      }
     }
-  }, [open, fetchBrands, fetchDepartments, fetchAttributes]);
+  }, [open, product, fetchBrands, fetchDepartments, fetchAttributes]);
 
   useEffect(() => {
     if (productBase.department_id) {
@@ -142,21 +153,40 @@ export function ProductDialog({ open, onOpenChange, product, onProductSaved }: P
   };
 
   const handleGenerateVariants = () => {
+    const existingVariants = [...variants];
+    const existingVariantsMap = new Map(
+      existingVariants.map(variant => {
+        const key = variant.attribute_values?.map(v => v.id).sort().join('-') || 'standard';
+        return [key, variant];
+      })
+    );
+
     const arraysOfSelectedValues: AttributeValue[][] = Object.entries(selectedAttributes).map(([attrId, attrData]) => 
         attrData.values.filter(value => selectedValues[`${attrId}-${value.id}`])
     );
+
     if (arraysOfSelectedValues.every(arr => arr.length === 0)) {
-        setVariants([{
-            sku: productBase.base_sku,
-            sale_price: 0, cost_price: 0, current_stock: 0,
-            attribute_values: [],
-        }]);
-        toastSuccess("Aviso", "No se seleccionaron atributos. Se creará una única variante estándar.");
+        if (!existingVariantsMap.has('standard')) {
+            setVariants([{
+                sku: productBase.base_sku,
+                sale_price: 0, cost_price: 0, current_stock: 0,
+                attribute_values: [],
+            }]);
+        }
+        toastSuccess("Aviso", "No se seleccionaron atributos. Se mantendrá la variante estándar.");
         setCurrentTab('pricing');
         return;
     }
+
     const combinations = getCombinations(arraysOfSelectedValues);
     const newVariants = combinations.map(combo => {
+      const key = combo.map(v => v.id).sort().join('-');
+      const existingVariant = existingVariantsMap.get(key);
+
+      if (existingVariant) {
+        return existingVariant;
+      }
+      
       const skuSuffix = combo.map(v => (v.value.substring(0,3))).join('-');
       return {
         sku: `${productBase.base_sku}-${skuSuffix}`,
@@ -164,6 +194,7 @@ export function ProductDialog({ open, onOpenChange, product, onProductSaved }: P
         attribute_values: combo,
       };
     });
+
     setVariants(newVariants);
     setCurrentTab('pricing');
   };
@@ -172,10 +203,19 @@ export function ProductDialog({ open, onOpenChange, product, onProductSaved }: P
     const { base_sku, ...productData } = productBase;
     const payload = { ...productData, variants };
     try {
-        const savedProduct = await createProduct(payload);
-        onProductSaved(savedProduct as Product);
-        onOpenChange(false);
-    } catch(e) {}
+      let savedProduct;
+      if (payload.id) {
+        savedProduct = await updateProduct(payload.id, payload);
+        toastSuccess("Éxito", "Producto actualizado correctamente.");
+      } else {
+        savedProduct = await createProduct(payload);
+        toastSuccess("Éxito", "Producto creado correctamente.");
+      }
+      onProductSaved(savedProduct as Product);
+      onOpenChange(false);
+    } catch (e) {
+      // El toast de error ya se muestra en fetchAPI
+    }
   };
 
   const handleVariantChange = (index: number, field: keyof ProductVariant, value: any) => {
@@ -215,9 +255,9 @@ export function ProductDialog({ open, onOpenChange, product, onProductSaved }: P
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-4xl">
           <DialogHeader>
-            <DialogTitle>Crear Nuevo Producto</DialogTitle>
+            <DialogTitle>{product?.id ? 'Editar' : 'Crear'} Producto</DialogTitle>
             <DialogDescription>
-              Sigue los pasos para configurar tu nuevo producto y sus variantes.
+              Sigue los pasos para configurar tu producto y sus variantes.
             </DialogDescription>
           </DialogHeader>
           
@@ -235,26 +275,26 @@ export function ProductDialog({ open, onOpenChange, product, onProductSaved }: P
                     <div>
                         <Label>Departamento</Label>
                         <div className="flex items-center gap-2">
-                        <Select value={String(productBase.department_id ?? '')} onValueChange={val => setProductBase(p => ({ ...p, department_id: Number(val), subdepartment_id: undefined, base_sku: '' }))}>
+                        <Select value={String(productBase.department_id ?? '')} onValueChange={val => setProductBase(p => ({ ...p, department_id: Number(val), subdepartment_id: undefined, base_sku: '' }))} disabled={!!product?.id}>
                             <SelectTrigger><SelectValue placeholder="Selecciona..." /></SelectTrigger>
                             <SelectContent>{departments.map(d => <SelectItem key={d.id} value={String(d.id)}>{d.name}</SelectItem>)}</SelectContent>
                         </Select>
-                        <Button variant="outline" size="icon" onClick={() => handleQuickAdd('department')}><PlusCircle className="h-4 w-4 text-green-600"/></Button>
+                        <Button variant="outline" size="icon" onClick={() => handleQuickAdd('department')} disabled={!!product?.id}><PlusCircle className="h-4 w-4 text-green-600"/></Button>
                         </div>
                     </div>
                     <div>
                         <Label>Sub-departamento</Label>
                         <div className="flex items-center gap-2">
-                        <Select value={String(productBase.subdepartment_id ?? '')} onValueChange={handleSubdepartmentChange} disabled={!productBase.department_id}>
+                        <Select value={String(productBase.subdepartment_id ?? '')} onValueChange={handleSubdepartmentChange} disabled={!productBase.department_id || !!product?.id}>
                             <SelectTrigger><SelectValue placeholder="Selecciona..." /></SelectTrigger>
                             <SelectContent>{subdepartments.map(s => <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}</SelectContent>
                         </Select>
-                        <Button variant="outline" size="icon" onClick={() => handleQuickAdd('subdepartment')} disabled={!productBase.department_id}><PlusCircle className="h-4 w-4 text-green-600"/></Button>
+                        <Button variant="outline" size="icon" onClick={() => handleQuickAdd('subdepartment')} disabled={!productBase.department_id || !!product?.id}><PlusCircle className="h-4 w-4 text-green-600"/></Button>
                         </div>
                     </div>
                 </div>
                 <div><Label>Nombre del Producto</Label><Input value={productBase.name ?? ''} onChange={e => setProductBase(p => ({ ...p, name: e.target.value }))} /></div>
-                <div><Label>SKU Base (Autogenerado)</Label><Input value={productBase.base_sku ?? ''} readOnly disabled /></div>
+                <div><Label>SKU Base</Label><Input value={productBase.base_sku ?? ''} readOnly disabled /></div>
                 <div><Label>Descripción</Label><Textarea value={productBase.description ?? ''} onChange={e => setProductBase(p => ({ ...p, description: e.target.value }))} /></div>
                 <div>
                     <Label>Marca</Label>

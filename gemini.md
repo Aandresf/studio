@@ -121,7 +121,10 @@ La experiencia de usuario para la gestión de productos y ventas cambiará signi
 *   ** - REALIZADO - Flujo de Venta/Compra:**
     1.  Buscar y seleccionar el producto base.
     2.  Un modal o paso intermedio solicitará la selección de la variante específica (Talla, Color) antes de añadir al carrito.
-    PENDIENTE - agregar el sku principal del producto al buscador, asi como un resumen de los atributos y el stock general, igual a la vista preliminar de los productos en la pagina productos
+    PENDIENTE - agregar el sku principal del producto al buscador, asi como un resumen de los atributos y el stock general, igual a la vista preliminar de los productos en la pagina productos, se corriguio pero ahora no edita y salta la creacion de un producto. no, no esta funcionando el productDialogo. AL editar no se estan cargando la segunda tab, la de atributos, aparece sin nada seleccionado, y 
+  por ejemplo, los pantalones blancos y negros, al yo querer agregar el verde tengo que volver a seleccionar exactamente las variables 
+  anteriores mas las nuevas, no es que al editar se seleccionan las anteriores y yo aguregue las nuevas, entonces se esta ropmiendo el flujo 
+  de edicion.
 
 ### 4. Plan de Implementación por Fases
 
