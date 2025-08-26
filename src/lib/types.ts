@@ -29,8 +29,11 @@ export interface ProductVariant {
 
 export interface Product {
   id: number;
+  base_sku?: string;
   name: string;
   description?: string;
+  department_id?:number;
+  subdepartment_id?:number;
   category?: string;
   subcategory?: string;
   brand_id?: number;

@@ -69,7 +69,7 @@ export function ProductDialog({ open, onOpenChange, product, onProductSaved }: P
   const [activeAttributeId, setActiveAttributeId] = useState<number | null>(null);
   const [currentTab, setCurrentTab] = useState<TabValue>('data');
 
-  const fetchBrands = useCallback(async () => { setBrands(await getBrands()); }, []);
+  const fetchBrands = async () => setBrands(await getBrands());
   const fetchDepartments = useCallback(async () => { setDepartments(await getDepartments()); }, []);
   const fetchAttributes = useCallback(async () => { setAttributes(await getAttributes()); }, []);
 
@@ -147,6 +147,7 @@ export function ProductDialog({ open, onOpenChange, product, onProductSaved }: P
     if (productBase.department_id && subdepartmentId && !productBase.id) {
       try {
         const { nextSku } = await getNextSku(productBase.department_id, subdepartmentId);
+        console.log(nextSku);
         setProductBase(p => ({ ...p, base_sku: nextSku }));
       } catch (error) {
         toastError("Error", "No se pudo generar el SKU.");
@@ -161,12 +162,12 @@ export function ProductDialog({ open, onOpenChange, product, onProductSaved }: P
   };
 
   const handleQuickSave = async (values: Record<string, string>) => {
-    let newItem;
+    let newItem:any;
     try {
       switch (quickAddType) {
         case 'brand':
-          newItem = await createBrand({ name: values.name });
-          await fetchBrands();
+          newItem = await createBrand(values.name);
+          setBrands(prevBrands => [...prevBrands, newItem].sort((a, b) => a.name.localeCompare(b.name)));
           setProductBase(p => ({ ...p, brand_id: newItem.id }));
           break;
         case 'department':
@@ -175,10 +176,12 @@ export function ProductDialog({ open, onOpenChange, product, onProductSaved }: P
           setProductBase(p => ({ ...p, department_id: newItem.id }));
           break;
         case 'subdepartment':
-          newItem = await createSubdepartment({ ...values, department_id: productBase.department_id! });
+          newItem = await createSubdepartment({ name: values.name, abbreviation: values.abbreviation, department_id: productBase.department_id! });
           const subs = await getSubdepartments(productBase.department_id!);
           setSubdepartments(subs);
           setProductBase(p => ({ ...p, subdepartment_id: newItem.id }));
+          // rerenderizar el sku principal
+          
           break;
         case 'attribute':
           newItem = await createAttribute(values.name);
@@ -191,7 +194,15 @@ export function ProductDialog({ open, onOpenChange, product, onProductSaved }: P
           break;
       }
       toastSuccess("Éxito", `${quickAddType} creado correctamente.`);
-    } catch (error) {}
+    } catch (error: any) {
+      if (error instanceof Error && error.message.includes('UNIQUE constraint failed')) {
+        toastError("Error de Duplicado", `El nombre "${values.name}" ya existe.`);
+      } else if (error.name === 'ApiError' && error.status === 409) {
+        toastError("Conflicto", error.message);
+      } else {
+        toastError("Error", `No se pudo crear el ${quickAddType}.`);
+      }
+    }
   };
 
   const [variantsToDelete, setVariantsToDelete] = useState<number[]>([]);

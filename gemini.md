@@ -121,7 +121,7 @@ La experiencia de usuario para la gestión de productos y ventas cambiará signi
     1.  Buscar y seleccionar el producto base.
     2.  Un modal o paso intermedio solicitará la selección de la variante específica (Talla, Color) antes de añadir al carrito.
 
-    PENDIENTE - al crear una marca desde el acceo directo en la creacion de un producto, no se actualiza la lista de marcas en el select
+    PENDIENTE - 
 
 ### 4. Plan de Implementación por Fases
 
@@ -133,4 +133,5 @@ La experiencia de usuario para la gestión de productos y ventas cambiará signi
 ### Notas y Tareas Pendientes (Agregado por el Usuario)
 
 *   **- REALIZADO - Dividir el panel de creación de productos en 3 pestañas:** Datos Principales, Atributos, y Costo/Precio. Esto evitará saturar la vista en un solo panel.
-*   **- pospuesto - Optimizar la selección en los combobox de compra y venta:** Especialmente en el de compra, para permitir cambiar el coste de los productos nuevos de forma más directa.
+*   ** Optimizar la selección en los combobox de compra y venta:** Especialmente en el de compra, para permitir cambiar el coste de los productos nuevos de forma más directa.
+* ** form para departmaento y subdepartamento en la confiduracion:** Creacion del crud en la pestañá catalogo en configuracion para el departamento y subdepartamento, ya la creacion se esta implementando desde el acceso rapido en productDialog pero falta la modificacion e inactivacion y lectura
