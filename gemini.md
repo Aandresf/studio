@@ -113,22 +113,24 @@ Los endpoints actuales deben ser rediseñados para reflejar el nuevo modelo de d
 La experiencia de usuario para la gestión de productos y ventas cambiará significativamente.
 
 *   ** - REALIZADO - Gestión de Atributos y Marcas:** Una nueva sección en "Configuración" para que el usuario defina sus propios atributos, valores y también para gestionar las marcas.
-*   **Formulario de Producto Rediseñado:** Un flujo de varios pasos:
+*   ** - REALIZADO - Formulario de Producto Rediseñado:** Un flujo de varios pasos:
     1.  Introducir datos del producto base (nombre, descripción, categoría y selección de marca desde una lista).
     2.  Seleccionar los atributos aplicables (Talla, Color).
     3.  Usar un **"Generador de Variantes"** para crear todas las combinaciones y asignarles SKU, stock y precios.
-*   **Flujo de Venta/Compra:**
+       IMPORTANTE -  presenta el error que al editar un producto y recalcular las variantes se pierden las que ya tenian, con si stock y precios
+*   ** - REALIZADO - Flujo de Venta/Compra:**
     1.  Buscar y seleccionar el producto base.
     2.  Un modal o paso intermedio solicitará la selección de la variante específica (Talla, Color) antes de añadir al carrito.
+    PENDIENTE - agregar el sku principal del producto al buscador, asi como un resumen de los atributos y el stock general, igual a la vista preliminar de los productos en la pagina productos
 
 ### 4. Plan de Implementación por Fases
 
-1.  **Fase 1 (Fundamento):** Crear un **script de migración de datos** para pasar del esquema antiguo al nuevo sin perder información. Refactorizar todo el backend (capa de datos, API) y actualizar las pruebas de Jest.
-2.  **Fase 2 (UI):** Implementar la gestión de atributos y rediseñar por completo el formulario de productos y los flujos de compra/venta.
-3.  **Fase 3 (Módulos Dependientes):** Reconstruir la lógica de generación de reportes y ajustar el dashboard para que funcionen con el nuevo esquema.
+1.  **- REALIZADO -Fase 1 (Fundamento):** Crear un **script de migración de datos** para pasar del esquema antiguo al nuevo sin perder información. Refactorizar todo el backend (capa de datos, API) y actualizar las pruebas de Jest.
+2.  **- REALIZADO -Fase 2 (UI):** Implementar la gestión de atributos y rediseñar por completo el formulario de productos y los flujos de compra/venta.
+3.  ** - POSTPUESTO - Fase 3 (Módulos Dependientes):** Reconstruir la lógica de generación de reportes y ajustar el dashboard para que funcionen con el nuevo esquema.
 
 ---
 ### Notas y Tareas Pendientes (Agregado por el Usuario)
 
-*   **Dividir el panel de creación de productos en 3 pestañas:** Datos Principales, Atributos, y Costo/Precio. Esto evitará saturar la vista en un solo panel.
+*   **- REALIZADO - Dividir el panel de creación de productos en 3 pestañas:** Datos Principales, Atributos, y Costo/Precio. Esto evitará saturar la vista en un solo panel.
 *   **Optimizar la selección en los combobox de compra y venta:** Especialmente en el de compra, para permitir cambiar el coste de los productos nuevos de forma más directa.
