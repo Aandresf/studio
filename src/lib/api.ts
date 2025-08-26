@@ -170,6 +170,23 @@ export const deleteAttributeValue = (attributeId: number, valueId: number): Prom
     });
 };
 
+// Department & Subdepartment API calls
+export const getDepartments = (): Promise<{ id: number; name: string; abbreviation: string }[]> => fetchAPI('/departments');
+export const createDepartment = (data: { name: string; abbreviation: string }): Promise<{ id: number; name: string; abbreviation: string }> => {
+    return fetchAPI('/departments', { method: 'POST', body: JSON.stringify(data) });
+};
+export const getSubdepartments = (departmentId: number): Promise<{ id: number; name: string; abbreviation: string }[]> => {
+    return fetchAPI(`/subdepartments?departmentId=${departmentId}`);
+};
+export const createSubdepartment = (data: { name: string; abbreviation: string; department_id: number }): Promise<{ id: number; name: string; abbreviation: string }> => {
+    return fetchAPI('/subdepartments', { method: 'POST', body: JSON.stringify(data) });
+};
+
+// SKU Generation API
+export const getNextSku = (depId: number, subId: number): Promise<{ nextSku: string }> => {
+    return fetchAPI(`/sku/next?depId=${depId}&subId=${subId}`);
+};
+
 
 
 // Purchase API call

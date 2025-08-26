@@ -851,6 +851,7 @@ __turbopack_context__.s({
     "createAttribute": (()=>createAttribute),
     "createAttributeValue": (()=>createAttributeValue),
     "createBrand": (()=>createBrand),
+    "createDepartment": (()=>createDepartment),
     "createInventoryMovement": (()=>createInventoryMovement),
     "createInventorySnapshot": (()=>createInventorySnapshot),
     "createProduct": (()=>createProduct),
@@ -858,6 +859,7 @@ __turbopack_context__.s({
     "createReport": (()=>createReport),
     "createSale": (()=>createSale),
     "createStore": (()=>createStore),
+    "createSubdepartment": (()=>createSubdepartment),
     "deleteAttribute": (()=>deleteAttribute),
     "deleteAttributeValue": (()=>deleteAttributeValue),
     "deleteBrand": (()=>deleteBrand),
@@ -868,8 +870,10 @@ __turbopack_context__.s({
     "getAttributes": (()=>getAttributes),
     "getBrands": (()=>getBrands),
     "getDashboardSummary": (()=>getDashboardSummary),
+    "getDepartments": (()=>getDepartments),
     "getHistoricalSummary": (()=>getHistoricalSummary),
     "getLatestSnapshot": (()=>getLatestSnapshot),
+    "getNextSku": (()=>getNextSku),
     "getPendingTransactions": (()=>getPendingTransactions),
     "getProductMovements": (()=>getProductMovements),
     "getProducts": (()=>getProducts),
@@ -883,6 +887,7 @@ __turbopack_context__.s({
     "getStoreDetails": (()=>getStoreDetails),
     "getStoreSettings": (()=>getStoreSettings),
     "getStores": (()=>getStores),
+    "getSubdepartments": (()=>getSubdepartments),
     "quitApplication": (()=>quitApplication),
     "removePendingTransaction": (()=>removePendingTransaction),
     "setActiveStore": (()=>setActiveStore),
@@ -1047,6 +1052,25 @@ const deleteAttributeValue = (attributeId, valueId)=>{
     return fetchAPI(`/attributes/${attributeId}/values/${valueId}`, {
         method: 'DELETE'
     });
+};
+const getDepartments = ()=>fetchAPI('/departments');
+const createDepartment = (data)=>{
+    return fetchAPI('/departments', {
+        method: 'POST',
+        body: JSON.stringify(data)
+    });
+};
+const getSubdepartments = (departmentId)=>{
+    return fetchAPI(`/subdepartments?departmentId=${departmentId}`);
+};
+const createSubdepartment = (data)=>{
+    return fetchAPI('/subdepartments', {
+        method: 'POST',
+        body: JSON.stringify(data)
+    });
+};
+const getNextSku = (depId, subId)=>{
+    return fetchAPI(`/sku/next?depId=${depId}&subId=${subId}`);
 };
 const createPurchase = (purchase)=>{
     // El payload ya viene estructurado correctamente desde el frontend.

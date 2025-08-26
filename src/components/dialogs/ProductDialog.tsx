@@ -5,22 +5,29 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Trash2, PlusCircle } from 'lucide-react';
 import { toastSuccess, toastError } from '@/hooks/use-toast';
-import { getBrands, getAttributes, getAttributeValues, createProduct, updateProduct } from '@/lib/api';
-import { Product, Brand, Attribute, AttributeValue, ProductVariant } from '@/lib/types';
+import { 
+    getBrands, createBrand, 
+    getAttributes, createAttribute, 
+    getAttributeValues, createAttributeValue,
+    getDepartments, createDepartment,
+    getSubdepartments, createSubdepartment,
+    getNextSku,
+    createProduct
+} from '@/lib/api';
+import { Product, Brand, Attribute, AttributeValue, ProductVariant, Department, Subdepartment } from '@/lib/types';
+import { QuickAddDialog } from './QuickAddDialog';
 
-// --- Helper para generar combinaciones ---
 function getCombinations<T>(arrays: T[][]): T[][] {
   if (!arrays || arrays.length === 0) return [];
   let result: T[][] = [[]];
   for (const array of arrays) {
-    if (array.length === 0) continue; // Ignorar atributos sin valores seleccionados
+    if (array.length === 0) continue;
     const newResult: T[][] = [];
     for (const res of result) {
       for (const item of array) {
@@ -39,65 +46,137 @@ interface ProductDialogProps {
   onProductSaved: (product: Product) => void;
 }
 
-interface SelectedAttributesData {
-    name: string;
-    values: AttributeValue[];
-}
+interface SelectedAttributesData { name: string; values: AttributeValue[]; }
+type QuickAddType = 'brand' | 'department' | 'subdepartment' | 'attribute' | 'attributeValue';
 
 export function ProductDialog({ open, onOpenChange, product, onProductSaved }: ProductDialogProps) {
-  // --- Estados para datos del producto y variantes ---
   const [productBase, setProductBase] = useState<Partial<Product>>({});
   const [variants, setVariants] = useState<Partial<ProductVariant>[]>([]);
-
-  // --- Estados para la UI y carga de datos ---
+  
   const [brands, setBrands] = useState<Brand[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [subdepartments, setSubdepartments] = useState<Subdepartment[]>([]);
   const [attributes, setAttributes] = useState<Attribute[]>([]);
+  
   const [selectedAttributes, setSelectedAttributes] = useState<Record<number, SelectedAttributesData>>({});
   const [selectedValues, setSelectedValues] = useState<Record<string, boolean>>({});
-  const [isLoading, setIsLoading] = useState(false);
+  
+  const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
+  const [quickAddType, setQuickAddType] = useState<QuickAddType | null>(null);
+  const [activeAttributeId, setActiveAttributeId] = useState<number | null>(null);
 
-  // --- Carga inicial de datos (marcas y atributos) ---
+  const fetchBrands = useCallback(async () => { setBrands(await getBrands()); }, []);
+  const fetchDepartments = useCallback(async () => { setDepartments(await getDepartments()); }, []);
+  const fetchAttributes = useCallback(async () => { setAttributes(await getAttributes()); }, []);
+
   useEffect(() => {
     if (open) {
-      const fetchData = async () => {
-        setIsLoading(true);
-        try {
-          const [brandsData, attributesData] = await Promise.all([getBrands(), getAttributes()]);
-          setBrands(brandsData);
-          setAttributes(attributesData);
-        } catch (error) {
-          // API layer handles toast
-        } finally {
-          setIsLoading(false);
-        }
-      };
-      fetchData();
+      fetchBrands();
+      fetchDepartments();
+      fetchAttributes();
     }
-  }, [open]);
+  }, [open, fetchBrands, fetchDepartments, fetchAttributes]);
 
-  // --- Inicialización del formulario al recibir un producto ---
   useEffect(() => {
-    if (open && product) {
-      setProductBase({
-        id: product.id,
-        name: product.name,
-        description: product.description,
-        brand_id: product.brand_id,
-        category: product.category,
-        subcategory: product.subcategory,
-        status: product.status ?? 'Activo',
-      });
-      if (product.variants) {
-        setVariants(product.variants);
-      }
-    } else if (!open) {
-      setProductBase({});
-      setVariants([]);
-      setSelectedAttributes({});
-      setSelectedValues({});
+    if (productBase.department_id) {
+      getSubdepartments(productBase.department_id).then(setSubdepartments);
+    } else {
+      setSubdepartments([]);
     }
-  }, [product, open]);
+  }, [productBase.department_id]);
 
+  const handleSubdepartmentChange = async (subId: string) => {
+    const subdepartmentId = Number(subId);
+    setProductBase(p => ({ ...p, subdepartment_id: subdepartmentId }));
+    if (productBase.department_id && subdepartmentId && !productBase.id) {
+      try {
+        const { nextSku } = await getNextSku(productBase.department_id, subdepartmentId);
+        setProductBase(p => ({ ...p, base_sku: nextSku }));
+      } catch (error) {
+        toastError("Error", "No se pudo generar el SKU.");
+      }
+    }
+  };
+
+  const handleQuickAdd = (type: QuickAddType, attributeId: number | null = null) => {
+    setQuickAddType(type);
+    setActiveAttributeId(attributeId);
+    setIsQuickAddOpen(true);
+  };
+
+  const handleQuickSave = async (values: Record<string, string>) => {
+    let newItem;
+    try {
+      switch (quickAddType) {
+        case 'brand':
+          newItem = await createBrand({ name: values.name });
+          await fetchBrands();
+          setProductBase(p => ({ ...p, brand_id: newItem.id }));
+          break;
+        case 'department':
+          newItem = await createDepartment({ name: values.name, abbreviation: values.abbreviation });
+          await fetchDepartments();
+          setProductBase(p => ({ ...p, department_id: newItem.id }));
+          break;
+        case 'subdepartment':
+          newItem = await createSubdepartment({ ...values, department_id: productBase.department_id! });
+          const subs = await getSubdepartments(productBase.department_id!);
+          setSubdepartments(subs);
+          setProductBase(p => ({ ...p, subdepartment_id: newItem.id }));
+          break;
+        case 'attribute':
+          newItem = await createAttribute(values.name);
+          await fetchAttributes();
+          break;
+        case 'attributeValue':
+          newItem = await createAttributeValue(activeAttributeId!, values.value);
+          const updatedValues = await getAttributeValues(activeAttributeId!);
+          setSelectedAttributes(prev => ({...prev, [activeAttributeId!]: {...prev[activeAttributeId!], values: updatedValues}}));
+          break;
+      }
+      toastSuccess("Éxito", `${quickAddType} creado correctamente.`);
+    } catch (error) {}
+  };
+
+  const handleGenerateVariants = () => {
+    const arraysOfSelectedValues: AttributeValue[][] = Object.entries(selectedAttributes).map(([attrId, attrData]) => 
+        attrData.values.filter(value => selectedValues[`${attrId}-${value.id}`])
+    );
+    if (arraysOfSelectedValues.every(arr => arr.length === 0)) {
+        toastError("Aviso", "Selecciona al menos un valor.");
+        return;
+    }
+    const combinations = getCombinations(arraysOfSelectedValues);
+    const newVariants = combinations.map(combo => {
+      const skuSuffix = combo.map(v => (v.value.substring(0,3))).join('-');
+      return {
+        sku: `${productBase.base_sku}-${skuSuffix}`,
+        sale_price: 0, cost_price: 0, current_stock: 0,
+        attribute_values: combo,
+      };
+    });
+    setVariants(newVariants);
+  };
+  
+  const handleSave = async () => {
+    const { base_sku, ...productData } = productBase;
+    const payload = { ...productData, variants };
+    try {
+        const savedProduct = await createProduct(payload);
+        onProductSaved(savedProduct as Product);
+        onOpenChange(false);
+    } catch(e) {}
+  };
+
+  const handleVariantChange = (index: number, field: keyof ProductVariant, value: any) => {
+    const updatedVariants = [...variants];
+    // @ts-ignore
+    updatedVariants[index][field] = value;
+    setVariants(updatedVariants);
+  };
+  const handleValueSelection = (attributeId: string, valueId: number, isSelected: boolean) => {
+    setSelectedValues(prev => ({ ...prev, [`${attributeId}-${valueId}`]: isSelected }));
+  };
   const handleAttributeSelection = async (attr: Attribute) => {
     const attributeId = attr.id;
     if (selectedAttributes[attributeId]) {
@@ -105,230 +184,116 @@ export function ProductDialog({ open, onOpenChange, product, onProductSaved }: P
       delete newSelection[attributeId];
       setSelectedAttributes(newSelection);
     } else {
-      try {
-        const values = await getAttributeValues(attributeId);
-        setSelectedAttributes(prev => ({ ...prev, [attributeId]: { name: attr.name, values: values } }));
-      } catch (error) {
-        toastError("Error", `No se pudieron cargar los valores para ${attr.name}`);
-      }
-    }
-  };
-
-  const handleValueSelection = (attributeId: string, valueId: number, isSelected: boolean) => {
-    setSelectedValues(prev => ({ ...prev, [`${attributeId}-${valueId}`]: isSelected }));
-  };
-
-  const handleGenerateVariants = () => {
-    const arraysOfSelectedValues: AttributeValue[][] = Object.entries(selectedAttributes).map(([attrId, attrData]) => 
-        attrData.values.filter(value => selectedValues[`${attrId}-${value.id}`])
-    );
-
-    if (arraysOfSelectedValues.every(arr => arr.length === 0)) {
-        toastError("Aviso", "Selecciona al menos un valor para generar variantes.");
-        return;
-    }
-
-    const combinations = getCombinations(arraysOfSelectedValues);
-    
-    const newVariants = combinations.map(combo => {
-      const name = combo.map(v => v.value).join(' / ');
-      const skuSuffix = combo.map(v => v.value.substring(0, 3).toUpperCase()).join('-');
-      return {
-        id: undefined,
-        sku: `${productBase.name ? productBase.name.substring(0, 3).toUpperCase() : 'PROD'}-${skuSuffix}`,
-        sale_price: 0,
-        cost_price: 0,
-        current_stock: 0,
-        attribute_values: combo,
-      };
-    });
-
-    setVariants(newVariants);
-  };
-
-  const handleVariantChange = (index: number, field: keyof ProductVariant, value: string | number) => {
-    const updatedVariants = [...variants];
-    const variant = updatedVariants[index] as any;
-    variant[field] = value;
-    setVariants(updatedVariants);
-  };
-  
-  const handleRemoveVariant = (index: number) => {
-    setVariants(variants.filter((_, i) => i !== index));
-  };
-
-  const handleSave = async () => {
-    if (!productBase.name) {
-        toastError("Validación", "El nombre del producto es obligatorio.");
-        return;
-    }
-    if (variants.length === 0) {
-        toastError("Validación", "Debes generar al menos una variante para el producto.");
-        return;
-    }
-
-    const payload = {
-        ...productBase,
-        variants: variants.map(v => ({
-            ...v,
-            // Asegurarse de que solo enviamos los IDs de los valores de atributos
-            attribute_values: v.attribute_values?.map(av => ({ id: av.id }))
-        })),
-    };
-
-    try {
-        let savedProduct;
-        if (payload.id) {
-            // @ts-ignore
-            savedProduct = await updateProduct(payload.id, payload);
-        } else {
-            // @ts-ignore
-            savedProduct = await createProduct(payload);
-        }
-        toastSuccess("Éxito", "Producto guardado correctamente.");
-        onProductSaved(savedProduct);
-        onOpenChange(false);
-    } catch (error) {
-        // API layer handles toast
+      const values = await getAttributeValues(attributeId);
+      setSelectedAttributes(prev => ({ ...prev, [attributeId]: { name: attr.name, values: values } }));
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl">
-        <DialogHeader>
-          <DialogTitle>{product?.id ? 'Editar Producto y sus Variantes' : 'Añadir Nuevo Producto'}</DialogTitle>
-          <DialogDescription>
-            Define la información base del producto y genera sus distintas variantes.
-          </DialogDescription>
-        </DialogHeader>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 py-4">
-          {/* --- COLUMNA IZQUIERDA: DATOS BASE --- */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium border-b pb-2">Datos del Producto</h3>
-            <div>
-              <Label htmlFor="name">Nombre del Producto</Label>
-              <Input id="name" value={productBase.name ?? ''} onChange={(e) => setProductBase(p => ({ ...p, name: e.target.value }))} />
-            </div>
-            <div>
-              <Label htmlFor="description">Descripción</Label>
-              <Textarea id="description" value={productBase.description ?? ''} onChange={(e) => setProductBase(p => ({ ...p, description: e.target.value }))} rows={4} />
-            </div>
-            <div>
-              <Label htmlFor="brand">Marca</Label>
-              <Select value={String(productBase.brand_id ?? '')} onValueChange={(value) => setProductBase(p => ({ ...p, brand_id: Number(value) }))}>
-                <SelectTrigger><SelectValue placeholder="Selecciona una marca..." /></SelectTrigger>
-                <SelectContent>
-                  {brands.map(brand => <SelectItem key={brand.id} value={String(brand.id)}>{brand.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="category">Departamento / Categoría</Label>
-              <Input id="category" value={productBase.category ?? ''} onChange={(e) => setProductBase(p => ({ ...p, category: e.target.value }))} />
-            </div>
-            <div>
-              <Label htmlFor="subcategory">Sub-departamento / Sub-categoría</Label>
-              <Input id="subcategory" value={productBase.subcategory ?? ''} onChange={(e) => setProductBase(p => ({ ...p, subcategory: e.target.value }))} />
-            </div>
-             <div className="flex items-center space-x-2">
-                <Switch
-                  id="status"
-                  checked={productBase.status === 'Activo'}
-                  onCheckedChange={(isChecked) => setProductBase(p => ({ ...p, status: isChecked ? 'Activo' : 'Inactivo' }))}
-                />
-                <Label htmlFor="status">Producto {productBase.status}</Label>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Crear Nuevo Producto</DialogTitle>
+            <DialogDescription>
+              Rellena los datos base, genera las variantes y establece sus precios y stock.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid md:grid-cols-2 gap-8 py-4">
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium border-b pb-2">Datos del Producto</h3>
+              <div>
+                <Label>Departamento</Label>
+                <div className="flex items-center gap-2">
+                  <Select value={String(productBase.department_id ?? '')} onValueChange={val => setProductBase(p => ({ ...p, department_id: Number(val), subdepartment_id: undefined, base_sku: '' }))}>
+                    <SelectTrigger><SelectValue placeholder="Selecciona..." /></SelectTrigger>
+                    <SelectContent>{departments.map(d => <SelectItem key={d.id} value={String(d.id)}>{d.name}</SelectItem>)}</SelectContent>
+                  </Select>
+                  <Button variant="outline" size="icon" onClick={() => handleQuickAdd('department')}><PlusCircle className="h-4 w-4 text-green-600"/></Button>
+                </div>
               </div>
-          </div>
-
-          {/* --- COLUMNA DERECHA: ATRIBUTOS Y VARIANTES --- */}
-          <div className="space-y-4">
-            <div className="space-y-2">
-                <h3 className="text-lg font-medium border-b pb-2">1. Selecciona Atributos</h3>
-                <div className="flex flex-wrap gap-2 pt-2">
-                    {attributes.map(attr => (
-                    <Button key={attr.id} variant={selectedAttributes[attr.id] ? 'secondary' : 'outline'} onClick={() => handleAttributeSelection(attr)}>
-                        {selectedAttributes[attr.id] ? '✓ ' : ''}{attr.name}
-                    </Button>
-                    ))}
+              <div>
+                <Label>Sub-departamento</Label>
+                <div className="flex items-center gap-2">
+                  <Select value={String(productBase.subdepartment_id ?? '')} onValueChange={handleSubdepartmentChange} disabled={!productBase.department_id}>
+                    <SelectTrigger><SelectValue placeholder="Selecciona..." /></SelectTrigger>
+                    <SelectContent>{subdepartments.map(s => <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}</SelectContent>
+                  </Select>
+                  <Button variant="outline" size="icon" onClick={() => handleQuickAdd('subdepartment')} disabled={!productBase.department_id}><PlusCircle className="h-4 w-4 text-green-600"/></Button>
                 </div>
+              </div>
+              <div><Label>Nombre del Producto</Label><Input value={productBase.name ?? ''} onChange={e => setProductBase(p => ({ ...p, name: e.target.value }))} /></div>
+              <div><Label>SKU Base (Autogenerado)</Label><Input value={productBase.base_sku ?? ''} readOnly disabled /></div>
+              <div><Label>Descripción</Label><Textarea value={productBase.description ?? ''} onChange={e => setProductBase(p => ({ ...p, description: e.target.value }))} /></div>
+              <div>
+                <Label>Marca</Label>
+                <div className="flex items-center gap-2">
+                  <Select value={String(productBase.brand_id ?? '')} onValueChange={val => setProductBase(p => ({ ...p, brand_id: Number(val) }))}>
+                    <SelectTrigger><SelectValue placeholder="Selecciona..." /></SelectTrigger>
+                    <SelectContent>{brands.map(b => <SelectItem key={b.id} value={String(b.id)}>{b.name}</SelectItem>)}</SelectContent>
+                  </Select>
+                  <Button variant="outline" size="icon" onClick={() => handleQuickAdd('brand')}><PlusCircle className="h-4 w-4 text-green-600"/></Button>
+                </div>
+              </div>
             </div>
-            
-            {Object.keys(selectedAttributes).length > 0 && (
-                <div className="space-y-2">
-                    <h3 className="text-lg font-medium border-b pb-2">2. Selecciona Valores</h3>
-                    <div className="space-y-3 max-h-48 overflow-y-auto p-2 border rounded-md">
-                    {Object.entries(selectedAttributes).map(([attrId, attrData]) => (
-                        <div key={attrId}>
-                            <Label className="font-semibold">{attrData.name}</Label>
-                            <div className="grid grid-cols-3 gap-2 mt-1">
-                                {attrData.values.map(value => (
-                                    <div key={value.id} className="flex items-center space-x-2">
-                                        <Checkbox
-                                            id={`value-${value.id}`}
-                                            checked={!!selectedValues[`${attrId}-${value.id}`]}
-                                            onCheckedChange={(checked) => handleValueSelection(attrId, value.id, !!checked)}
-                                        />
-                                        <Label htmlFor={`value-${value.id}`} className="text-sm font-normal">{value.value}</Label>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    ))}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium border-b pb-2">Atributos y Variantes</h3>
+              <div>
+                <div className="flex items-center justify-between">
+                  <Label>Atributos Aplicables</Label>
+                  <Button variant="ghost" size="sm" onClick={() => handleQuickAdd('attribute')}><PlusCircle className="mr-2 h-4 w-4"/>Añadir Atributo</Button>
+                </div>
+                <div className="flex flex-wrap gap-2 mt-2">{attributes.map(attr => (<Button key={attr.id} variant={selectedAttributes[attr.id] ? 'secondary' : 'outline'} onClick={() => handleAttributeSelection(attr)}>{selectedAttributes[attr.id] ? '✓ ' : ''}{attr.name}</Button>))}</div>
+              </div>
+              {Object.keys(selectedAttributes).length > 0 && (
+                <div className="space-y-2 border rounded-md p-2 max-h-48 overflow-y-auto">
+                  {Object.entries(selectedAttributes).map(([attrId, attrData]) => (
+                    <div key={attrId}>
+                      <div className="flex items-center justify-between">
+                        <Label className="font-semibold">{attrData.name}</Label>
+                        <Button variant="ghost" size="sm" onClick={() => handleQuickAdd('attributeValue', Number(attrId))}><PlusCircle className="mr-2 h-4 w-4"/>Añadir Valor</Button>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 mt-1">{attrData.values.map(value => (<div key={value.id} className="flex items-center space-x-2"><Checkbox id={`v-${value.id}`} checked={!!selectedValues[`${attrId}-${value.id}`]} onCheckedChange={c => handleValueSelection(attrId, value.id, !!c)} /><Label htmlFor={`v-${value.id}`} className="font-normal">{value.value}</Label></div>))}</div>
                     </div>
+                  ))}
                 </div>
-            )}
-
-            <Button onClick={handleGenerateVariants} className="w-full">
-              <PlusCircle className="mr-2 h-4 w-4" />
-              3. Generar Variantes
-            </Button>
-
-            <div className="border rounded-md max-h-64 overflow-y-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Variante</TableHead>
-                    <TableHead>SKU</TableHead>
-                    <TableHead>Costo</TableHead>
-                    <TableHead>Precio</TableHead>
-                    <TableHead>Stock</TableHead>
-                    <TableHead></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {variants.length > 0 ? variants.map((variant, index) => (
-                    <TableRow key={index}>
-                      <TableCell className="font-medium text-sm">
-                        {variant.attribute_values?.map(v => v.value).join(' / ')}
-                      </TableCell>
-                      <TableCell><Input type="text" value={variant.sku ?? ''} onChange={e => handleVariantChange(index, 'sku', e.target.value)} className="w-24" /></TableCell>
-                      <TableCell><Input type="number" value={variant.cost_price ?? ''} onChange={e => handleVariantChange(index, 'cost_price', parseFloat(e.target.value))} className="w-20" /></TableCell>
-                      <TableCell><Input type="number" value={variant.sale_price ?? ''} onChange={e => handleVariantChange(index, 'sale_price', parseFloat(e.target.value))} className="w-20" /></TableCell>
-                      <TableCell><Input type="number" value={variant.current_stock ?? ''} onChange={e => handleVariantChange(index, 'current_stock', parseInt(e.target.value, 10))} className="w-20" /></TableCell>
-                      <TableCell>
-                        <Button variant="ghost" size="icon" onClick={() => handleRemoveVariant(index)}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  )) : (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center h-24">Aún no se han generado variantes.</TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+              )}
+              <Button onClick={handleGenerateVariants} className="w-full"><PlusCircle className="mr-2 h-4 w-4" />Generar Variantes</Button>
+              <div className="border rounded-md max-h-64 overflow-y-auto">
+                <Table>
+                  <TableHeader><TableRow><TableHead>Variante</TableHead><TableHead>SKU</TableHead><TableHead>Costo</TableHead><TableHead>Precio</TableHead><TableHead>Stock</TableHead></TableRow></TableHeader>
+                  <TableBody>
+                    {variants.map((variant, index) => (
+                      <TableRow key={index}>
+                        <TableCell className="font-medium text-sm">{variant.attribute_values?.map(v => v.value).join(' / ')}</TableCell>
+                        <TableCell><Input type="text" value={variant.sku ?? ''} onChange={e => handleVariantChange(index, 'sku', e.target.value)} className="w-32" /></TableCell>
+                        <TableCell><Input type="number" value={variant.cost_price ?? ''} onChange={e => handleVariantChange(index, 'cost_price', parseFloat(e.target.value))} className="w-20" /></TableCell>
+                        <TableCell><Input type="number" value={variant.sale_price ?? ''} onChange={e => handleVariantChange(index, 'sale_price', parseFloat(e.target.value))} className="w-20" /></TableCell>
+                        <TableCell><Input type="number" value={variant.current_stock ?? ''} onChange={e => handleVariantChange(index, 'current_stock', parseInt(e.target.value, 10))} className="w-20" /></TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
           </div>
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={handleSave}>Guardar Producto</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          <DialogFooter><Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button><Button onClick={handleSave}>Guardar Producto</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {quickAddType && <QuickAddDialog
+        open={isQuickAddOpen}
+        onOpenChange={setIsQuickAddOpen}
+        title={`Añadir Nuevo ${quickAddType.replace('Value', ' Valor')}`}
+        description={`Introduce los detalles para el nuevo ${quickAddType.replace('Value', ' valor')}.`}
+        fields={
+            quickAddType === 'brand' ? [{ name: 'name', label: 'Nombre' }] :
+            quickAddType === 'department' ? [{ name: 'name', label: 'Nombre' }, { name: 'abbreviation', label: 'Abrev.' }] :
+            quickAddType === 'subdepartment' ? [{ name: 'name', label: 'Nombre' }, { name: 'abbreviation', label: 'Abrev.' }] :
+            quickAddType === 'attribute' ? [{ name: 'name', label: 'Nombre' }] :
+            [{ name: 'value', label: 'Valor' }]
+        }
+        onSave={handleQuickSave}
+      />}
+    </>
   );
 }

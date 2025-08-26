@@ -277,12 +277,12 @@ app.get('/api/products', async (req, res) => {
   }
 });
 
-// PRODUCTS (con variantes)
+// PRODUCTS (con variantes y SKU seguro)
 app.post('/api/products', async (req, res) => {
-    const { name, description, brand_id, category, subcategory, status = 'Activo', variants } = req.body;
+    const { name, description, brand_id, department_id, subdepartment_id, status = 'Activo', variants } = req.body;
 
-    if (!name || !variants || !Array.isArray(variants) || variants.length === 0) {
-        return res.status(400).json({ error: 'Nombre y al menos una variante son requeridos.' });
+    if (!name || !variants || !Array.isArray(variants) || !department_id || !subdepartment_id) {
+        return res.status(400).json({ error: 'Faltan datos requeridos (nombre, variantes, departamento, subdepartamento).' });
     }
 
     const db = databaseManager.getActiveDb();
@@ -292,52 +292,54 @@ app.post('/api/products', async (req, res) => {
     try {
         await run('BEGIN TRANSACTION');
 
-        // 1. Insertar el producto base
-        const productSql = `INSERT INTO products (name, description, brand_id, category, subcategory, status) VALUES (?, ?, ?, ?, ?, ?)`;
+        // --- Generación de SKU Transaccional ---
+        let sequence = await get('SELECT last_number FROM product_sequences WHERE department_id = ? AND subdepartment_id = ?', [department_id, subdepartment_id]);
+        if (!sequence) {
+            await run('INSERT INTO product_sequences (department_id, subdepartment_id, last_number) VALUES (?, ?, 0)', [department_id, subdepartment_id]);
+            sequence = { last_number: 0 };
+        }
+        const newNumber = sequence.last_number + 1;
+        await run('UPDATE product_sequences SET last_number = ? WHERE department_id = ? AND subdepartment_id = ?', [newNumber, department_id, subdepartment_id]);
+        
+        const dep = await get('SELECT abbreviation FROM departments WHERE id = ?', [department_id]);
+        const sub = await get('SELECT abbreviation FROM subdepartments WHERE id = ?', [subdepartment_id]);
+        if (!dep || !sub) throw new Error('Departamento o Subdepartamento no encontrado.');
+        const baseSku = `${dep.abbreviation}-${sub.abbreviation}-${String(newNumber).padStart(3, '0')}`;
+        // --- Fin de Generación de SKU ---
+
+        const productSql = `INSERT INTO products (name, description, brand_id, department_id, subdepartment_id, base_sku, status) VALUES (?, ?, ?, ?, ?, ?, ?)`;
         const productResult = await new Promise((resolve, reject) => {
-            db.run(productSql, [name, description, brand_id, category, subcategory, status], function(err) {
-                if (err) reject(err);
-                else resolve({ lastID: this.lastID });
+            db.run(productSql, [name, description, brand_id, department_id, subdepartment_id, baseSku, status], function(err) {
+                if (err) reject(err); else resolve({ lastID: this.lastID });
             });
         });
         const productId = productResult.lastID;
 
-        // 2. Iterar e insertar cada variante y sus atributos
         for (const variant of variants) {
             const { sku, cost_price, sale_price, current_stock, attribute_values } = variant;
-            
-            // Insertar la variante
             const variantSql = `INSERT INTO product_variants (product_id, sku, cost_price, sale_price, current_stock, status) VALUES (?, ?, ?, ?, ?, ?)`;
             const variantResult = await new Promise((resolve, reject) => {
                 db.run(variantSql, [productId, sku, cost_price, sale_price, current_stock, status], function(err) {
-                    if (err) reject(err);
-                    else resolve({ lastID: this.lastID });
+                    if (err) reject(err); else resolve({ lastID: this.lastID });
                 });
             });
             const variantId = variantResult.lastID;
 
-            // Vincular valores de atributos a la variante
             if (attribute_values && Array.isArray(attribute_values)) {
-                const pivotSql = `INSERT INTO variant_attribute_values (variant_id, attribute_value_id) VALUES (?, ?)`;
                 for (const attrValue of attribute_values) {
-                    await run(pivotSql, [variantId, attrValue.id]);
+                    await run(`INSERT INTO variant_attribute_values (variant_id, attribute_value_id) VALUES (?, ?)`, [variantId, attrValue.id]);
                 }
             }
         }
 
         await run('COMMIT');
-        
-        // Devolver el producto completo creado (sin hacer otro query por simplicidad ahora)
-        res.status(201).json({ id: productId, ...req.body });
+        const createdProduct = await get('SELECT * FROM products WHERE id = ?', [productId]);
+        res.status(201).json(createdProduct);
 
     } catch (err) {
-        console.error('Error al crear producto con variantes:', err.message);
-        try {
-            await run('ROLLBACK');
-            res.status(500).json({ error: `Error en la transacción: ${err.message}` });
-        } catch (rollbackErr) {
-            res.status(500).json({ error: 'Error fatal durante el rollback.' });
-        }
+        console.error('Error al crear producto:', err.message);
+        await run('ROLLBACK');
+        res.status(500).json({ error: `Error en la transacción: ${err.message}` });
     }
 });
 
@@ -652,6 +654,102 @@ app.delete('/api/attributes/:attributeId/values/:valueId', (req, res) => {
         });
     } catch (error) {
         res.status(500).json({ error: `Failed to delete attribute value: ${error.message}` });
+    }
+});
+
+// --- DEPARTMENTS API ---
+app.get('/api/departments', async (req, res) => {
+    try {
+        const db = databaseManager.getActiveDb();
+        const rows = await util.promisify(db.all.bind(db))("SELECT * FROM departments ORDER BY name ASC", []);
+        res.json(rows);
+    } catch (error) {
+        res.status(500).json({ error: `Failed to fetch departments: ${error.message}` });
+    }
+});
+
+app.post('/api/departments', (req, res) => {
+    const { name, abbreviation } = req.body;
+    if (!name || !abbreviation) return res.status(400).json({ error: 'Name and abbreviation are required.' });
+    try {
+        const db = databaseManager.getActiveDb();
+        db.run(`INSERT INTO departments (name, abbreviation) VALUES (?, ?)`, [name, abbreviation], function(err) {
+            if (err) return res.status(500).json({ error: err.message });
+            res.status(201).json({ id: this.lastID, name, abbreviation });
+        });
+    } catch (error) {
+        res.status(500).json({ error: `Failed to create department: ${error.message}` });
+    }
+});
+
+// --- SUBDEPARTMENTS API ---
+app.get('/api/subdepartments', async (req, res) => {
+    const { departmentId } = req.query;
+    let query = "SELECT * FROM subdepartments";
+    const params = [];
+    if (departmentId) {
+        query += " WHERE department_id = ?";
+        params.push(departmentId);
+    }
+    query += " ORDER BY name ASC";
+    
+    try {
+        const db = databaseManager.getActiveDb();
+        const rows = await util.promisify(db.all.bind(db))(query, params);
+        res.json(rows);
+    } catch (error) {
+        res.status(500).json({ error: `Failed to fetch subdepartments: ${error.message}` });
+    }
+});
+
+app.post('/api/subdepartments', (req, res) => {
+    const { name, abbreviation, department_id } = req.body;
+    if (!name || !abbreviation || !department_id) return res.status(400).json({ error: 'Name, abbreviation, and department_id are required.' });
+    try {
+        const db = databaseManager.getActiveDb();
+        db.run(`INSERT INTO subdepartments (name, abbreviation, department_id) VALUES (?, ?, ?)`, [name, abbreviation, department_id], function(err) {
+            if (err) return res.status(500).json({ error: err.message });
+            res.status(201).json({ id: this.lastID, name, abbreviation, department_id });
+        });
+    } catch (error) {
+        res.status(500).json({ error: `Failed to create subdepartment: ${error.message}` });
+    }
+});
+
+// --- SKU GENERATION API ---
+app.get('/api/sku/next', async (req, res) => {
+    const { depId, subId } = req.query;
+    if (!depId || !subId) return res.status(400).json({ error: 'Department and Subdepartment IDs are required.' });
+
+    const db = databaseManager.getActiveDb();
+    const run = util.promisify(db.run.bind(db));
+    const get = util.promisify(db.get.bind(db));
+
+    try {
+        await run('BEGIN TRANSACTION');
+        let sequence = await get('SELECT last_number FROM product_sequences WHERE department_id = ? AND subdepartment_id = ?', [depId, subId]);
+        
+        if (!sequence) {
+            await run('INSERT INTO product_sequences (department_id, subdepartment_id, last_number) VALUES (?, ?, 0)', [depId, subId]);
+            sequence = { last_number: 0 };
+        }
+
+        const newNumber = sequence.last_number + 1;
+        await run('UPDATE product_sequences SET last_number = ? WHERE department_id = ? AND subdepartment_id = ?', [newNumber, depId, subId]);
+        
+        const dep = await get('SELECT abbreviation FROM departments WHERE id = ?', [depId]);
+        const sub = await get('SELECT abbreviation FROM subdepartments WHERE id = ?', [subId]);
+
+        if (!dep || !sub) throw new Error('Department or Subdepartment not found.');
+
+        const baseSku = `${dep.abbreviation}-${sub.abbreviation}-${String(newNumber).padStart(3, '0')}`;
+        
+        await run('COMMIT');
+        res.json({ nextSku: baseSku, nextNumber: newNumber });
+
+    } catch (error) {
+        await run('ROLLBACK');
+        res.status(500).json({ error: `Failed to generate SKU: ${error.message}` });
     }
 });
 
