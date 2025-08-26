@@ -77,7 +77,7 @@ Para manejar de forma óptima productos con variantes (ropa, colonias, joyería)
 
 Esto representa un cambio estructural significativo que impactará la base de datos, el backend y el frontend.
 
-### 1. Cambios Fundamentales en la Base de Datos
+### 1. Cambios Fundamentales en la Base de Datos - realizado
 
 Se debe modificar el `schema.sql` para adoptar un modelo relacional jerárquico.
 
@@ -100,7 +100,7 @@ Se debe modificar el `schema.sql` para adoptar un modelo relacional jerárquico.
     *   **`attribute_values`**: Define los valores posibles (ej. "Pequeño", "Rojo", "Oro", "100ml").
     *   **`variant_attribute_values` (Tabla Pivote):** Vincula una variante con sus valores de atributo (ej. `variant_id` 1 se vincula con `attribute_value_id` para "Rojo" y "Pequeño").
 
-### 2. Actualizaciones del Backend (API)
+### 2. Actualizaciones del Backend (API) - realizado
 
 Los endpoints actuales deben ser rediseñados para reflejar el nuevo modelo de datos.
 
@@ -117,23 +117,20 @@ La experiencia de usuario para la gestión de productos y ventas cambiará signi
     1.  Introducir datos del producto base (nombre, descripción, categoría y selección de marca desde una lista).
     2.  Seleccionar los atributos aplicables (Talla, Color).
     3.  Usar un **"Generador de Variantes"** para crear todas las combinaciones y asignarles SKU, stock y precios.
-       IMPORTANTE -  presenta el error que al editar un producto y recalcular las variantes se pierden las que ya tenian, con si stock y precios
 *   ** - REALIZADO - Flujo de Venta/Compra:**
     1.  Buscar y seleccionar el producto base.
     2.  Un modal o paso intermedio solicitará la selección de la variante específica (Talla, Color) antes de añadir al carrito.
-    PENDIENTE - agregar el sku principal del producto al buscador, asi como un resumen de los atributos y el stock general, igual a la vista preliminar de los productos en la pagina productos, se corriguio pero ahora no edita y salta la creacion de un producto. no, no esta funcionando el productDialogo. AL editar no se estan cargando la segunda tab, la de atributos, aparece sin nada seleccionado, y 
-  por ejemplo, los pantalones blancos y negros, al yo querer agregar el verde tengo que volver a seleccionar exactamente las variables 
-  anteriores mas las nuevas, no es que al editar se seleccionan las anteriores y yo aguregue las nuevas, entonces se esta ropmiendo el flujo 
-  de edicion.
+
+    PENDIENTE - las varientes se eliminan de la bd, corrige para que se desactiven. como se hace con el stock de la variante al eliminarla? encuentra una forma, ya sea inhabilitando la eliminacion de una variante con stock o similar. necesito eliminar el boton de generar variantes, en su lugar al seleccionar la pestaña costo precio o dar en el boton continuar el front va a generar las variantes con los atributos seleccionados
 
 ### 4. Plan de Implementación por Fases
 
 1.  **- REALIZADO -Fase 1 (Fundamento):** Crear un **script de migración de datos** para pasar del esquema antiguo al nuevo sin perder información. Refactorizar todo el backend (capa de datos, API) y actualizar las pruebas de Jest.
 2.  **- REALIZADO -Fase 2 (UI):** Implementar la gestión de atributos y rediseñar por completo el formulario de productos y los flujos de compra/venta.
-3.  ** - POSTPUESTO - Fase 3 (Módulos Dependientes):** Reconstruir la lógica de generación de reportes y ajustar el dashboard para que funcionen con el nuevo esquema.
+3.  ** - POSPUESTO - Fase 3 (Módulos Dependientes):** Reconstruir la lógica de generación de reportes y ajustar el dashboard para que funcionen con el nuevo esquema.
 
 ---
 ### Notas y Tareas Pendientes (Agregado por el Usuario)
 
 *   **- REALIZADO - Dividir el panel de creación de productos en 3 pestañas:** Datos Principales, Atributos, y Costo/Precio. Esto evitará saturar la vista en un solo panel.
-*   **Optimizar la selección en los combobox de compra y venta:** Especialmente en el de compra, para permitir cambiar el coste de los productos nuevos de forma más directa.
+*   **- pospuesto - Optimizar la selección en los combobox de compra y venta:** Especialmente en el de compra, para permitir cambiar el coste de los productos nuevos de forma más directa.

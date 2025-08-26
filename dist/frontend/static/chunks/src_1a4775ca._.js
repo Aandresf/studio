@@ -717,7 +717,7 @@ function ProductDialog({ open, onOpenChange, product, onProductSaved }) {
         } catch (error) {}
     };
     const [variantsToDelete, setVariantsToDelete] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])([]);
-    const handleGenerateVariants = ()=>{
+    const handleGenerateVariants = (callback)=>{
         const oldVariantsMap = new Map(variants.map((variant)=>{
             const key = variant.attribute_values?.map((v)=>v.id).sort().join('-') || 'standard';
             return [
@@ -738,7 +738,7 @@ function ProductDialog({ open, onOpenChange, product, onProductSaved }) {
             setVariants([
                 standardVariant
             ]);
-            setCurrentTab('pricing');
+            if (callback) callback();
             return;
         }
         const combinations = getCombinations(arraysOfSelectedValues);
@@ -772,7 +772,14 @@ function ProductDialog({ open, onOpenChange, product, onProductSaved }) {
                 ...variantsMarkedForDeletion
             ]);
         setVariants(newVariants);
-        setCurrentTab('pricing');
+        if (callback) callback();
+    };
+    const handleTabChange = (newTab)=>{
+        if (currentTab === 'attributes' && newTab === 'pricing') {
+            handleGenerateVariants(()=>setCurrentTab('pricing'));
+        } else {
+            setCurrentTab(newTab);
+        }
     };
     const handleSave = async ()=>{
         const { base_sku, ...productData } = productBase;
@@ -838,24 +845,24 @@ function ProductDialog({ open, onOpenChange, product, onProductSaved }) {
                     children: "Cancelar"
                 }, void 0, false, {
                     fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                    lineNumber: 299,
+                    lineNumber: 307,
                     columnNumber: 9
                 }, this),
                 currentTab !== 'data' && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Button"], {
                     variant: "ghost",
-                    onClick: ()=>setCurrentTab(currentTab === 'pricing' ? 'attributes' : 'data'),
+                    onClick: ()=>handleTabChange(currentTab === 'pricing' ? 'attributes' : 'data'),
                     children: "Anterior"
                 }, void 0, false, {
                     fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                    lineNumber: 300,
+                    lineNumber: 308,
                     columnNumber: 35
                 }, this),
                 currentTab !== 'pricing' && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Button"], {
-                    onClick: ()=>setCurrentTab(currentTab === 'data' ? 'attributes' : 'pricing'),
+                    onClick: ()=>handleTabChange(currentTab === 'data' ? 'attributes' : 'pricing'),
                     children: "Siguiente"
                 }, void 0, false, {
                     fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                    lineNumber: 301,
+                    lineNumber: 309,
                     columnNumber: 38
                 }, this),
                 currentTab === 'pricing' && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Button"], {
@@ -863,13 +870,13 @@ function ProductDialog({ open, onOpenChange, product, onProductSaved }) {
                     children: "Guardar Producto"
                 }, void 0, false, {
                     fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                    lineNumber: 302,
+                    lineNumber: 310,
                     columnNumber: 38
                 }, this)
             ]
         }, void 0, true, {
             fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-            lineNumber: 298,
+            lineNumber: 306,
             columnNumber: 7
         }, this);
     };
@@ -890,25 +897,25 @@ function ProductDialog({ open, onOpenChange, product, onProductSaved }) {
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                    lineNumber: 312,
+                                    lineNumber: 320,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["DialogDescription"], {
                                     children: "Sigue los pasos para configurar tu producto y sus variantes."
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                    lineNumber: 313,
+                                    lineNumber: 321,
                                     columnNumber: 13
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                            lineNumber: 311,
+                            lineNumber: 319,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$tabs$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Tabs"], {
                             value: currentTab,
-                            onValueChange: (value)=>setCurrentTab(value),
+                            onValueChange: (value)=>handleTabChange(value),
                             className: "w-full",
                             children: [
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$tabs$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TabsList"], {
@@ -919,7 +926,7 @@ function ProductDialog({ open, onOpenChange, product, onProductSaved }) {
                                             children: "1. Datos Principales"
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                            lineNumber: 320,
+                                            lineNumber: 328,
                                             columnNumber: 15
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$tabs$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TabsTrigger"], {
@@ -927,7 +934,7 @@ function ProductDialog({ open, onOpenChange, product, onProductSaved }) {
                                             children: "2. Atributos y Variantes"
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                            lineNumber: 321,
+                                            lineNumber: 329,
                                             columnNumber: 15
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$tabs$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TabsTrigger"], {
@@ -935,13 +942,13 @@ function ProductDialog({ open, onOpenChange, product, onProductSaved }) {
                                             children: "3. Costos y Precios"
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                            lineNumber: 322,
+                                            lineNumber: 330,
                                             columnNumber: 15
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                    lineNumber: 319,
+                                    lineNumber: 327,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$tabs$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TabsContent"], {
@@ -955,7 +962,7 @@ function ProductDialog({ open, onOpenChange, product, onProductSaved }) {
                                                 children: "Datos del Producto"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                lineNumber: 327,
+                                                lineNumber: 335,
                                                 columnNumber: 17
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -967,7 +974,7 @@ function ProductDialog({ open, onOpenChange, product, onProductSaved }) {
                                                                 children: "Departamento"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                                lineNumber: 330,
+                                                                lineNumber: 338,
                                                                 columnNumber: 25
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -988,12 +995,12 @@ function ProductDialog({ open, onOpenChange, product, onProductSaved }) {
                                                                                     placeholder: "Selecciona..."
                                                                                 }, void 0, false, {
                                                                                     fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                                                    lineNumber: 333,
+                                                                                    lineNumber: 341,
                                                                                     columnNumber: 44
                                                                                 }, this)
                                                                             }, void 0, false, {
                                                                                 fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                                                lineNumber: 333,
+                                                                                lineNumber: 341,
                                                                                 columnNumber: 29
                                                                             }, this),
                                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$select$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["SelectContent"], {
@@ -1002,18 +1009,18 @@ function ProductDialog({ open, onOpenChange, product, onProductSaved }) {
                                                                                         children: d.name
                                                                                     }, d.id, false, {
                                                                                         fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                                                        lineNumber: 334,
+                                                                                        lineNumber: 342,
                                                                                         columnNumber: 66
                                                                                     }, this))
                                                                             }, void 0, false, {
                                                                                 fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                                                lineNumber: 334,
+                                                                                lineNumber: 342,
                                                                                 columnNumber: 29
                                                                             }, this)
                                                                         ]
                                                                     }, void 0, true, {
                                                                         fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                                        lineNumber: 332,
+                                                                        lineNumber: 340,
                                                                         columnNumber: 25
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Button"], {
@@ -1025,24 +1032,24 @@ function ProductDialog({ open, onOpenChange, product, onProductSaved }) {
                                                                             className: "h-4 w-4 text-green-600"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                                            lineNumber: 336,
+                                                                            lineNumber: 344,
                                                                             columnNumber: 133
                                                                         }, this)
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                                        lineNumber: 336,
+                                                                        lineNumber: 344,
                                                                         columnNumber: 25
                                                                     }, this)
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                                lineNumber: 331,
+                                                                lineNumber: 339,
                                                                 columnNumber: 25
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                        lineNumber: 329,
+                                                        lineNumber: 337,
                                                         columnNumber: 21
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1051,7 +1058,7 @@ function ProductDialog({ open, onOpenChange, product, onProductSaved }) {
                                                                 children: "Sub-departamento"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                                lineNumber: 340,
+                                                                lineNumber: 348,
                                                                 columnNumber: 25
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1067,12 +1074,12 @@ function ProductDialog({ open, onOpenChange, product, onProductSaved }) {
                                                                                     placeholder: "Selecciona..."
                                                                                 }, void 0, false, {
                                                                                     fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                                                    lineNumber: 343,
+                                                                                    lineNumber: 351,
                                                                                     columnNumber: 44
                                                                                 }, this)
                                                                             }, void 0, false, {
                                                                                 fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                                                lineNumber: 343,
+                                                                                lineNumber: 351,
                                                                                 columnNumber: 29
                                                                             }, this),
                                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$select$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["SelectContent"], {
@@ -1081,18 +1088,18 @@ function ProductDialog({ open, onOpenChange, product, onProductSaved }) {
                                                                                         children: s.name
                                                                                     }, s.id, false, {
                                                                                         fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                                                        lineNumber: 344,
+                                                                                        lineNumber: 352,
                                                                                         columnNumber: 69
                                                                                     }, this))
                                                                             }, void 0, false, {
                                                                                 fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                                                lineNumber: 344,
+                                                                                lineNumber: 352,
                                                                                 columnNumber: 29
                                                                             }, this)
                                                                         ]
                                                                     }, void 0, true, {
                                                                         fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                                        lineNumber: 342,
+                                                                        lineNumber: 350,
                                                                         columnNumber: 25
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Button"], {
@@ -1104,30 +1111,30 @@ function ProductDialog({ open, onOpenChange, product, onProductSaved }) {
                                                                             className: "h-4 w-4 text-green-600"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                                            lineNumber: 346,
+                                                                            lineNumber: 354,
                                                                             columnNumber: 166
                                                                         }, this)
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                                        lineNumber: 346,
+                                                                        lineNumber: 354,
                                                                         columnNumber: 25
                                                                     }, this)
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                                lineNumber: 341,
+                                                                lineNumber: 349,
                                                                 columnNumber: 25
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                        lineNumber: 339,
+                                                        lineNumber: 347,
                                                         columnNumber: 21
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                lineNumber: 328,
+                                                lineNumber: 336,
                                                 columnNumber: 17
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1136,7 +1143,7 @@ function ProductDialog({ open, onOpenChange, product, onProductSaved }) {
                                                         children: "Nombre del Producto"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                        lineNumber: 350,
+                                                        lineNumber: 358,
                                                         columnNumber: 22
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Input"], {
@@ -1147,13 +1154,13 @@ function ProductDialog({ open, onOpenChange, product, onProductSaved }) {
                                                                 }))
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                        lineNumber: 350,
+                                                        lineNumber: 358,
                                                         columnNumber: 56
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                lineNumber: 350,
+                                                lineNumber: 358,
                                                 columnNumber: 17
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1162,7 +1169,7 @@ function ProductDialog({ open, onOpenChange, product, onProductSaved }) {
                                                         children: "SKU Base"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                        lineNumber: 351,
+                                                        lineNumber: 359,
                                                         columnNumber: 22
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Input"], {
@@ -1171,13 +1178,13 @@ function ProductDialog({ open, onOpenChange, product, onProductSaved }) {
                                                         disabled: true
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                        lineNumber: 351,
+                                                        lineNumber: 359,
                                                         columnNumber: 45
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                lineNumber: 351,
+                                                lineNumber: 359,
                                                 columnNumber: 17
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1186,7 +1193,7 @@ function ProductDialog({ open, onOpenChange, product, onProductSaved }) {
                                                         children: "Descripción"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                        lineNumber: 352,
+                                                        lineNumber: 360,
                                                         columnNumber: 22
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$textarea$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Textarea"], {
@@ -1197,13 +1204,13 @@ function ProductDialog({ open, onOpenChange, product, onProductSaved }) {
                                                                 }))
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                        lineNumber: 352,
+                                                        lineNumber: 360,
                                                         columnNumber: 48
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                lineNumber: 352,
+                                                lineNumber: 360,
                                                 columnNumber: 17
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1212,7 +1219,7 @@ function ProductDialog({ open, onOpenChange, product, onProductSaved }) {
                                                         children: "Marca"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                        lineNumber: 354,
+                                                        lineNumber: 362,
                                                         columnNumber: 21
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1230,12 +1237,12 @@ function ProductDialog({ open, onOpenChange, product, onProductSaved }) {
                                                                             placeholder: "Selecciona..."
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                                            lineNumber: 357,
+                                                                            lineNumber: 365,
                                                                             columnNumber: 40
                                                                         }, this)
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                                        lineNumber: 357,
+                                                                        lineNumber: 365,
                                                                         columnNumber: 25
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$select$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["SelectContent"], {
@@ -1244,18 +1251,18 @@ function ProductDialog({ open, onOpenChange, product, onProductSaved }) {
                                                                                 children: b.name
                                                                             }, b.id, false, {
                                                                                 fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                                                lineNumber: 358,
+                                                                                lineNumber: 366,
                                                                                 columnNumber: 57
                                                                             }, this))
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                                        lineNumber: 358,
+                                                                        lineNumber: 366,
                                                                         columnNumber: 25
                                                                     }, this)
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                                lineNumber: 356,
+                                                                lineNumber: 364,
                                                                 columnNumber: 21
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Button"], {
@@ -1266,35 +1273,35 @@ function ProductDialog({ open, onOpenChange, product, onProductSaved }) {
                                                                     className: "h-4 w-4 text-green-600"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                                    lineNumber: 360,
+                                                                    lineNumber: 368,
                                                                     columnNumber: 99
                                                                 }, this)
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                                lineNumber: 360,
+                                                                lineNumber: 368,
                                                                 columnNumber: 21
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                        lineNumber: 355,
+                                                        lineNumber: 363,
                                                         columnNumber: 21
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                lineNumber: 353,
+                                                lineNumber: 361,
                                                 columnNumber: 17
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                        lineNumber: 326,
+                                        lineNumber: 334,
                                         columnNumber: 15
                                     }, this)
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                    lineNumber: 325,
+                                    lineNumber: 333,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$tabs$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TabsContent"], {
@@ -1308,7 +1315,7 @@ function ProductDialog({ open, onOpenChange, product, onProductSaved }) {
                                                 children: "Atributos y Variantes"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                lineNumber: 368,
+                                                lineNumber: 376,
                                                 columnNumber: 17
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1320,7 +1327,7 @@ function ProductDialog({ open, onOpenChange, product, onProductSaved }) {
                                                                 children: "Atributos Aplicables"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                                lineNumber: 371,
+                                                                lineNumber: 379,
                                                                 columnNumber: 21
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Button"], {
@@ -1332,20 +1339,20 @@ function ProductDialog({ open, onOpenChange, product, onProductSaved }) {
                                                                         className: "mr-2 h-4 w-4"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                                        lineNumber: 372,
+                                                                        lineNumber: 380,
                                                                         columnNumber: 99
                                                                     }, this),
                                                                     "Añadir Atributo"
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                                lineNumber: 372,
+                                                                lineNumber: 380,
                                                                 columnNumber: 21
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                        lineNumber: 370,
+                                                        lineNumber: 378,
                                                         columnNumber: 19
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1359,18 +1366,18 @@ function ProductDialog({ open, onOpenChange, product, onProductSaved }) {
                                                                 ]
                                                             }, attr.id, true, {
                                                                 fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                                lineNumber: 374,
+                                                                lineNumber: 382,
                                                                 columnNumber: 87
                                                             }, this))
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                        lineNumber: 374,
+                                                        lineNumber: 382,
                                                         columnNumber: 19
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                lineNumber: 369,
+                                                lineNumber: 377,
                                                 columnNumber: 17
                                             }, this),
                                             Object.keys(selectedAttributes).length > 0 && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1385,7 +1392,7 @@ function ProductDialog({ open, onOpenChange, product, onProductSaved }) {
                                                                         children: attrData.name
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                                        lineNumber: 381,
+                                                                        lineNumber: 389,
                                                                         columnNumber: 27
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Button"], {
@@ -1397,20 +1404,20 @@ function ProductDialog({ open, onOpenChange, product, onProductSaved }) {
                                                                                 className: "mr-2 h-4 w-4"
                                                                             }, void 0, false, {
                                                                                 fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                                                lineNumber: 382,
+                                                                                lineNumber: 390,
                                                                                 columnNumber: 126
                                                                             }, this),
                                                                             "Añadir Valor"
                                                                         ]
                                                                     }, void 0, true, {
                                                                         fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                                        lineNumber: 382,
+                                                                        lineNumber: 390,
                                                                         columnNumber: 27
                                                                     }, this)
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                                lineNumber: 380,
+                                                                lineNumber: 388,
                                                                 columnNumber: 25
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1424,7 +1431,7 @@ function ProductDialog({ open, onOpenChange, product, onProductSaved }) {
                                                                                 onCheckedChange: (c)=>handleValueSelection(attrId, value.id, !!c)
                                                                             }, void 0, false, {
                                                                                 fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                                                lineNumber: 384,
+                                                                                lineNumber: 392,
                                                                                 columnNumber: 161
                                                                             }, this),
                                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$label$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Label"], {
@@ -1433,58 +1440,40 @@ function ProductDialog({ open, onOpenChange, product, onProductSaved }) {
                                                                                 children: value.value
                                                                             }, void 0, false, {
                                                                                 fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                                                lineNumber: 384,
+                                                                                lineNumber: 392,
                                                                                 columnNumber: 313
                                                                             }, this)
                                                                         ]
                                                                     }, value.id, true, {
                                                                         fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                                        lineNumber: 384,
+                                                                        lineNumber: 392,
                                                                         columnNumber: 101
                                                                     }, this))
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                                lineNumber: 384,
+                                                                lineNumber: 392,
                                                                 columnNumber: 25
                                                             }, this)
                                                         ]
                                                     }, attrId, true, {
                                                         fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                        lineNumber: 379,
+                                                        lineNumber: 387,
                                                         columnNumber: 23
                                                     }, this))
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                lineNumber: 377,
+                                                lineNumber: 385,
                                                 columnNumber: 19
-                                            }, this),
-                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Button"], {
-                                                onClick: handleGenerateVariants,
-                                                className: "w-full",
-                                                children: [
-                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$circle$2d$plus$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__PlusCircle$3e$__["PlusCircle"], {
-                                                        className: "mr-2 h-4 w-4"
-                                                    }, void 0, false, {
-                                                        fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                        lineNumber: 389,
-                                                        columnNumber: 77
-                                                    }, this),
-                                                    "Generar Variantes y Continuar"
-                                                ]
-                                            }, void 0, true, {
-                                                fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                lineNumber: 389,
-                                                columnNumber: 17
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                        lineNumber: 367,
+                                        lineNumber: 375,
                                         columnNumber: 15
                                     }, this)
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                    lineNumber: 366,
+                                    lineNumber: 374,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$tabs$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TabsContent"], {
@@ -1496,7 +1485,7 @@ function ProductDialog({ open, onOpenChange, product, onProductSaved }) {
                                             children: "Costos, Precios y Stock Inicial"
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                            lineNumber: 394,
+                                            lineNumber: 401,
                                             columnNumber: 17
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1510,46 +1499,46 @@ function ProductDialog({ open, onOpenChange, product, onProductSaved }) {
                                                                     children: "Variante"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                                    lineNumber: 397,
+                                                                    lineNumber: 404,
                                                                     columnNumber: 44
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableHead"], {
                                                                     children: "SKU"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                                    lineNumber: 397,
+                                                                    lineNumber: 404,
                                                                     columnNumber: 75
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableHead"], {
                                                                     children: "Costo"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                                    lineNumber: 397,
+                                                                    lineNumber: 404,
                                                                     columnNumber: 101
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableHead"], {
                                                                     children: "Precio"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                                    lineNumber: 397,
+                                                                    lineNumber: 404,
                                                                     columnNumber: 129
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableHead"], {
                                                                     children: "Stock"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                                    lineNumber: 397,
+                                                                    lineNumber: 404,
                                                                     columnNumber: 158
                                                                 }, this)
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                            lineNumber: 397,
+                                                            lineNumber: 404,
                                                             columnNumber: 34
                                                         }, this)
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                        lineNumber: 397,
+                                                        lineNumber: 404,
                                                         columnNumber: 21
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableBody"], {
@@ -1560,7 +1549,7 @@ function ProductDialog({ open, onOpenChange, product, onProductSaved }) {
                                                                         children: variant.attribute_values?.map((v)=>v.value).join(' / ') || 'Estándar'
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                                        lineNumber: 401,
+                                                                        lineNumber: 408,
                                                                         columnNumber: 29
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableCell"], {
@@ -1571,12 +1560,12 @@ function ProductDialog({ open, onOpenChange, product, onProductSaved }) {
                                                                             className: "w-32"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                                            lineNumber: 402,
+                                                                            lineNumber: 409,
                                                                             columnNumber: 40
                                                                         }, this)
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                                        lineNumber: 402,
+                                                                        lineNumber: 409,
                                                                         columnNumber: 29
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableCell"], {
@@ -1587,12 +1576,12 @@ function ProductDialog({ open, onOpenChange, product, onProductSaved }) {
                                                                             className: "w-20"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                                            lineNumber: 403,
+                                                                            lineNumber: 410,
                                                                             columnNumber: 40
                                                                         }, this)
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                                        lineNumber: 403,
+                                                                        lineNumber: 410,
                                                                         columnNumber: 29
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableCell"], {
@@ -1603,12 +1592,12 @@ function ProductDialog({ open, onOpenChange, product, onProductSaved }) {
                                                                             className: "w-20"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                                            lineNumber: 404,
+                                                                            lineNumber: 411,
                                                                             columnNumber: 40
                                                                         }, this)
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                                        lineNumber: 404,
+                                                                        lineNumber: 411,
                                                                         columnNumber: 29
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableCell"], {
@@ -1619,58 +1608,58 @@ function ProductDialog({ open, onOpenChange, product, onProductSaved }) {
                                                                             className: "w-20"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                                            lineNumber: 405,
+                                                                            lineNumber: 412,
                                                                             columnNumber: 40
                                                                         }, this)
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                                        lineNumber: 405,
+                                                                        lineNumber: 412,
                                                                         columnNumber: 29
                                                                     }, this)
                                                                 ]
                                                             }, index, true, {
                                                                 fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                                lineNumber: 400,
+                                                                lineNumber: 407,
                                                                 columnNumber: 25
                                                             }, this))
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                        lineNumber: 398,
+                                                        lineNumber: 405,
                                                         columnNumber: 21
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                                lineNumber: 396,
+                                                lineNumber: 403,
                                                 columnNumber: 21
                                             }, this)
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                            lineNumber: 395,
+                                            lineNumber: 402,
                                             columnNumber: 17
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                                    lineNumber: 393,
+                                    lineNumber: 400,
                                     columnNumber: 13
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                            lineNumber: 318,
+                            lineNumber: 326,
                             columnNumber: 11
                         }, this),
                         renderFooter()
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                    lineNumber: 310,
+                    lineNumber: 318,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                lineNumber: 309,
+                lineNumber: 317,
                 columnNumber: 7
             }, this),
             quickAddType && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$dialogs$2f$QuickAddDialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["QuickAddDialog"], {
@@ -1715,7 +1704,7 @@ function ProductDialog({ open, onOpenChange, product, onProductSaved }) {
                 onSave: handleQuickSave
             }, void 0, false, {
                 fileName: "[project]/src/components/dialogs/ProductDialog.tsx",
-                lineNumber: 417,
+                lineNumber: 424,
                 columnNumber: 24
             }, this)
         ]

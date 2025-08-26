@@ -196,7 +196,7 @@ export function ProductDialog({ open, onOpenChange, product, onProductSaved }: P
 
   const [variantsToDelete, setVariantsToDelete] = useState<number[]>([]);
 
-  const handleGenerateVariants = () => {
+  const handleGenerateVariants = (callback?: () => void) => {
     const oldVariantsMap = new Map(
       variants.map(variant => {
         const key = variant.attribute_values?.map(v => v.id).sort().join('-') || 'standard';
@@ -216,7 +216,7 @@ export function ProductDialog({ open, onOpenChange, product, onProductSaved }: P
             attribute_values: [],
         };
         setVariants([standardVariant]);
-        setCurrentTab('pricing');
+        if (callback) callback();
         return;
     }
 
@@ -250,7 +250,15 @@ export function ProductDialog({ open, onOpenChange, product, onProductSaved }: P
     setVariantsToDelete(vtd => [...vtd, ...variantsMarkedForDeletion]);
 
     setVariants(newVariants);
-    setCurrentTab('pricing');
+    if (callback) callback();
+  };
+
+  const handleTabChange = (newTab: TabValue) => {
+    if (currentTab === 'attributes' && newTab === 'pricing') {
+      handleGenerateVariants(() => setCurrentTab('pricing'));
+    } else {
+      setCurrentTab(newTab);
+    }
   };
   
   const handleSave = async () => {
@@ -297,8 +305,8 @@ export function ProductDialog({ open, onOpenChange, product, onProductSaved }: P
     return (
       <DialogFooter>
         <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-        {currentTab !== 'data' && <Button variant="ghost" onClick={() => setCurrentTab(currentTab === 'pricing' ? 'attributes' : 'data')}>Anterior</Button>}
-        {currentTab !== 'pricing' && <Button onClick={() => setCurrentTab(currentTab === 'data' ? 'attributes' : 'pricing')}>Siguiente</Button>}
+        {currentTab !== 'data' && <Button variant="ghost" onClick={() => handleTabChange(currentTab === 'pricing' ? 'attributes' : 'data')}>Anterior</Button>}
+        {currentTab !== 'pricing' && <Button onClick={() => handleTabChange(currentTab === 'data' ? 'attributes' : 'pricing')}>Siguiente</Button>}
         {currentTab === 'pricing' && <Button onClick={handleSave}>Guardar Producto</Button>}
       </DialogFooter>
     );
@@ -315,7 +323,7 @@ export function ProductDialog({ open, onOpenChange, product, onProductSaved }: P
             </DialogDescription>
           </DialogHeader>
           
-          <Tabs value={currentTab} onValueChange={(value) => setCurrentTab(value as TabValue)} className="w-full">
+          <Tabs value={currentTab} onValueChange={(value) => handleTabChange(value as TabValue)} className="w-full">
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="data">1. Datos Principales</TabsTrigger>
               <TabsTrigger value="attributes">2. Atributos y Variantes</TabsTrigger>
@@ -386,7 +394,6 @@ export function ProductDialog({ open, onOpenChange, product, onProductSaved }: P
                     ))}
                   </div>
                 )}
-                <Button onClick={handleGenerateVariants} className="w-full"><PlusCircle className="mr-2 h-4 w-4" />Generar Variantes y Continuar</Button>
               </div>
             </TabsContent>
 

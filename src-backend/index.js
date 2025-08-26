@@ -386,11 +386,19 @@ app.put('/api/products/:id', async (req, res) => {
         `;
         await run(productSql, [name, description, brand_id, status, id]);
 
-        // 2. Eliminar las variantes marcadas para borrado
+        // 2. Procesar variantes marcadas para borrado (ahora se desactivan)
         if (variantsToDelete && variantsToDelete.length > 0) {
-            const idsToDelete = variantsToDelete.join(',');
-            await run(`DELETE FROM variant_attribute_values WHERE variant_id IN (${idsToDelete})`);
-            await run(`DELETE FROM product_variants WHERE id IN (${idsToDelete})`);
+            const get = util.promisify(db.get.bind(db));
+            for (const variantId of variantsToDelete) {
+                const variant = await get('SELECT current_stock FROM product_variants WHERE id = ?', [variantId]);
+                
+                if (variant && variant.current_stock > 0) {
+                    throw new Error(`No se puede eliminar la variante (ID: ${variantId}) porque tiene ${variant.current_stock} unidades en stock.`);
+                }
+                
+                // Si no tiene stock, se desactiva en lugar de borrar.
+                await run(`UPDATE product_variants SET status = 'inactive' WHERE id = ?`, [variantId]);
+            }
         }
 
         // 3. Iterar sobre las variantes para actualizar o crear
