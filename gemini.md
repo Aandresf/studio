@@ -133,5 +133,4 @@ La experiencia de usuario para la gestión de productos y ventas cambiará signi
 ### Notas y Tareas Pendientes (Agregado por el Usuario)
 
 *   **- REALIZADO - Dividir el panel de creación de productos en 3 pestañas:** Datos Principales, Atributos, y Costo/Precio. Esto evitará saturar la vista en un solo panel.
-*   ** Optimizar la selección en los combobox de compra y venta:** Especialmente en el de compra, para permitir cambiar el coste de los productos nuevos de forma más directa.
-* ** corregir el fomr de departmaento y subdepartamento en la confiduracion:** el departamento queda muy apretado, mueve los botones de accion del deprtamento a la derecha
+*   ** Optimizar la selección en los combobox de compra y venta:** Especialmente en el de compra, para permitir cambiar el coste de los productos nuevos de forma más directa. La idea es que cada producto listado en el combobox tenga: sku principal, nombre, lista de atributos(igual a como se muestra el la pagina productos), stock total, departamento y subdepartamento. Ademas debe permitir la busqueda por todos esos campos. usa el endpoint get products que devuelve el producto con sus variantes, no elimines el dialogo de seleccion de variante, analiza como se muestran los productos y sus atributos en la pagina principal de productos y crea algo similar en la lista del combobox

@@ -18,7 +18,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { Combobox } from '@/components/ui/combobox';
+import { AdvancedCombobox } from '@/components/ui/AdvancedCombobox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { PurchaseHistoryDialog } from '@/components/dialogs/PurchaseHistoryDialog';
 import { PurchaseReceiptDialog } from '@/components/dialogs/PurchaseReceiptDialog';
@@ -26,17 +26,18 @@ import { PurchaseConfirmationDialog } from '@/components/dialogs/PurchaseConfirm
 import { VariantSelectionDialog } from '@/components/dialogs/VariantSelectionDialog';
 import { ProductDialog } from '@/components/dialogs/ProductDialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { string } from 'zod';
 
 interface CartItem {
-  id: string;
-  variantId: number;
-  productId: number;
-  productName: string;
-  variantName: string;
-  quantity: number;
-  unitCost: number;
-  tax_rate: number;
-  sku: string | null;
+    id: string;
+    variantId: number;
+    productId: number;
+    productName: string;
+    variantName: string;
+    quantity: number;
+    unitCost: number;
+    tax_rate: number;
+    sku: string | null;
 }
 
 interface PendingPurchase {
@@ -45,7 +46,7 @@ interface PendingPurchase {
     date: Date;
     supplier: string;
     supplierRif: string;
-invoiceNumber: string;
+    invoiceNumber: string;
     createdAt: Date;
 }
 
@@ -54,16 +55,16 @@ export default function PurchasesPage() {
     const [supplier, setSupplier] = React.useState('');
     const [supplierRif, setSupplierRif] = React.useState('');
     const [invoiceNumber, setInvoiceNumber] = React.useState('');
-    
+
     const [products, setProducts] = React.useState<Product[]>([]);
     const [cart, setCart] = React.useState<CartItem[]>([]);
-    
+
     const [isLoading, setIsLoading] = React.useState(false);
     const [isLoadingProducts, setIsLoadingProducts] = React.useState(true);
 
     const [isVariantDialogOpen, setIsVariantDialogOpen] = React.useState(false);
     const [selectedProductForVariants, setSelectedProductForVariants] = React.useState<Product | null>(null);
-    
+
     const [pendingPurchases, setPendingPurchases] = React.useState<PendingPurchase[]>([]);
     const [isHistoryOpen, setIsHistoryOpen] = React.useState(false);
     const [isReceiptOpen, setIsReceiptOpen] = React.useState(false);
@@ -85,7 +86,7 @@ export default function PurchasesPage() {
             ]);
             setProducts(productsData);
             setPendingPurchases(pendingData.purchases || []);
-        } catch (error) {} finally {
+        } catch (error) { } finally {
             setIsLoadingProducts(false);
         }
     }, [isBackendReady]);
@@ -95,12 +96,70 @@ export default function PurchasesPage() {
     }, [fetchInitialData, refetchKey]);
 
     const productMap = React.useMemo(() => new Map(products.map(p => [p.id, p])), [products]);
-    
-    const productOptions = React.useMemo(() => 
-        products.map(p => ({ 
-            value: String(p.id), 
-            label: p.name
-        })), [products]);
+
+    const getProductDisplayValue = (productId: string) => {
+        const product = productMap.get(Number(productId));
+        return product ? product.name : '';
+    };
+
+    const productFilterFn = (options: Product[], searchValue: string): Product[] => {
+        if (!searchValue) return options;
+        const lowerCaseSearch = searchValue.toLowerCase();
+
+        return options.filter(product => {
+            const searchIn = [
+                product.name,
+                product.category || '',
+                product.brand?.name || '',
+                ...product.variants.map(v => v.sku || ''),
+                ...product.variants.flatMap(v => v.attribute_values?.map(av => av.value) || [])
+            ].join(' ').toLowerCase();
+
+            return searchIn.includes(lowerCaseSearch);
+        });
+    };
+
+    const renderProductOption = (product: Product) => {
+        console.log(product);
+
+        const totalStock = product.variants.reduce((acc, v) => acc + v.current_stock, 0);
+        const attributes = () => {
+            const productAttributes = product.variants?.reduce((acc, variant) => {
+                if (variant.current_stock > 0 && variant.attribute_values) {
+                    variant.attribute_values.forEach(av => {
+                        const attributeName = av.attribute_name;
+                        if (!acc[attributeName]) {
+                            acc[attributeName] = new Set();
+                        }
+                        acc[attributeName].add(av.value)
+                    });
+                }
+                return acc;
+            }, {});
+            const attributesForDisplay = {};
+            for (const name in productAttributes) {
+                attributesForDisplay[name] = Array.from(productAttributes[name]).join(', ');
+            }
+            // Mostrar los atributos y valores
+            return Object.entries(attributesForDisplay).length > 0
+                ? Object.entries(attributesForDisplay).map(([name, values]) => (
+                    <p key={name}><b>{name}:</b> {values}</p>
+                ))
+                : <span className="text-muted-foreground">Sin atributos</span>;
+        }
+
+        return (
+            <div className="grid grid-cols-4 items-center w-full gap-2">
+                <div className="flex flex-col justify-self-start">
+                    <span className="font-semibold">{product.name}</span>
+                    <span className="text-xs text-muted-foreground">{product.brand_name}</span>
+                </div>
+                <span className="text-xs text-muted-foreground justify-self-center">SKU: {product.base_sku || 'N/A'}</span>
+                <span className="justify-self-center">Stock: {totalStock}</span>
+                <div className="justify-self-end">{attributes()}</div>
+            </div>
+        );
+    };
 
     const resetForm = () => {
         setDate(new Date());
@@ -163,7 +222,7 @@ export default function PurchasesPage() {
 
     const handleFormSubmit = async () => {
         setIsLoading(true);
-        
+
         const purchasePayload: PurchasePayload = {
             transaction_date: date.toISOString(),
             entity_name: supplier || undefined,
@@ -184,7 +243,7 @@ export default function PurchasesPage() {
                 toastSuccess("Compra Registrada", "La compra se ha guardado exitosamente.");
                 setSelectedTransactionId(response.transaction_id);
             }
-            
+
             setIsReceiptOpen(true);
             triggerRefetch();
             resetForm();
@@ -194,7 +253,7 @@ export default function PurchasesPage() {
             setIsConfirmationOpen(false);
         }
     };
-    
+
     const handleProductSaved = (savedProduct: Product) => {
         triggerRefetch();
         toastSuccess("Producto Creado", `El producto "${savedProduct.name}" ya está disponible.`);
@@ -206,17 +265,17 @@ export default function PurchasesPage() {
             toastError("Compra Vacía", "No puedes poner en espera una compra sin productos.");
             return;
         }
-        const newPendingPurchase: PendingPurchase = { 
-            id: `pending-purchase-${Date.now()}`, 
-            cart, date, supplier, supplierRif, invoiceNumber, createdAt: new Date() 
+        const newPendingPurchase: PendingPurchase = {
+            id: `pending-purchase-${Date.now()}`,
+            cart, date, supplier, supplierRif, invoiceNumber, createdAt: new Date()
         };
-        
+
         try {
             await addPendingTransaction('purchase', newPendingPurchase);
             toastSuccess("Compra en Espera", "La compra actual se ha guardado.");
             resetForm();
             triggerRefetch();
-        } catch (error) {}
+        } catch (error) { }
     };
 
     const handleRestorePurchase = async (purchaseToRestore: PendingPurchase) => {
@@ -225,12 +284,12 @@ export default function PurchasesPage() {
         setSupplier(purchaseToRestore.supplier);
         setSupplierRif(purchaseToRestore.supplierRif);
         setInvoiceNumber(purchaseToRestore.invoiceNumber);
-        
+
         try {
             await removePendingTransaction(purchaseToRestore.id);
             toastSuccess("Compra Restaurada", "La compra ha sido cargada.");
             triggerRefetch();
-        } catch (error) {}
+        } catch (error) { }
     };
 
     const handleRemovePendingPurchase = async (id: string) => {
@@ -238,7 +297,7 @@ export default function PurchasesPage() {
             await removePendingTransaction(id);
             toastSuccess("Compra Descartada", "La compra en espera ha sido eliminada.");
             triggerRefetch();
-        } catch (error) {}
+        } catch (error) { }
     };
 
     const handleViewReceiptFromHistory = (purchase: GroupedPurchase) => {
@@ -257,7 +316,7 @@ export default function PurchasesPage() {
             id: `edit-${m.variantId}-${Math.random()}`,
             variantId: m.variantId,
             // @ts-ignore
-            productId: m.productId, 
+            productId: m.productId,
             productName: m.productName,
             variantName: m.variantName,
             quantity: m.quantity,
@@ -279,114 +338,118 @@ export default function PurchasesPage() {
 
     return (
         <TooltipProvider>
-        <div className="flex flex-col gap-6">
-            <div className="flex items-center justify-between">
-                <div className="flex-1">
-                    <h1 className="font-semibold text-lg md:text-2xl">Compras</h1>
-                    <p className="text-sm text-muted-foreground">{editingTransactionId ? `Editando compra a ${supplier}` : "Registra nuevas órdenes de compra."}</p>
-                </div>
-                <Button variant="outline" onClick={() => setIsHistoryOpen(true)} disabled={editingTransactionId !== null}>
-                    <History className="mr-2 h-4 w-4" />Historial
-                </Button>
-            </div>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-                <div className="lg:col-span-2 space-y-6">
-                    <Card>
-                        <CardHeader><CardTitle>{editingTransactionId ? "Editar Orden de Compra" : "Nueva Orden de Compra"}</CardTitle></CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="grid gap-2"><Label htmlFor="supplier">Proveedor</Label><Input id="supplier" value={supplier} onChange={e => setSupplier(e.target.value)} placeholder="Nombre del proveedor" /></div>
-                                <div className="grid gap-2"><Label htmlFor="supplierRif">RIF Proveedor</Label><Input id="supplierRif" value={supplierRif} onChange={e => setSupplierRif(e.target.value)} placeholder="Ej: J-12345678" /></div>
-                            </div>
-                            <div className="flex items-end gap-2">
-                                <div className="flex-grow">
-                                    <Label>Añadir Producto</Label>
-                                    <Combobox 
-                                        options={productOptions} 
-                                        value={""}
-                                        onChange={handleProductSelect} 
-                                        placeholder={isLoadingProducts ? "Cargando..." : "Buscar producto..."} 
-                                        searchPlaceholder="Buscar..." 
-                                        emptyMessage="No se encontraron productos." 
-                                        disabled={isLoadingProducts}
-                                    />
-                                </div>
-                                <Button variant="outline" onClick={() => setIsProductDialogOpen(true)}>
-                                    <PlusCircle className="mr-2 h-4 w-4" /> Crear
-                                </Button>
-                            </div>
-                            <div className="border rounded-md">
-                                
-                                <Table>
-                                    <TableHeader><TableRow><TableHead>Producto</TableHead><TableHead>Cantidad</TableHead><TableHead>Costo Unit.</TableHead><TableHead>Total</TableHead><TableHead></TableHead></TableRow></TableHeader>
-                                    <TableBody>
-                                        {cart.length > 0 ? cart.map((item, index) => (
-                                            <TableRow key={item.id}>
-                                                <TableCell><p className="font-medium">{item.productName}</p><p className="text-xs text-muted-foreground">{item.variantName} ({item.sku})</p></TableCell>
-                                                <TableCell>{item.quantity}</TableCell>
-                                                <TableCell>${item.unitCost.toFixed(2)}</TableCell>
-                                                <TableCell>${(item.quantity * item.unitCost).toFixed(2)}</TableCell>
-                                                <TableCell><Button variant="ghost" size="icon" onClick={() => removeCartItem(index)}><Trash2 className="h-4 w-4 text-destructive"/></Button></TableCell>
-                                            </TableRow>
-                                        )) : (<TableRow><TableCell colSpan={5} className="text-center h-24">Añade productos a la compra.</TableCell></TableRow>)}
-                                    </TableBody>
-                                </Table>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
-                <div className="space-y-6">
-                    <Card>
-                        <CardHeader><CardTitle>Configuración</CardTitle></CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="grid gap-2"><Label>Fecha de Compra</Label><Popover><PopoverTrigger asChild><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{date ? format(date, "PPP", { locale: es }) : <span>Seleccione fecha</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={date} onSelect={(d) => setDate(d || new Date())} initialFocus /></PopoverContent></Popover></div>
-                            <div className="grid gap-2"><Label htmlFor="invoiceNumber">Nº de Factura</Label><Input id="invoiceNumber" value={invoiceNumber} onChange={e => setInvoiceNumber(e.target.value)} placeholder="Opcional" /></div>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader><CardTitle>Resumen de Compra</CardTitle></CardHeader>
-                        <CardContent className="grid gap-4">
-                            <div className="flex justify-between"><span>Subtotal</span><span>${subtotal.toFixed(2)}</span></div>
-                            <div className="flex justify-between"><span>Impuestos</span><span>${totalTaxes.toFixed(2)}</span></div>
-                            <Separator />
-                            <div className="flex justify-between font-semibold text-lg"><span>Total</span><span>${total.toFixed(2)}</span></div>
-                        </CardContent>
-                    </Card>
-                    <div className="flex flex-col gap-2">
-                         <Button onClick={handleOpenConfirmation} disabled={isSubmitDisabled} size="lg">
-                            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            {isLoading ? "Procesando..." : (editingTransactionId ? "Guardar Cambios" : "Registrar Compra")}
-                        </Button>
-                        {editingTransactionId && (<Button variant="ghost" size="sm" onClick={resetForm}><XCircle className="mr-2 h-4 w-4" />Cancelar Edición</Button>)}
-                        <Button variant="secondary" onClick={handleHoldPurchase} disabled={editingTransactionId !== null}>Poner en Espera</Button>
+            <div className="flex flex-col gap-6">
+                <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                        <h1 className="font-semibold text-lg md:text-2xl">Compras</h1>
+                        <p className="text-sm text-muted-foreground">{editingTransactionId ? `Editando compra a ${supplier}` : "Registra nuevas órdenes de compra."}</p>
                     </div>
-                    {pendingPurchases.length > 0 && (
+                    <Button variant="outline" onClick={() => setIsHistoryOpen(true)} disabled={editingTransactionId !== null}>
+                        <History className="mr-2 h-4 w-4" />Historial
+                    </Button>
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+                    <div className="lg:col-span-2 space-y-6">
                         <Card>
-                            <CardHeader><CardTitle>Compras en Espera</CardTitle><CardDescription>Restaura o elimina las compras pendientes.</CardDescription></CardHeader>
+                            <CardHeader><CardTitle>{editingTransactionId ? "Editar Orden de Compra" : "Nueva Orden de Compra"}</CardTitle></CardHeader>
                             <CardContent className="space-y-4">
-                                {pendingPurchases.map((purchase) => (
-                                    <div key={purchase.id} className="flex items-center justify-between p-2 border rounded-lg">
-                                        <div>
-                                            <p className="font-medium">{purchase.supplier || "Proveedor General"}</p>
-                                            <p className="text-sm text-muted-foreground">{purchase.cart.length} producto(s) - {format(new Date(purchase.createdAt), "p", { locale: es })}</p>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <Tooltip><TooltipTrigger asChild><Button variant="outline" size="icon" onClick={() => handleRestorePurchase(purchase)}><ListRestart className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent><p>Restaurar</p></TooltipContent></Tooltip>
-                                            <Tooltip><TooltipTrigger asChild><Button variant="destructive" size="icon" onClick={() => handleRemovePendingPurchase(purchase.id)}><Trash className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent><p>Eliminar</p></TooltipContent></Tooltip>
-                                        </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="grid gap-2"><Label htmlFor="supplier">Proveedor</Label><Input id="supplier" value={supplier} onChange={e => setSupplier(e.target.value)} placeholder="Nombre del proveedor" /></div>
+                                    <div className="grid gap-2"><Label htmlFor="supplierRif">RIF Proveedor</Label><Input id="supplierRif" value={supplierRif} onChange={e => setSupplierRif(e.target.value)} placeholder="Ej: J-12345678" /></div>
+                                </div>
+                                <div className="flex items-end gap-2">
+                                    <div className="flex-grow">
+                                        <Label>Añadir Producto</Label>
+                                        <AdvancedCombobox<Product>
+                                            options={products}
+                                            value={""}
+                                            onChange={handleProductSelect}
+                                            valueAccessor={(product) => String(product.id)}
+                                            filterFn={productFilterFn}
+                                            renderOption={renderProductOption}
+                                            displayValue={getProductDisplayValue}
+                                            placeholder={isLoadingProducts ? "Cargando..." : "Buscar producto..."}
+                                            searchPlaceholder="Buscar por nombre, SKU, categoría, marca..."
+                                            emptyMessage="No se encontraron productos."
+                                            disabled={isLoadingProducts}
+                                        />
                                     </div>
-                                ))}
+                                    <Button variant="outline" onClick={() => setIsProductDialogOpen(true)}>
+                                        <PlusCircle className="mr-2 h-4 w-4" /> Crear
+                                    </Button>
+                                </div>
+                                <div className="border rounded-md">
+
+                                    <Table>
+                                        <TableHeader><TableRow><TableHead>Producto</TableHead><TableHead>Cantidad</TableHead><TableHead>Costo Unit.</TableHead><TableHead>Total</TableHead><TableHead></TableHead></TableRow></TableHeader>
+                                        <TableBody>
+                                            {cart.length > 0 ? cart.map((item, index) => (
+                                                <TableRow key={item.id}>
+                                                    <TableCell><p className="font-medium">{item.productName}</p><p className="text-xs text-muted-foreground">{item.variantName} ({item.sku})</p></TableCell>
+                                                    <TableCell>{item.quantity}</TableCell>
+                                                    <TableCell>${item.unitCost.toFixed(2)}</TableCell>
+                                                    <TableCell>${(item.quantity * item.unitCost).toFixed(2)}</TableCell>
+                                                    <TableCell><Button variant="ghost" size="icon" onClick={() => removeCartItem(index)}><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell>
+                                                </TableRow>
+                                            )) : (<TableRow><TableCell colSpan={5} className="text-center h-24">Añade productos a la compra.</TableCell></TableRow>)}
+                                        </TableBody>
+                                    </Table>
+                                </div>
                             </CardContent>
                         </Card>
-                    )}
+                    </div>
+                    <div className="space-y-6">
+                        <Card>
+                            <CardHeader><CardTitle>Configuración</CardTitle></CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="grid gap-2"><Label>Fecha de Compra</Label><Popover><PopoverTrigger asChild><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{date ? format(date, "PPP", { locale: es }) : <span>Seleccione fecha</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={date} onSelect={(d) => setDate(d || new Date())} initialFocus /></PopoverContent></Popover></div>
+                                <div className="grid gap-2"><Label htmlFor="invoiceNumber">Nº de Factura</Label><Input id="invoiceNumber" value={invoiceNumber} onChange={e => setInvoiceNumber(e.target.value)} placeholder="Opcional" /></div>
+                            </CardContent>
+                        </Card>
+                        <Card>
+                            <CardHeader><CardTitle>Resumen de Compra</CardTitle></CardHeader>
+                            <CardContent className="grid gap-4">
+                                <div className="flex justify-between"><span>Subtotal</span><span>${subtotal.toFixed(2)}</span></div>
+                                <div className="flex justify-between"><span>Impuestos</span><span>${totalTaxes.toFixed(2)}</span></div>
+                                <Separator />
+                                <div className="flex justify-between font-semibold text-lg"><span>Total</span><span>${total.toFixed(2)}</span></div>
+                            </CardContent>
+                        </Card>
+                        <div className="flex flex-col gap-2">
+                            <Button onClick={handleOpenConfirmation} disabled={isSubmitDisabled} size="lg">
+                                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                {isLoading ? "Procesando..." : (editingTransactionId ? "Guardar Cambios" : "Registrar Compra")}
+                            </Button>
+                            {editingTransactionId && (<Button variant="ghost" size="sm" onClick={resetForm}><XCircle className="mr-2 h-4 w-4" />Cancelar Edición</Button>)}
+                            <Button variant="secondary" onClick={handleHoldPurchase} disabled={editingTransactionId !== null}>Poner en Espera</Button>
+                        </div>
+                        {pendingPurchases.length > 0 && (
+                            <Card>
+                                <CardHeader><CardTitle>Compras en Espera</CardTitle><CardDescription>Restaura o elimina las compras pendientes.</CardDescription></CardHeader>
+                                <CardContent className="space-y-4">
+                                    {pendingPurchases.map((purchase) => (
+                                        <div key={purchase.id} className="flex items-center justify-between p-2 border rounded-lg">
+                                            <div>
+                                                <p className="font-medium">{purchase.supplier || "Proveedor General"}</p>
+                                                <p className="text-sm text-muted-foreground">{purchase.cart.length} producto(s) - {format(new Date(purchase.createdAt), "p", { locale: es })}</p>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <Tooltip><TooltipTrigger asChild><Button variant="outline" size="icon" onClick={() => handleRestorePurchase(purchase)}><ListRestart className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent><p>Restaurar</p></TooltipContent></Tooltip>
+                                                <Tooltip><TooltipTrigger asChild><Button variant="destructive" size="icon" onClick={() => handleRemovePendingPurchase(purchase.id)}><Trash className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent><p>Eliminar</p></TooltipContent></Tooltip>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </CardContent>
+                            </Card>
+                        )}
+                    </div>
                 </div>
             </div>
-        </div>
-        <VariantSelectionDialog open={isVariantDialogOpen} onOpenChange={setIsVariantDialogOpen} product={selectedProductForVariants} onVariantsSelected={handleVariantsSelected} />
-        <ProductDialog open={isProductDialogOpen} onOpenChange={setIsProductDialogOpen} product={null} onProductSaved={handleProductSaved} />
-        <PurchaseHistoryDialog open={isHistoryOpen} onOpenChange={setIsHistoryOpen} onViewReceipt={handleViewReceiptFromHistory} onEditPurchase={handleEditPurchase} />
-        <PurchaseReceiptDialog open={isReceiptOpen} onOpenChange={(open) => { if (!open) setSelectedTransactionId(null); setIsReceiptOpen(open); }} transactionId={selectedTransactionId} />
-        <PurchaseConfirmationDialog open={isConfirmationOpen} onOpenChange={setIsConfirmationOpen} purchaseItems={consolidatedItems} onConfirm={handleFormSubmit} isSaving={isLoading} />
+            <VariantSelectionDialog open={isVariantDialogOpen} onOpenChange={setIsVariantDialogOpen} product={selectedProductForVariants} onVariantsSelected={handleVariantsSelected} />
+            <ProductDialog open={isProductDialogOpen} onOpenChange={setIsProductDialogOpen} product={null} onProductSaved={handleProductSaved} />
+            <PurchaseHistoryDialog open={isHistoryOpen} onOpenChange={setIsHistoryOpen} onViewReceipt={handleViewReceiptFromHistory} onEditPurchase={handleEditPurchase} />
+            <PurchaseReceiptDialog open={isReceiptOpen} onOpenChange={(open) => { if (!open) setSelectedTransactionId(null); setIsReceiptOpen(open); }} transactionId={selectedTransactionId} />
+            <PurchaseConfirmationDialog open={isConfirmationOpen} onOpenChange={setIsConfirmationOpen} purchaseItems={consolidatedItems} onConfirm={handleFormSubmit} isSaving={isLoading} />
         </TooltipProvider>
     )
 }

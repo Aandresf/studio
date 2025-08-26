@@ -18,7 +18,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { Combobox } from '@/components/ui/combobox';
+import { AdvancedCombobox } from '@/components/ui/AdvancedCombobox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { SalesHistoryDialog } from '@/components/dialogs/SalesHistoryDialog';
 import { SalesReceiptDialog } from '@/components/dialogs/SalesReceiptDialog';
@@ -93,12 +93,70 @@ export default function SalesPage() {
     }, [isBackendReady, refetchKey]);
 
     const productMap = React.useMemo(() => new Map(products.map(p => [p.id, p])), [products]);
+
+    const getProductDisplayValue = (productId: string) => {
+        const product = productMap.get(Number(productId));
+        return product ? product.name : '';
+    };
+
+    const productFilterFn = (options: Product[], searchValue: string): Product[] => {
+        if (!searchValue) return options;
+        const lowerCaseSearch = searchValue.toLowerCase();
+
+        return options.filter(product => {
+            const searchIn = [
+                product.name,
+                product.category || '',
+                product.brand?.name || '',
+                ...product.variants.map(v => v.sku || ''),
+                ...product.variants.flatMap(v => v.attribute_values?.map(av => av.value) || [])
+            ].join(' ').toLowerCase();
+
+            return searchIn.includes(lowerCaseSearch);
+        });
+    };
+
+    const renderProductOption = (product: Product) => {
+            console.log(product);
     
-    const productOptions = React.useMemo(() => 
-        products.map(p => ({
-            value: String(p.id),
-            label: p.name
-        })), [products]);
+            const totalStock = product.variants.reduce((acc, v) => acc + v.current_stock, 0);
+            const attributes = () => {
+                const productAttributes = product.variants?.reduce((acc, variant) => {
+                    if (variant.current_stock > 0 && variant.attribute_values) {
+                        variant.attribute_values.forEach(av => {
+                            const attributeName = av.attribute_name;
+                            if (!acc[attributeName]) {
+                                acc[attributeName] = new Set();
+                            }
+                            acc[attributeName].add(av.value)
+                        });
+                    }
+                    return acc;
+                }, {});
+                const attributesForDisplay = {};
+                for (const name in productAttributes) {
+                    attributesForDisplay[name] = Array.from(productAttributes[name]).join(', ');
+                }
+                // Mostrar los atributos y valores
+                return Object.entries(attributesForDisplay).length > 0
+                    ? Object.entries(attributesForDisplay).map(([name, values]) => (
+                        <p key={name}><b>{name}:</b> {values}</p>
+                    ))
+                    : <span className="text-muted-foreground">Sin atributos</span>;
+            }
+    
+            return (
+                <div className="grid grid-cols-4 items-center w-full gap-2">
+                    <div className="flex flex-col justify-self-start">
+                        <span className="font-semibold">{product.name}</span>
+                        <span className="text-xs text-muted-foreground">{product.brand_name}</span>
+                    </div>
+                    <span className="text-xs text-muted-foreground justify-self-center">SKU: {product.base_sku || 'N/A'}</span>
+                    <span className="justify-self-center">Stock: {totalStock}</span>
+                    <div className="justify-self-end">{attributes()}</div>
+                </div>
+            );
+        };
 
     const resetForm = () => {
         setDate(new Date());
@@ -293,13 +351,17 @@ export default function SalesPage() {
                             </div>
                             <div>
                                 <Label>Añadir Producto</Label>
-                                <Combobox 
-                                    options={productOptions} 
+                                <AdvancedCombobox<Product>
+                                    options={products}
                                     value={""}
-                                    onChange={handleProductSelect} 
-                                    placeholder={isLoadingProducts ? "Cargando..." : "Buscar producto..."} 
-                                    searchPlaceholder="Buscar..." 
-                                    emptyMessage="No se encontraron productos." 
+                                    onChange={handleProductSelect}
+                                    valueAccessor={(product) => String(product.id)}
+                                    filterFn={productFilterFn}
+                                    renderOption={renderProductOption}
+                                    displayValue={getProductDisplayValue}
+                                    placeholder={isLoadingProducts ? "Cargando..." : "Buscar producto..."}
+                                    searchPlaceholder="Buscar por nombre, SKU, categoría, marca..."
+                                    emptyMessage="No se encontraron productos."
                                     disabled={isLoadingProducts}
                                 />
                             </div>
