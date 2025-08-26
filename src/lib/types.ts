@@ -1,18 +1,45 @@
+// --- Tipos para la gestión de Catálogo y Variantes ---
+
+export interface Brand {
+  id: number;
+  name: string;
+}
+
+export interface Attribute {
+  id: number;
+  name: string;
+}
+
+export interface AttributeValue {
+  id: number;
+  attribute_id: number;
+  value: string;
+}
+
+export interface ProductVariant {
+  id: number;
+  product_id: number;
+  sku: string | null;
+  cost_price: number;
+  sale_price: number;
+  current_stock: number;
+  status: 'Activo' | 'Inactivo';
+  attribute_values?: AttributeValue[]; // Para mostrar qué valores tiene
+}
 
 export interface Product {
   id: number;
   name: string;
-  sku: string | null;
   description?: string;
-  stock: number;
-  price: number;
-  tax_rate: number;
+  category?: string;
+  subcategory?: string;
+  brand_id?: number;
   status: 'Activo' | 'Inactivo';
-  image?: string;
-  // Campos de la BD que se mapean a los de arriba
-  current_stock?: number;
-  average_cost?: number;
+  variants?: ProductVariant[]; // Un producto ahora puede tener muchas variantes
 }
+
+
+// --- Tipos para Dashboard y Reportes (se mantendrán y adaptarán) ---
 
 export interface DashboardSummary {
     productCount: number;
@@ -21,19 +48,20 @@ export interface DashboardSummary {
 }
 
 export interface RecentSale {
-    productName: string;
+    productName: string; // Podría ser "Producto Base - Variante"
     quantity: number;
     date: string;
 }
 
-export type MovementType = 'ENTRADA' | 'SALIDA' | 'RETIRO' | 'AUTO-CONSUMO';
+export type MovementType = 'ENTRADA' | 'SALIDA' | 'RETIRO' | 'AUTO-CONSUMO' | 'AJUSTE';
 
 export interface InventoryMovement {
     id: number;
-    product_id: number;
+    variant_id: number; // Cambiado de product_id a variant_id
     type: MovementType;
     quantity: number;
     unit_cost?: number;
+    price?: number;
     date: string;
     description?: string;
 }
@@ -47,28 +75,6 @@ export interface ReportMetadata {
     generated_at: string;
 }
 
-export interface InventoryReportItem {
-    product_id: number;
-    name: string;
-    sku: string;
-    opening_stock: number;
-    entradas: number;
-    salidas: number;
-    closing_stock: number;
-}
-
-export interface SalesReportItem {
-    product_id: number;
-    name: string;
-    sku: string;
-    quantity: number;
-    unit_cost: number;
-    date: string;
-}
-
-// Purchases report can reuse SalesReportItem
-export type PurchasesReportItem = SalesReportItem;
-
 export interface FullReport extends ReportMetadata {
     report_data: string; // JSON string
 }
@@ -81,10 +87,15 @@ export interface StoreSettings {
     website?: string;
 }
 
-export interface PurchaseItemPayload {
-  productId: number;
+// --- Tipos para Transacciones (Compras y Ventas) ---
+
+// Se operará a nivel de variante
+export interface TransactionItemPayload {
+  variantId: number;
   quantity: number;
-  unitCost: number;
+  unitCost?: number; // Para compras
+  unitPrice?: number; // Para ventas
+  tax_rate: number;
   description?: string;
 }
 
@@ -93,36 +104,7 @@ export interface PurchasePayload {
   entity_name?: string;
   entity_document?: string;
   document_number?: string;
-  items: PurchaseItemPayload[];
-}
-
-export interface PurchaseHistoryMovement {
-  movementId: number;
-  productId: number;
-  date: string;
-  productName: string;
-  quantity: number;
-  unit_cost: number;
-  total_cost: number;
-  description: string;
-}
-
-export interface GroupedPurchase {
-  transaction_id: string;
-  transaction_date: string;
-  entity_name: string;
-  entity_document: string;
-  document_number: string;
-  movements: PurchaseHistoryMovement[];
-  status: 'Activo' | 'Anulado' | 'Reemplazado';
-  total_cost: number;
-}
-
-export interface SaleItemPayload {
-  productId: number;
-  quantity: number;
-  unitPrice: number;
-  tax_rate: number;
+  items: TransactionItemPayload[];
 }
 
 export interface SalePayload {
@@ -130,25 +112,32 @@ export interface SalePayload {
   entity_name?: string;
   entity_document?: string;
   document_number?: string;
-  items: SaleItemPayload[];
+  items: TransactionItemPayload[];
 }
 
-export interface SalesHistoryMovement {
+// --- Tipos para Historiales ---
+
+export interface HistoryMovement {
   movementId: number;
-  productId: number;
-  productName: string;
+  variantId: number;
+  productName: string; // "Producto Base"
+  variantName: string; // "Valor1 / Valor2"
   quantity: number;
-  unit_price: number;
+  unit_cost?: number;
+  unit_price?: number;
   status: 'Activo' | 'Reemplazado' | 'Anulado';
 }
 
-export interface GroupedSale {
+export interface GroupedTransaction {
   transaction_id: string;
   transaction_date: string;
   entity_name: string;
   entity_document: string;
   document_number: string;
   total: number;
-  movements: SalesHistoryMovement[];
+  movements: HistoryMovement[];
   status: 'Activo' | 'Anulado' | 'Reemplazado';
 }
+
+export type GroupedPurchase = GroupedTransaction;
+export type GroupedSale = GroupedTransaction;

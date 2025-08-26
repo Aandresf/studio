@@ -68,17 +68,17 @@ export function SalesConfirmationDialog({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Producto</TableHead>
-                <TableHead className="text-right">Cantidad</TableHead>
+                <TableHead>Cantidad</TableHead>
+                <TableHead className="text-right">Producto</TableHead>
                 <TableHead className="text-right">Precio Unitario</TableHead>
                 <TableHead className="text-right">Subtotal</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {saleItems.map((item) => (
-                <TableRow key={item.productId}>
-                  <TableCell>{item.name}</TableCell>
-                  <TableCell className="text-right">{item.quantity}</TableCell>
+                <TableRow key={item.variantId}>
+                  <TableCell>{item.quantity}</TableCell>
+                  <TableCell className="text-right" >{item.name}</TableCell>
                   <TableCell className="text-right">${item.unitPrice.toFixed(2)}</TableCell>
                   <TableCell className="text-right">
                     ${(item.quantity * item.unitPrice).toFixed(2)}

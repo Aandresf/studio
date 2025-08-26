@@ -220,63 +220,127 @@ app.post('/api/app/quit', (req, res) => {
 
 // PRODUCTS
 app.get('/api/products', async (req, res) => {
-  console.log('--- INICIO DE PETICIÓN GET /api/products ---');
+  console.log('--- INICIO DE PETICIÓN GET /api/products (con variantes) ---');
   try {
     const db = databaseManager.getActiveDb();
     const dbAll = util.promisify(db.all.bind(db));
     
-    const sql = "SELECT id, name, sku, status, image, description, current_stock, average_cost, tax_rate FROM products ORDER BY id DESC";
-    const rows = await dbAll(sql, []);
+    // 1. Obtener todos los productos base
+    const productsSql = `
+      SELECT p.*, b.name as brand_name 
+      FROM products p
+      LEFT JOIN brands b ON p.brand_id = b.id
+      ORDER BY p.id DESC
+    `;
+    const products = await dbAll(productsSql, []);
 
-    const products = rows.map(p => ({
-      id: p.id,
-      name: p.name,
-      sku: p.sku,
-      status: p.status,
-      image: p.image,
-      description: p.description,
-      tax_rate: p.tax_rate,
-      stock: p.current_stock,
-      price: p.average_cost
+    // 2. Obtener todas las variantes y agruparlas por product_id
+    const variantsSql = `SELECT * FROM product_variants`;
+    const allVariants = await dbAll(variantsSql, []);
+    
+    // 3. Obtener todas las relaciones variante-atributo-valor
+    const variantAttrsSql = `
+      SELECT 
+        vav.variant_id, 
+        av.id as attribute_value_id, 
+        av.value, 
+        a.id as attribute_id, 
+        a.name as attribute_name
+      FROM variant_attribute_values vav
+      JOIN attribute_values av ON vav.attribute_value_id = av.id
+      JOIN attributes a ON av.attribute_id = a.id
+    `;
+    const allVariantAttrs = await dbAll(variantAttrsSql, []);
+
+    // 4. Mapear los atributos a sus variantes
+    const variantsWithAttrs = allVariants.map(variant => {
+      const attributes = allVariantAttrs
+        .filter(attr => attr.variant_id === variant.id)
+        .map(attr => ({
+          id: attr.attribute_value_id,
+          value: attr.value,
+          attribute_id: attr.attribute_id,
+          attribute_name: attr.attribute_name
+        }));
+      return { ...variant, attribute_values: attributes };
+    });
+
+    // 5. Anidar las variantes en sus productos correspondientes
+    const finalProducts = products.map(p => ({
+      ...p,
+      variants: variantsWithAttrs.filter(v => v.product_id === p.id)
     }));
     
-    res.json(products);
+    res.json(finalProducts);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-app.post('/api/products', (req, res) => {
-  const { name, sku, description, stock = 0, price = 0, tax_rate = 16.00 } = req.body;
-  const status = req.body.status === 'Inactivo' ? 'Inactivo' : 'Activo';
+// PRODUCTS (con variantes)
+app.post('/api/products', async (req, res) => {
+    const { name, description, brand_id, category, subcategory, status = 'Activo', variants } = req.body;
 
-  if (!name) {
-    return res.status(400).json({ error: 'Product name is required.' });
-  }
+    if (!name || !variants || !Array.isArray(variants) || variants.length === 0) {
+        return res.status(400).json({ error: 'Nombre y al menos una variante son requeridos.' });
+    }
 
-  try {
     const db = databaseManager.getActiveDb();
-    const sql = `INSERT INTO products (name, sku, description, status, current_stock, average_cost, tax_rate) VALUES (?, ?, ?, ?, ?, ?, ?)`;
-    
-    db.run(sql, [name, sku, description || '', status, stock, price, tax_rate], function(err) {
-      if (err) {
-        return res.status(500).json({ error: err.message });
-      }
-      res.status(201).json({ 
-        id: this.lastID,
-        name,
-        sku,
-        description: description || '',
-        status,
-        stock,
-        price,
-        tax_rate
-      });
-    });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
+    const run = util.promisify(db.run.bind(db));
+    const get = util.promisify(db.get.bind(db));
+
+    try {
+        await run('BEGIN TRANSACTION');
+
+        // 1. Insertar el producto base
+        const productSql = `INSERT INTO products (name, description, brand_id, category, subcategory, status) VALUES (?, ?, ?, ?, ?, ?)`;
+        const productResult = await new Promise((resolve, reject) => {
+            db.run(productSql, [name, description, brand_id, category, subcategory, status], function(err) {
+                if (err) reject(err);
+                else resolve({ lastID: this.lastID });
+            });
+        });
+        const productId = productResult.lastID;
+
+        // 2. Iterar e insertar cada variante y sus atributos
+        for (const variant of variants) {
+            const { sku, cost_price, sale_price, current_stock, attribute_values } = variant;
+            
+            // Insertar la variante
+            const variantSql = `INSERT INTO product_variants (product_id, sku, cost_price, sale_price, current_stock, status) VALUES (?, ?, ?, ?, ?, ?)`;
+            const variantResult = await new Promise((resolve, reject) => {
+                db.run(variantSql, [productId, sku, cost_price, sale_price, current_stock, status], function(err) {
+                    if (err) reject(err);
+                    else resolve({ lastID: this.lastID });
+                });
+            });
+            const variantId = variantResult.lastID;
+
+            // Vincular valores de atributos a la variante
+            if (attribute_values && Array.isArray(attribute_values)) {
+                const pivotSql = `INSERT INTO variant_attribute_values (variant_id, attribute_value_id) VALUES (?, ?)`;
+                for (const attrValue of attribute_values) {
+                    await run(pivotSql, [variantId, attrValue.id]);
+                }
+            }
+        }
+
+        await run('COMMIT');
+        
+        // Devolver el producto completo creado (sin hacer otro query por simplicidad ahora)
+        res.status(201).json({ id: productId, ...req.body });
+
+    } catch (err) {
+        console.error('Error al crear producto con variantes:', err.message);
+        try {
+            await run('ROLLBACK');
+            res.status(500).json({ error: `Error en la transacción: ${err.message}` });
+        } catch (rollbackErr) {
+            res.status(500).json({ error: 'Error fatal durante el rollback.' });
+        }
+    }
 });
+
 
 app.get('/api/products/:id', async (req, res) => {
   try {
@@ -298,43 +362,68 @@ app.get('/api/products/:id', async (req, res) => {
   }
 });
 
-app.put('/api/products/:id', (req, res) => {
-  const { name, sku, description, stock, price, tax_rate } = req.body;
-  const status = req.body.status === 'Inactivo' ? 'Inactivo' : 'Activo';
-  
-  if (!name) {
-    return res.status(400).json({ error: 'Product name is required.' });
-  }
+app.put('/api/products/:id', async (req, res) => {
+    const { id } = req.params;
+    const { name, description, brand_id, category, subcategory, status = 'Activo', variants } = req.body;
 
-  try {
+    if (!name || !variants || !Array.isArray(variants)) {
+        return res.status(400).json({ error: 'Faltan datos requeridos.' });
+    }
+
     const db = databaseManager.getActiveDb();
-    const sql = `
-      UPDATE products 
-      SET 
-        name = ?, 
-        sku = ?, 
-        description = ?,
-        status = ?, 
-        current_stock = ?, 
-        average_cost = ?, 
-        tax_rate = ?,
-        updated_at = strftime('%Y-%m-%d %H:%M:%S', 'now') 
-      WHERE id = ?
-    `;
-    const params = [name, sku, description || '', status, stock ?? 0, price ?? 0, tax_rate ?? 16.00, req.params.id];
-    
-    db.run(sql, params, function(err) {
-      if (err) {
-        return res.status(500).json({ error: err.message });
-      }
-      if (this.changes === 0) {
-        return res.status(404).json({ error: 'Product not found' });
-      }
-      res.json({ message: 'Product updated successfully' });
-    });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
+    const run = util.promisify(db.run.bind(db));
+    const all = util.promisify(db.all.bind(db));
+
+    try {
+        await run('BEGIN TRANSACTION');
+
+        // 1. Actualizar el producto base
+        const productSql = `
+            UPDATE products 
+            SET name = ?, description = ?, brand_id = ?, category = ?, subcategory = ?, status = ?, updated_at = strftime('%Y-%m-%d %H:%M:%S', 'now') 
+            WHERE id = ?
+        `;
+        await run(productSql, [name, description, brand_id, category, subcategory, status, id]);
+
+        // 2. Obtener los IDs de las variantes viejas para borrarlas
+        const oldVariantIds = await all('SELECT id FROM product_variants WHERE product_id = ?', [id]);
+        const idsToDelete = oldVariantIds.map(v => v.id);
+
+        if (idsToDelete.length > 0) {
+            // Borrar las relaciones en la tabla pivote
+            await run(`DELETE FROM variant_attribute_values WHERE variant_id IN (${idsToDelete.join(',')})`);
+            // Borrar las variantes viejas
+            await run(`DELETE FROM product_variants WHERE id IN (${idsToDelete.join(',')})`);
+        }
+
+        // 3. Re-crear las variantes con la nueva información
+        for (const variant of variants) {
+            const { sku, cost_price, sale_price, current_stock, attribute_values } = variant;
+            
+            const variantSql = `INSERT INTO product_variants (product_id, sku, cost_price, sale_price, current_stock, status) VALUES (?, ?, ?, ?, ?, ?)`;
+            const variantResult = await new Promise((resolve, reject) => {
+                db.run(variantSql, [id, sku, cost_price, sale_price, current_stock, status], function(err) {
+                    if (err) reject(err); else resolve({ lastID: this.lastID });
+                });
+            });
+            const variantId = variantResult.lastID;
+
+            if (attribute_values && Array.isArray(attribute_values)) {
+                const pivotSql = `INSERT INTO variant_attribute_values (variant_id, attribute_value_id) VALUES (?, ?)`;
+                for (const attrValue of attribute_values) {
+                    await run(pivotSql, [variantId, attrValue.id]);
+                }
+            }
+        }
+
+        await run('COMMIT');
+        res.json({ message: 'Producto actualizado exitosamente' });
+
+    } catch (err) {
+        console.error('Error al actualizar producto con variantes:', err.message);
+        await run('ROLLBACK');
+        res.status(500).json({ error: `Error en la transacción: ${err.message}` });
+    }
 });
 
 app.delete('/api/products/:id', (req, res) => {
@@ -353,6 +442,219 @@ app.delete('/api/products/:id', (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+// --- BRANDS API ---
+app.get('/api/brands', async (req, res) => {
+    try {
+        const db = databaseManager.getActiveDb();
+        const dbAll = util.promisify(db.all.bind(db));
+        const rows = await dbAll("SELECT * FROM brands ORDER BY name ASC", []);
+        res.json(rows);
+    } catch (error) {
+        res.status(500).json({ error: `Failed to fetch brands: ${error.message}` });
+    }
+});
+
+app.post('/api/brands', (req, res) => {
+    const { name } = req.body;
+    if (!name) {
+        return res.status(400).json({ error: 'Brand name is required.' });
+    }
+    try {
+        const db = databaseManager.getActiveDb();
+        const sql = `INSERT INTO brands (name) VALUES (?)`;
+        db.run(sql, [name], function(err) {
+            if (err) {
+                if (err.message.includes('UNIQUE constraint failed')) {
+                    return res.status(409).json({ error: 'Brand name already exists.' });
+                }
+                return res.status(500).json({ error: err.message });
+            }
+            res.status(201).json({ id: this.lastID, name });
+        });
+    } catch (error) {
+        res.status(500).json({ error: `Failed to create brand: ${error.message}` });
+    }
+});
+
+app.put('/api/brands/:id', (req, res) => {
+    const { name } = req.body;
+    const { id } = req.params;
+    if (!name) {
+        return res.status(400).json({ error: 'Brand name is required.' });
+    }
+    try {
+        const db = databaseManager.getActiveDb();
+        const sql = `UPDATE brands SET name = ? WHERE id = ?`;
+        db.run(sql, [name, id], function(err) {
+            if (err) {
+                if (err.message.includes('UNIQUE constraint failed')) {
+                    return res.status(409).json({ error: 'Brand name already exists.' });
+                }
+                return res.status(500).json({ error: err.message });
+            }
+            if (this.changes === 0) {
+                return res.status(404).json({ error: 'Brand not found' });
+            }
+            res.json({ message: 'Brand updated successfully' });
+        });
+    } catch (error) {
+        res.status(500).json({ error: `Failed to update brand: ${error.message}` });
+    }
+});
+
+app.delete('/api/brands/:id', (req, res) => {
+    const { id } = req.params;
+    try {
+        const db = databaseManager.getActiveDb();
+        db.run('DELETE FROM brands WHERE id = ?', [id], function(err) {
+            if (err) {
+                return res.status(500).json({ error: err.message });
+            }
+            if (this.changes === 0) {
+                return res.status(404).json({ error: 'Brand not found' });
+            }
+            res.status(204).send();
+        });
+    } catch (error) {
+        res.status(500).json({ error: `Failed to delete brand: ${error.message}` });
+    }
+});
+
+// --- ATTRIBUTES API ---
+app.get('/api/attributes', async (req, res) => {
+    try {
+        const db = databaseManager.getActiveDb();
+        const dbAll = util.promisify(db.all.bind(db));
+        const rows = await dbAll("SELECT * FROM attributes ORDER BY name ASC", []);
+        res.json(rows);
+    } catch (error) {
+        res.status(500).json({ error: `Failed to fetch attributes: ${error.message}` });
+    }
+});
+
+app.post('/api/attributes', (req, res) => {
+    const { name } = req.body;
+    if (!name) return res.status(400).json({ error: 'Attribute name is required.' });
+    try {
+        const db = databaseManager.getActiveDb();
+        db.run(`INSERT INTO attributes (name) VALUES (?)`, [name], function(err) {
+            if (err) {
+                if (err.message.includes('UNIQUE constraint failed')) {
+                    return res.status(409).json({ error: 'Attribute name already exists.' });
+                }
+                return res.status(500).json({ error: err.message });
+            }
+            res.status(201).json({ id: this.lastID, name });
+        });
+    } catch (error) {
+        res.status(500).json({ error: `Failed to create attribute: ${error.message}` });
+    }
+});
+
+app.put('/api/attributes/:id', (req, res) => {
+    const { name } = req.body;
+    const { id } = req.params;
+    if (!name) return res.status(400).json({ error: 'Attribute name is required.' });
+    try {
+        const db = databaseManager.getActiveDb();
+        db.run(`UPDATE attributes SET name = ? WHERE id = ?`, [name, id], function(err) {
+            if (err) {
+                if (err.message.includes('UNIQUE constraint failed')) {
+                    return res.status(409).json({ error: 'Attribute name already exists.' });
+                }
+                return res.status(500).json({ error: err.message });
+            }
+            if (this.changes === 0) return res.status(404).json({ error: 'Attribute not found' });
+            res.json({ message: 'Attribute updated successfully' });
+        });
+    } catch (error) {
+        res.status(500).json({ error: `Failed to update attribute: ${error.message}` });
+    }
+});
+
+app.delete('/api/attributes/:id', (req, res) => {
+    const { id } = req.params;
+    try {
+        const db = databaseManager.getActiveDb();
+        db.run('DELETE FROM attributes WHERE id = ?', [id], function(err) {
+            if (err) return res.status(500).json({ error: err.message });
+            if (this.changes === 0) return res.status(404).json({ error: 'Attribute not found' });
+            res.status(204).send();
+        });
+    } catch (error) {
+        res.status(500).json({ error: `Failed to delete attribute: ${error.message}` });
+    }
+});
+
+// --- ATTRIBUTE VALUES API ---
+app.get('/api/attributes/:attributeId/values', async (req, res) => {
+    const { attributeId } = req.params;
+    try {
+        const db = databaseManager.getActiveDb();
+        const dbAll = util.promisify(db.all.bind(db));
+        const rows = await dbAll("SELECT * FROM attribute_values WHERE attribute_id = ? ORDER BY value ASC", [attributeId]);
+        res.json(rows);
+    } catch (error) {
+        res.status(500).json({ error: `Failed to fetch attribute values: ${error.message}` });
+    }
+});
+
+app.post('/api/attributes/:attributeId/values', (req, res) => {
+    const { attributeId } = req.params;
+    const { value } = req.body;
+    if (!value) return res.status(400).json({ error: 'Value is required.' });
+    try {
+        const db = databaseManager.getActiveDb();
+        db.run(`INSERT INTO attribute_values (attribute_id, value) VALUES (?, ?)`, [attributeId, value], function(err) {
+            if (err) {
+                if (err.message.includes('UNIQUE constraint failed')) {
+                    return res.status(409).json({ error: 'This value already exists for this attribute.' });
+                }
+                return res.status(500).json({ error: err.message });
+            }
+            res.status(201).json({ id: this.lastID, attribute_id: parseInt(attributeId), value });
+        });
+    } catch (error) {
+        res.status(500).json({ error: `Failed to create attribute value: ${error.message}` });
+    }
+});
+
+app.put('/api/attributes/:attributeId/values/:valueId', (req, res) => {
+    const { attributeId, valueId } = req.params;
+    const { value } = req.body;
+    if (!value) return res.status(400).json({ error: 'Value is required.' });
+    try {
+        const db = databaseManager.getActiveDb();
+        db.run(`UPDATE attribute_values SET value = ? WHERE id = ? AND attribute_id = ?`, [value, valueId, attributeId], function(err) {
+            if (err) {
+                if (err.message.includes('UNIQUE constraint failed')) {
+                    return res.status(409).json({ error: 'This value already exists for this attribute.' });
+                }
+                return res.status(500).json({ error: err.message });
+            }
+            if (this.changes === 0) return res.status(404).json({ error: 'Attribute value not found' });
+            res.json({ message: 'Attribute value updated successfully' });
+        });
+    } catch (error) {
+        res.status(500).json({ error: `Failed to update attribute value: ${error.message}` });
+    }
+});
+
+app.delete('/api/attributes/:attributeId/values/:valueId', (req, res) => {
+    const { attributeId, valueId } = req.params;
+    try {
+        const db = databaseManager.getActiveDb();
+        db.run('DELETE FROM attribute_values WHERE id = ? AND attribute_id = ?', [valueId, attributeId], function(err) {
+            if (err) return res.status(500).json({ error: err.message });
+            if (this.changes === 0) return res.status(404).json({ error: 'Attribute value not found' });
+            res.status(204).send();
+        });
+    } catch (error) {
+        res.status(500).json({ error: `Failed to delete attribute value: ${error.message}` });
+    }
+});
+
 
 app.get('/api/products/:id/movements', async (req, res) => {
   const { id } = req.params;
@@ -587,31 +889,31 @@ app.post('/api/purchases', async (req, res) => {
         await run('BEGIN TRANSACTION');
 
         for (const item of items) {
-            const { productId, quantity, unitCost, description } = item;
+            const { variantId, quantity, unitCost, description } = item;
 
-            if (!productId || !quantity || unitCost === undefined) {
-                throw new Error('Cada item debe tener productId, quantity y unitCost.');
+            if (!variantId || !quantity || unitCost === undefined) {
+                throw new Error('Cada item debe tener variantId, quantity y unitCost.');
             }
 
-            const product = await get('SELECT current_stock, average_cost FROM products WHERE id = ?', [productId]);
-            if (!product) {
-                throw new Error(`Producto con ID ${productId} no encontrado.`);
+            const variant = await get('SELECT current_stock, cost_price FROM product_variants WHERE id = ?', [variantId]);
+            if (!variant) {
+                throw new Error(`Variante con ID ${variantId} no encontrada.`);
             }
 
-            const new_stock = product.current_stock + quantity;
-            const current_total_value = product.current_stock * product.average_cost;
+            const new_stock = variant.current_stock + quantity;
+            const current_total_value = variant.current_stock * variant.cost_price;
             const entry_value = quantity * unitCost;
             const new_avg_cost = new_stock > 0 ? (current_total_value + entry_value) / new_stock : 0;
 
             const movementSql = `
                 INSERT INTO inventory_movements 
-                (product_id, transaction_id, transaction_date, entity_name, entity_document, document_number, type, quantity, unit_cost, description, status) 
+                (variant_id, transaction_id, transaction_date, entity_name, entity_document, document_number, type, quantity, unit_cost, description, status) 
                 VALUES (?, ?, ?, ?, ?, ?, 'ENTRADA', ?, ?, ?, 'Activo')
             `;
-            await run(movementSql, [productId, transactionId, transaction_date, entity_name, entity_document, document_number, quantity, unitCost, description]);
+            await run(movementSql, [variantId, transactionId, transaction_date, entity_name, entity_document, document_number, quantity, unitCost, description]);
 
-            const productSql = `UPDATE products SET current_stock = ?, average_cost = ?, updated_at = strftime('%Y-%m-%d %H:%M:%S', 'now') WHERE id = ?`;
-            await run(productSql, [new_stock, new_avg_cost, productId]);
+            const variantSql = `UPDATE product_variants SET current_stock = ?, cost_price = ? WHERE id = ?`;
+            await run(variantSql, [new_stock, new_avg_cost, variantId]);
         }
 
         await run('COMMIT');
@@ -852,38 +1154,40 @@ app.get('/api/purchases/details', async (req, res) => {
         const db = databaseManager.getActiveDb();
         const dbAll = util.promisify(db.all.bind(db));
         const sql = `
-        SELECT
-            im.product_id as productId,
-            p.name as productName,
-            im.quantity,
-            im.unit_cost as unitCost,
-            p.tax_rate,
-            im.transaction_date,
-            im.entity_name,
-            im.entity_document,
-            im.document_number,
-            im.status,
-            im.created_at
-        FROM inventory_movements im
-        JOIN products p ON im.product_id = p.id
-        WHERE im.transaction_id = ? AND im.type = 'ENTRADA'
-    `;
+            SELECT
+                im.variant_id as variantId,
+                p.name as productName,
+                pv.sku,
+                im.quantity,
+                im.unit_cost as unitCost,
+                im.transaction_date,
+                im.entity_name,
+                im.entity_document,
+                im.document_number,
+                im.status,
+                im.created_at,
+                (
+                    SELECT GROUP_CONCAT(av.value, ' / ')
+                    FROM variant_attribute_values vav
+                    JOIN attribute_values av ON vav.attribute_value_id = av.id
+                    WHERE vav.variant_id = im.variant_id
+                ) as variantName
+            FROM inventory_movements im
+            JOIN product_variants pv ON im.variant_id = pv.id
+            JOIN products p ON pv.product_id = p.id
+            WHERE im.transaction_id = ? AND im.type = 'ENTRADA'
+        `;
         const allItems = await dbAll(sql, [transactionId]);
         if (allItems.length === 0) return res.status(404).json({ error: 'Compra no encontrada' });
 
+        // Lógica para mostrar los items correctos (activos, anulados o reemplazados)
         let itemsToShow = allItems.filter(item => item.status === 'Activo');
-        
         if (itemsToShow.length === 0) {
-            const annulledItems = allItems.filter(item => item.status === 'Anulado');
-            if (annulledItems.length > 0) {
-                itemsToShow = annulledItems;
-            } else {
-                const lastReplacedDate = allItems
-                    .filter(item => item.status === 'Reemplazado')
-                    .reduce((max, i) => (i.created_at > max ? i.created_at : max), allItems[0].created_at);
-                
-                itemsToShow = allItems.filter(item => item.status === 'Reemplazado' && item.created_at === lastReplacedDate);
-            }
+            itemsToShow = allItems.filter(item => item.status === 'Anulado');
+        }
+        if (itemsToShow.length === 0) {
+            const lastDate = allItems.reduce((max, i) => (i.created_at > max ? i.created_at : max), '');
+            itemsToShow = allItems.filter(item => item.created_at === lastDate);
         }
 
         if (itemsToShow.length === 0) {
@@ -898,10 +1202,12 @@ app.get('/api/purchases/details', async (req, res) => {
             entity_document: firstItem.entity_document,
             document_number: firstItem.document_number,
             items: itemsToShow.map(i => ({
-                productId: i.productId,
+                variantId: i.variantId,
+                productName: i.productName,
+                variantName: i.variantName || 'Estándar',
+                sku: i.sku,
                 quantity: i.quantity,
                 unitCost: i.unitCost,
-                tax_rate: i.tax_rate
             }))
         };
 
@@ -997,38 +1303,39 @@ app.get('/api/sales/details', async (req, res) => {
         const db = databaseManager.getActiveDb();
         const dbAll = util.promisify(db.all.bind(db));
         const sql = `
-        SELECT
-            im.product_id as productId,
-            p.name as productName,
-            im.quantity,
-            im.price as unitPrice,
-            p.tax_rate,
-            im.transaction_date,
-            im.entity_name,
-            im.entity_document,
-            im.document_number,
-            im.status,
-            im.created_at
-        FROM inventory_movements im
-        JOIN products p ON im.product_id = p.id
-        WHERE im.transaction_id = ? AND im.type = 'SALIDA'
-    `;
+            SELECT
+                im.variant_id as variantId,
+                p.name as productName,
+                pv.sku,
+                im.quantity,
+                im.price as unitPrice,
+                im.transaction_date,
+                im.entity_name,
+                im.entity_document,
+                im.document_number,
+                im.status,
+                im.created_at,
+                (
+                    SELECT GROUP_CONCAT(av.value, ' / ')
+                    FROM variant_attribute_values vav
+                    JOIN attribute_values av ON vav.attribute_value_id = av.id
+                    WHERE vav.variant_id = im.variant_id
+                ) as variantName
+            FROM inventory_movements im
+            JOIN product_variants pv ON im.variant_id = pv.id
+            JOIN products p ON pv.product_id = p.id
+            WHERE im.transaction_id = ? AND im.type = 'SALIDA'
+        `;
         const allItems = await dbAll(sql, [transactionId]);
         if (allItems.length === 0) return res.status(404).json({ error: 'Venta no encontrada' });
 
         let itemsToShow = allItems.filter(item => item.status === 'Activo');
-
         if (itemsToShow.length === 0) {
-            const annulledItems = allItems.filter(item => item.status === 'Anulado');
-            if (annulledItems.length > 0) {
-                itemsToShow = annulledItems;
-            } else {
-                const lastReplacedDate = allItems
-                    .filter(item => item.status === 'Reemplazado')
-                    .reduce((max, i) => (i.created_at > max ? i.created_at : max), allItems[0].created_at);
-                
-                itemsToShow = allItems.filter(item => item.status === 'Reemplazado' && item.created_at === lastReplacedDate);
-            }
+            itemsToShow = allItems.filter(item => item.status === 'Anulado');
+        }
+        if (itemsToShow.length === 0) {
+            const lastDate = allItems.reduce((max, i) => (i.created_at > max ? i.created_at : max), '');
+            itemsToShow = allItems.filter(item => item.created_at === lastDate);
         }
 
         if (itemsToShow.length === 0) {
@@ -1036,17 +1343,19 @@ app.get('/api/sales/details', async (req, res) => {
         }
 
         const firstItem = itemsToShow[0];
-
+        
         const salePayload = {
             transaction_date: firstItem.transaction_date,
             entity_name: firstItem.entity_name,
             entity_document: firstItem.entity_document,
             document_number: firstItem.document_number,
             items: itemsToShow.map(i => ({
-                productId: i.productId,
+                variantId: i.variantId,
+                productName: i.productName,
+                variantName: i.variantName || 'Estándar',
+                sku: i.sku,
                 quantity: i.quantity,
                 unitPrice: i.unitPrice,
-                tax_rate: i.tax_rate
             }))
         };
 
@@ -1061,7 +1370,6 @@ app.post('/api/sales', async (req, res) => {
     const { transaction_date, entity_document, items } = req.body;
     let { document_number, entity_name } = req.body;
 
-    // Si no hay nombre de entidad, asignar uno por defecto.
     entity_name = entity_name || 'Cliente General';
 
     if (!transaction_date || !items || !Array.isArray(items) || items.length === 0) {
@@ -1088,35 +1396,35 @@ app.post('/api/sales', async (req, res) => {
         await run('BEGIN TRANSACTION');
 
         for (const item of items) {
-            const { productId, quantity, unitPrice, description } = item;
+            const { variantId, quantity, unitPrice, description } = item;
 
-            if (!productId || !quantity || unitPrice === undefined) {
-                throw new Error('Cada item debe tener productId, quantity y unitPrice.');
+            if (!variantId || !quantity || unitPrice === undefined) {
+                throw new Error('Cada item debe tener variantId, quantity y unitPrice.');
             }
 
-            const product = await get('SELECT current_stock, average_cost FROM products WHERE id = ?', [productId]);
-            if (!product) {
-                throw new Error(`Producto con ID ${productId} no encontrado.`);
+            const variant = await get('SELECT product_id, current_stock, cost_price FROM product_variants WHERE id = ?', [variantId]);
+            if (!variant) {
+                throw new Error(`Variante con ID ${variantId} no encontrada.`);
             }
 
-            if (!settings.advanced?.allowNegativeStock && product.current_stock < quantity) {
-                throw new Error(`Stock insuficiente para el producto ID ${productId}. Disponible: ${product.current_stock}, Requerido: ${quantity}`);
+            if (!settings.advanced?.allowNegativeStock && variant.current_stock < quantity) {
+                throw new Error(`Stock insuficiente para la variante ID ${variantId}. Disponible: ${variant.current_stock}, Requerido: ${quantity}`);
             }
-            if (!settings.advanced?.allowSellBelowCost && unitPrice < product.average_cost) {
-                throw new Error(`El precio de venta del producto ID ${productId} (${unitPrice}) no puede ser inferior a su costo (${product.average_cost}).`);
+            if (!settings.advanced?.allowSellBelowCost && unitPrice < variant.cost_price) {
+                throw new Error(`El precio de venta de la variante ID ${variantId} (${unitPrice}) no puede ser inferior a su costo (${variant.cost_price}).`);
             }
 
-            const new_stock = product.current_stock - quantity;
+            const new_stock = variant.current_stock - quantity;
 
             const movementSql = `
                 INSERT INTO inventory_movements 
-                (product_id, transaction_id, transaction_date, entity_name, entity_document, document_number, type, quantity, unit_cost, price, description, status) 
+                (variant_id, transaction_id, transaction_date, entity_name, entity_document, document_number, type, quantity, unit_cost, price, description, status) 
                 VALUES (?, ?, ?, ?, ?, ?, 'SALIDA', ?, ?, ?, ?, 'Activo')
             `;
-            await run(movementSql, [productId, transactionId, transaction_date, entity_name, entity_document, document_number, quantity, product.average_cost, unitPrice, description]);
+            await run(movementSql, [variantId, transactionId, transaction_date, entity_name, entity_document, document_number, quantity, variant.cost_price, unitPrice, description]);
 
-            const productSql = `UPDATE products SET current_stock = ?, updated_at = strftime('%Y-%m-%d %H:%M:%S', 'now') WHERE id = ?`;
-            await run(productSql, [new_stock, productId]);
+            const variantSql = `UPDATE product_variants SET current_stock = ? WHERE id = ?`;
+            await run(variantSql, [new_stock, variantId]);
         }
 
         await run('COMMIT');

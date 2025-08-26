@@ -68,17 +68,18 @@ export function PurchaseConfirmationDialog({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Producto</TableHead>
-                <TableHead className="text-right">Cantidad</TableHead>
+                <TableHead >Cantidad</TableHead>
+                <TableHead className="text-right">Producto</TableHead>
                 <TableHead className="text-right">Costo Unitario</TableHead>
                 <TableHead className="text-right">Subtotal</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {purchaseItems.map((item) => (
-                <TableRow key={item.productId}>
-                  <TableCell>{item.productName}</TableCell>
-                  <TableCell className="text-right">{item.quantity}</TableCell>
+                console.log(item),
+                <TableRow key={item.variantId}>
+                  <TableCell>{item.quantity}</TableCell>
+                  <TableCell className="text-right">{item.name}</TableCell>
                   <TableCell className="text-right">${item.unitCost.toFixed(2)}</TableCell>
                   <TableCell className="text-right">
                     ${(item.quantity * item.unitCost).toFixed(2)}

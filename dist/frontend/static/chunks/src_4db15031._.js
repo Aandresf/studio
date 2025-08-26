@@ -942,6 +942,9 @@ __turbopack_context__.s({
     "annulPurchase": (()=>annulPurchase),
     "annulSale": (()=>annulSale),
     "backupDatabase": (()=>backupDatabase),
+    "createAttribute": (()=>createAttribute),
+    "createAttributeValue": (()=>createAttributeValue),
+    "createBrand": (()=>createBrand),
     "createInventoryMovement": (()=>createInventoryMovement),
     "createInventorySnapshot": (()=>createInventorySnapshot),
     "createProduct": (()=>createProduct),
@@ -949,9 +952,15 @@ __turbopack_context__.s({
     "createReport": (()=>createReport),
     "createSale": (()=>createSale),
     "createStore": (()=>createStore),
+    "deleteAttribute": (()=>deleteAttribute),
+    "deleteAttributeValue": (()=>deleteAttributeValue),
+    "deleteBrand": (()=>deleteBrand),
     "deleteProduct": (()=>deleteProduct),
     "deleteStore": (()=>deleteStore),
     "exportInventoryToExcel": (()=>exportInventoryToExcel),
+    "getAttributeValues": (()=>getAttributeValues),
+    "getAttributes": (()=>getAttributes),
+    "getBrands": (()=>getBrands),
     "getDashboardSummary": (()=>getDashboardSummary),
     "getHistoricalSummary": (()=>getHistoricalSummary),
     "getLatestSnapshot": (()=>getLatestSnapshot),
@@ -971,6 +980,9 @@ __turbopack_context__.s({
     "quitApplication": (()=>quitApplication),
     "removePendingTransaction": (()=>removePendingTransaction),
     "setActiveStore": (()=>setActiveStore),
+    "updateAttribute": (()=>updateAttribute),
+    "updateAttributeValue": (()=>updateAttributeValue),
+    "updateBrand": (()=>updateBrand),
     "updateProduct": (()=>updateProduct),
     "updatePurchase": (()=>updatePurchase),
     "updateSale": (()=>updateSale),
@@ -1044,23 +1056,89 @@ async function fetchAPI(endpoint, options = {}) {
     }
 }
 const getProducts = ()=>fetchAPI('/products');
-const getProductMovements = (productId)=>fetchAPI(`/products/${productId}/movements`);
-const createProduct = (product)=>{
+const getProductMovements = (variantId)=>fetchAPI(`/variants/${variantId}/movements`);
+const createProduct = (productData)=>{
     return fetchAPI('/products', {
         method: 'POST',
-        body: JSON.stringify(product)
+        body: JSON.stringify(productData)
     });
 };
-const updateProduct = (id, product)=>{
-    console.log(JSON.stringify(product));
+const updateProduct = (id, productData)=>{
     return fetchAPI(`/products/${id}`, {
         method: 'PUT',
-        body: JSON.stringify(product)
+        body: JSON.stringify(productData)
     });
 };
 const deleteProduct = (id)=>{
-    console.log(`Deleting product with ID: ${id}`);
     return fetchAPI(`/products/${id}`, {
+        method: 'DELETE'
+    });
+};
+const getBrands = ()=>fetchAPI('/brands');
+const createBrand = (name)=>{
+    return fetchAPI('/brands', {
+        method: 'POST',
+        body: JSON.stringify({
+            name
+        })
+    });
+};
+const updateBrand = (id, name)=>{
+    return fetchAPI(`/brands/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+            name
+        })
+    });
+};
+const deleteBrand = (id)=>{
+    return fetchAPI(`/brands/${id}`, {
+        method: 'DELETE'
+    });
+};
+const getAttributes = ()=>fetchAPI('/attributes');
+const createAttribute = (name)=>{
+    return fetchAPI('/attributes', {
+        method: 'POST',
+        body: JSON.stringify({
+            name
+        })
+    });
+};
+const updateAttribute = (id, name)=>{
+    return fetchAPI(`/attributes/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+            name
+        })
+    });
+};
+const deleteAttribute = (id)=>{
+    return fetchAPI(`/attributes/${id}`, {
+        method: 'DELETE'
+    });
+};
+const getAttributeValues = (attributeId)=>{
+    return fetchAPI(`/attributes/${attributeId}/values`);
+};
+const createAttributeValue = (attributeId, value)=>{
+    return fetchAPI(`/attributes/${attributeId}/values`, {
+        method: 'POST',
+        body: JSON.stringify({
+            value
+        })
+    });
+};
+const updateAttributeValue = (attributeId, valueId, value)=>{
+    return fetchAPI(`/attributes/${attributeId}/values/${valueId}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+            value
+        })
+    });
+};
+const deleteAttributeValue = (attributeId, valueId)=>{
+    return fetchAPI(`/attributes/${attributeId}/values/${valueId}`, {
         method: 'DELETE'
     });
 };

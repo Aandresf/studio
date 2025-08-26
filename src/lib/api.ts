@@ -77,29 +77,100 @@ async function fetchAPI(endpoint: string, options: RequestInit = {}) {
 
 // Product API calls
 export const getProducts = (): Promise<Product[]> => fetchAPI('/products');
-export const getProductMovements = (productId: number): Promise<InventoryMovement[]> => fetchAPI(`/products/${productId}/movements`);
+export const getProductMovements = (variantId: number): Promise<InventoryMovement[]> => fetchAPI(`/variants/${variantId}/movements`);
 
-export const createProduct = (product: Partial<Product>): Promise<Product> => {
+export const createProduct = (productData: Partial<Product>): Promise<Product> => {
     return fetchAPI('/products', {
         method: 'POST',
-        body: JSON.stringify(product),
+        body: JSON.stringify(productData),
     });
 };
 
-export const updateProduct = (id: number, product: Partial<Product>): Promise<{ message: string }> => {
-    console.log(JSON.stringify(product));
+export const updateProduct = (id: number, productData: Partial<Product>): Promise<{ message: string }> => {
     return fetchAPI(`/products/${id}`, {
         method: 'PUT',
-        body: JSON.stringify(product),
+        body: JSON.stringify(productData),
     });
 };
 
 export const deleteProduct = (id: number): Promise<null> => {
-    console.log(`Deleting product with ID: ${id}`);
     return fetchAPI(`/products/${id}`, {
         method: 'DELETE',
     });
 };
+
+// Brand API calls
+export const getBrands = (): Promise<{ id: number; name: string }[]> => fetchAPI('/brands');
+
+export const createBrand = (name: string): Promise<{ id: number; name: string }> => {
+    return fetchAPI('/brands', {
+        method: 'POST',
+        body: JSON.stringify({ name }),
+    });
+};
+
+export const updateBrand = (id: number, name: string): Promise<{ message: string }> => {
+    return fetchAPI(`/brands/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ name }),
+    });
+};
+
+export const deleteBrand = (id: number): Promise<null> => {
+    return fetchAPI(`/brands/${id}`, {
+        method: 'DELETE',
+    });
+};
+
+// Attribute API calls
+export const getAttributes = (): Promise<{ id: number; name: string }[]> => fetchAPI('/attributes');
+
+export const createAttribute = (name: string): Promise<{ id: number; name: string }> => {
+    return fetchAPI('/attributes', {
+        method: 'POST',
+        body: JSON.stringify({ name }),
+    });
+};
+
+export const updateAttribute = (id: number, name: string): Promise<{ message: string }> => {
+    return fetchAPI(`/attributes/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ name }),
+    });
+};
+
+export const deleteAttribute = (id: number): Promise<null> => {
+    return fetchAPI(`/attributes/${id}`, {
+        method: 'DELETE',
+    });
+};
+
+// Attribute Value API calls
+export const getAttributeValues = (attributeId: number): Promise<{ id: number; value: string; attribute_id: number }[]> => {
+    return fetchAPI(`/attributes/${attributeId}/values`);
+};
+
+export const createAttributeValue = (attributeId: number, value: string): Promise<{ id: number; value: string; attribute_id: number }> => {
+    return fetchAPI(`/attributes/${attributeId}/values`, {
+        method: 'POST',
+        body: JSON.stringify({ value }),
+    });
+};
+
+export const updateAttributeValue = (attributeId: number, valueId: number, value: string): Promise<{ message: string }> => {
+    return fetchAPI(`/attributes/${attributeId}/values/${valueId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ value }),
+    });
+};
+
+export const deleteAttributeValue = (attributeId: number, valueId: number): Promise<null> => {
+    return fetchAPI(`/attributes/${attributeId}/values/${valueId}`, {
+        method: 'DELETE',
+    });
+};
+
+
 
 // Purchase API call
 export const createPurchase = (purchase: PurchasePayload): Promise<{ message: string }> => {

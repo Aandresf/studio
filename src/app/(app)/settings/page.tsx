@@ -19,12 +19,15 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { BrandsManagementCard } from '@/components/settings/brands-management';
+import { AttributesManagementCard } from '@/components/settings/attributes-management';
 
 interface Store {
   id: string;
   name: string;
   dbPath: string;
 }
+
 
 interface StoreDetails {
   name?: string;
@@ -229,6 +232,9 @@ function DangerZone({ activeStoreId, stores, onStoreDeleted }: { activeStoreId: 
     );
 }
 
+
+
+
 export default function SettingsPage() {
   const { setTheme } = useTheme();
   const { isBackendReady, refetchKey, triggerRefetch } = useBackendStatus();
@@ -323,6 +329,7 @@ export default function SettingsPage() {
       <Tabs defaultValue="stores" className="grid w-full gap-4">
         <TabsList>
           <TabsTrigger value="stores">Tiendas</TabsTrigger>
+          <TabsTrigger value="catalog">Catálogo</TabsTrigger>
           <TabsTrigger value="appearance">Apariencia</TabsTrigger>
           <TabsTrigger value="advanced">Avanzados</TabsTrigger>
           <TabsTrigger value="miscellaneous">Misceláneos</TabsTrigger>
@@ -362,6 +369,12 @@ export default function SettingsPage() {
                 <DangerZone activeStoreId={activeStoreId} stores={stores} onStoreDeleted={triggerRefetch} />
               </div>
            </div>
+        </TabsContent>
+        <TabsContent value="catalog">
+            <div className="grid md:grid-cols-2 gap-6">
+                <BrandsManagementCard />
+                <AttributesManagementCard />
+            </div>
         </TabsContent>
         <TabsContent value="appearance">
           <Card>

@@ -3,15 +3,15 @@
 import * as React from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Calendar as CalendarIcon, PlusCircle, Trash2, History, Loader2, ListRestart, Trash, XCircle } from 'lucide-react';
+import { Calendar as CalendarIcon, PlusCircle, Trash2, History, Loader2, ListRestart, Trash } from 'lucide-react';
 
 import { useBackendStatus } from '@/app/(app)/layout';
-import { getProducts, createSale, updateSale, Product, getStores, getStoreDetails, getPendingTransactions, addPendingTransaction, removePendingTransaction } from '@/lib/api';
-import { SalePayload, GroupedSale, SaleItemPayload } from '@/lib/types';
+import { getProducts, createSale, getPendingTransactions, addPendingTransaction, removePendingTransaction } from '@/lib/api';
+import { Product, SalePayload, ProductVariant, TransactionItemPayload } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { toastSuccess, toastError } from '@/hooks/use-toast';
 
-import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,15 +23,20 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { SalesHistoryDialog } from '@/components/dialogs/SalesHistoryDialog';
 import { SalesReceiptDialog } from '@/components/dialogs/SalesReceiptDialog';
 import { SalesConfirmationDialog } from '@/components/dialogs/SalesConfirmationDialog';
+import { VariantSelectionDialog } from '@/components/dialogs/VariantSelectionDialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 interface CartItem {
   id: string;
-  productId: number | null;
-  name: string;
+  variantId: number;
+  productId: number;
+  productName: string;
+  variantName: string;
   quantity: number;
   price: number;
   tax_rate: number;
   availableStock: number;
+  sku: string | null;
 }
 
 interface PendingSale {
@@ -44,16 +49,6 @@ interface PendingSale {
     createdAt: Date;
 }
 
-const createEmptyCartItem = (): CartItem => ({
-    id: `temp-${Date.now()}-${Math.random()}`,
-    productId: null,
-    name: '',
-    quantity: 1,
-    price: 0,
-    tax_rate: 0,
-    availableStock: 0,
-});
-
 export default function SalesPage() {
     const [date, setDate] = React.useState<Date>(new Date());
     const [clientName, setClientName] = React.useState('');
@@ -61,21 +56,20 @@ export default function SalesPage() {
     const [invoiceNumber, setInvoiceNumber] = React.useState('');
     
     const [products, setProducts] = React.useState<Product[]>([]);
-    const [cart, setCart] = React.useState<CartItem[]>([createEmptyCartItem()]);
+    const [cart, setCart] = React.useState<CartItem[]>([]);
     
     const [isLoading, setIsLoading] = React.useState(false);
     const [isLoadingProducts, setIsLoadingProducts] = React.useState(true);
-    const [openComboboxIndex, setOpenComboboxIndex] = React.useState<number | null>(null);
+
+    const [isVariantDialogOpen, setIsVariantDialogOpen] = React.useState(false);
+    const [selectedProductForVariants, setSelectedProductForVariants] = React.useState<Product | null>(null);
 
     const [pendingSales, setPendingSales] = React.useState<PendingSale[]>([]);
     const [isHistoryOpen, setIsHistoryOpen] = React.useState(false);
     const [isReceiptOpen, setIsReceiptOpen] = React.useState(false);
     const [isConfirmationOpen, setIsConfirmationOpen] = React.useState(false);
-    const [consolidatedItems, setConsolidatedItems] = React.useState<(SaleItemPayload & { name: string })[]>([]);
+    const [consolidatedItems, setConsolidatedItems] = React.useState<(TransactionItemPayload & { name: string })[]>([]);
     const [selectedTransactionId, setSelectedTransactionId] = React.useState<string | null>(null);
-    const [editingTransactionId, setEditingTransactionId] = React.useState<string | null>(null);
-
-    const [storeSettings, setStoreSettings] = React.useState<any>({});
 
     const { isBackendReady, refetchKey, triggerRefetch } = useBackendStatus();
 
@@ -84,18 +78,12 @@ export default function SalesPage() {
         const fetchInitialData = async () => {
             setIsLoadingProducts(true);
             try {
-                const { activeStoreId } = await getStores();
-                const [productsData, settingsData, pendingData] = await Promise.all([
+                const [productsData, pendingData] = await Promise.all([
                     getProducts(),
-                    getStoreDetails(activeStoreId),
                     getPendingTransactions()
                 ]);
-                
-                console.log('[SALES PAGE] Fetched store settings:', settingsData);
                 setProducts(productsData);
-                setStoreSettings(settingsData || {});
                 setPendingSales(pendingData.sales || []);
-
             } catch (error) {
                 console.error('Error fetching initial sales data:', error);
             } finally {
@@ -107,67 +95,52 @@ export default function SalesPage() {
 
     const productMap = React.useMemo(() => new Map(products.map(p => [p.id, p])), [products]);
     
-    const productOptions = React.useMemo(() => {
-        const optionsMap = new Map<string, { value: string; label: string }>();
-        const showOutOfStock = storeSettings.advanced?.showOutOfStockProducts || false;
-
-        const filteredProducts = products.filter(p => {
-            if (showOutOfStock) return true;
-            return p.stock > 0;
-        });
-
-        filteredProducts.forEach(p => optionsMap.set(String(p.id), {
+    const productOptions = React.useMemo(() => 
+        products.map(p => ({
             value: String(p.id),
-            label: `(${p.sku || 'N/A'}) ${p.name}`
-        }));
-
-        cart.forEach(item => {
-            if (item.productId && !optionsMap.has(String(item.productId))) {
-                const product = productMap.get(item.productId);
-                if (product) {
-                    optionsMap.set(String(product.id), {
-                        value: String(product.id),
-                        label: `(${product.sku || 'N/A'}) ${product.name}`
-                    });
-                }
-            }
-        });
-        
-        return Array.from(optionsMap.values());
-    }, [products, cart, productMap, storeSettings]);
+            label: p.name
+        })), [products]);
 
     const resetForm = () => {
         setDate(new Date());
         setClientName('');
         setClientDni('');
         setInvoiceNumber('');
-        setCart([createEmptyCartItem()]);
-        setOpenComboboxIndex(null);
-        setEditingTransactionId(null);
+        setCart([]);
     };
 
-    const handleCartItemChange = (index: number, field: keyof Omit<CartItem, 'id' | 'name' | 'availableStock'>, value: any) => {
-        const newItems = [...cart];
-        const item = newItems[index];
-        
-        if (field === 'productId') {
-            const selectedProduct = productMap.get(Number(value));
-            if (selectedProduct) {
-                item.productId = selectedProduct.id;
-                item.name = selectedProduct.name;
-                item.price = selectedProduct.price;
-                item.tax_rate = selectedProduct.tax_rate;
-                item.availableStock = selectedProduct.stock;
-            }
-        } else {
-            item[field as 'quantity' | 'price'] = Number(value);
+    const handleProductSelect = (productId: string) => {
+        const product = productMap.get(Number(productId));
+        if (product) {
+            setSelectedProductForVariants(product);
+            setIsVariantDialogOpen(true);
         }
-        setCart(newItems);
     };
 
-    const addCartItem = () => {
-        setCart(prevItems => [...prevItems, createEmptyCartItem()]);
-        setOpenComboboxIndex(cart.length);
+    const handleVariantsSelected = (selectedVariants: (ProductVariant & { quantity: number })[]) => {
+        const newCartItems: CartItem[] = selectedVariants.map(variant => ({
+            id: `temp-${variant.id}-${Date.now()}`,
+            variantId: variant.id,
+            productId: variant.product_id,
+            productName: selectedProductForVariants?.name || 'N/A',
+            variantName: variant.attribute_values?.map(v => v.value).join(' / ') || 'Estándar',
+            quantity: variant.quantity,
+            price: variant.sale_price,
+            tax_rate: 16.00, // TODO
+            availableStock: variant.current_stock,
+            sku: variant.sku,
+        }));
+
+        const newCart = [...cart];
+        newCartItems.forEach(newItem => {
+            const existingItemIndex = newCart.findIndex(item => item.variantId === newItem.variantId);
+            if (existingItemIndex > -1) {
+                newCart[existingItemIndex].quantity += newItem.quantity;
+            } else {
+                newCart.push(newItem);
+            }
+        });
+        setCart(newCart);
     };
 
     const removeCartItem = (index: number) => {
@@ -175,27 +148,14 @@ export default function SalesPage() {
     };
 
     const handleOpenConfirmation = () => {
-        const itemMap = new Map<number, SaleItemPayload & { name: string }>();
-
-        cart
-            .filter(item => item.productId !== null)
-            .forEach(item => {
-                const productId = item.productId!;
-                if (itemMap.has(productId)) {
-                    const existing = itemMap.get(productId)!;
-                    existing.quantity += item.quantity;
-                } else {
-                    itemMap.set(productId, {
-                        productId: productId,
-                        name: item.name,
-                        quantity: item.quantity,
-                        unitPrice: item.price,
-                        tax_rate: item.tax_rate,
-                    });
-                }
-            });
-        
-        const finalItems = Array.from(itemMap.values());
+        const finalItems = cart.map(item => ({
+            variantId: item.variantId,
+            name: `${item.productName} (${item.variantName})`,
+            quantity: item.quantity,
+            unitPrice: item.price,
+            tax_rate: item.tax_rate,
+        }));
+        // @ts-ignore
         setConsolidatedItems(finalItems);
         setIsConfirmationOpen(true);
     };
@@ -208,76 +168,32 @@ export default function SalesPage() {
             entity_name: clientName || undefined,
             entity_document: clientDni || undefined,
             document_number: invoiceNumber || undefined,
+            // @ts-ignore
             items: consolidatedItems,
         };
 
         try {
-            if (editingTransactionId) {
-                await updateSale({ transaction_id: editingTransactionId, saleData: salePayload });
-                toastSuccess("Venta Actualizada", "La venta se ha modificado exitosamente.");
-                setSelectedTransactionId(editingTransactionId);
-                setIsReceiptOpen(true);
-            } else {
-                const response = await createSale(salePayload);
-                toastSuccess("Venta Registrada", "La venta se ha guardado exitosamente.");
-                setSelectedTransactionId(response.transaction_id);
-                setIsReceiptOpen(true);
-            }
-            
+            const response = await createSale(salePayload);
+            toastSuccess("Venta Registrada", "La venta se ha guardado exitosamente.");
+            setSelectedTransactionId(response.transaction_id);
+            setIsReceiptOpen(true);
             triggerRefetch();
             resetForm();
-            setIsHistoryOpen(false);
         } catch (error) {
-            // Error handled in API layer
+            // API layer handles toast
         } finally {
             setIsLoading(false);
             setIsConfirmationOpen(false);
         }
     };
 
-    const handleEditSale = (sale: GroupedSale) => {
-        setDate(new Date(sale.transaction_date));
-        setClientName(sale.entity_name);
-        setClientDni(sale.entity_document !== 'N/A' ? sale.entity_document : '');
-        setInvoiceNumber(sale.document_number);
-
-        // Consolidate items before setting the cart
-        const consolidatedItems = new Map<number, CartItem>();
-        sale.movements.forEach(m => {
-            const product = productMap.get(m.productId);
-            if (consolidatedItems.has(m.productId)) {
-                const existing = consolidatedItems.get(m.productId)!;
-                existing.quantity += m.quantity;
-            } else {
-                consolidatedItems.set(m.productId, {
-                    id: `edit-consolidated-${m.productId}`,
-                    productId: m.productId,
-                    name: m.productName,
-                    quantity: m.quantity,
-                    price: m.unit_price,
-                    tax_rate: product?.tax_rate || 0,
-                    availableStock: (product?.stock || 0) + m.quantity,
-                });
-            }
-        });
-
-        setCart(Array.from(consolidatedItems.values()));
-        setEditingTransactionId(sale.transaction_id);
-        setIsHistoryOpen(false);
-    };
-
-    const handleViewReceiptFromHistory = (sale: GroupedSale) => {
-        setSelectedTransactionId(sale.transaction_id);
-        setIsReceiptOpen(true);
-    };
-
     const handleHoldSale = async () => {
-        if (cart.every(item => item.productId === null)) {
+        if (cart.length === 0) {
             toastError("Venta Vacía", "No puedes poner en espera una venta sin productos.");
             return;
         }
         const newPendingSale: PendingSale = { 
-            id: `pending-${Date.now()}`, 
+            id: `pending-sale-${Date.now()}`, 
             cart, 
             date, 
             clientName, 
@@ -290,15 +206,13 @@ export default function SalesPage() {
             await addPendingTransaction('sale', newPendingSale);
             toastSuccess("Venta en Espera", "La venta actual se ha guardado.");
             resetForm();
-            triggerRefetch(); // Recarga la lista de pendientes
-        } catch (error) {
-            // El error ya se muestra a través del toast en la capa de API
-        }
+            triggerRefetch();
+        } catch (error) {}
     };
 
     const handleRestoreSale = async (saleToRestore: PendingSale) => {
         setCart(saleToRestore.cart);
-        setDate(new Date(saleToRestore.date)); // Asegurarse que la fecha se restaura como objeto Date
+        setDate(new Date(saleToRestore.date));
         setClientName(saleToRestore.clientName);
         setClientDni(saleToRestore.clientDni);
         setInvoiceNumber(saleToRestore.invoiceNumber);
@@ -306,82 +220,23 @@ export default function SalesPage() {
         try {
             await removePendingTransaction(saleToRestore.id);
             toastSuccess("Venta Restaurada", "La venta ha sido cargada en el formulario.");
-            triggerRefetch(); // Recarga la lista de pendientes
-        } catch (error) {
-            // El error ya se muestra
-        }
+            triggerRefetch();
+        } catch (error) {}
     };
 
     const handleRemovePendingSale = async (id: string) => {
         try {
             await removePendingTransaction(id);
             toastSuccess("Venta Descartada", "La venta en espera ha sido eliminada.");
-            triggerRefetch(); // Recarga la lista de pendientes
-        } catch (error) {
-            // El error ya se muestra
-        }
+            triggerRefetch();
+        } catch (error) {}
     };
 
     const subtotal = cart.reduce((acc, item) => acc + item.quantity * item.price, 0);
     const totalTaxes = cart.reduce((acc, item) => acc + (item.quantity * item.price * (item.tax_rate / 100)), 0);
     const total = subtotal + totalTaxes;
 
-    const allowNegativeSales = storeSettings.advanced?.allowNegativeStockSales || false;
-    console.log(`[SALES PAGE] 'allowNegativeSales' is currently: ${allowNegativeSales}`);
-
-    const isSubmitDisabled = React.useMemo(() => {
-        console.log('[SubmitCheck] Recalculating isSubmitDisabled...');
-        if (isLoading) {
-            console.log('[SubmitCheck] Disabled due to isLoading=true');
-            return true;
-        }
-
-        const isAnyItemInvalid = cart.some(item => {
-            console.log(`[SubmitCheck] Checking item: ${item.name || 'New Item'} (ID: ${item.productId})`);
-            if (!item.productId || item.quantity <= 0) {
-                console.log(`[SubmitCheck] -> INVALID: No product selected or quantity is zero.`);
-                return true;
-            }
-            if (allowNegativeSales) {
-                console.log(`[SubmitCheck] -> VALID (Negative sales allowed)`);
-                return false;
-            }
-            const invalid = item.quantity > item.availableStock;
-            if (invalid) {
-                console.log(`[SubmitCheck] -> INVALID: Quantity (${item.quantity}) > Stock (${item.availableStock})`);
-            } else {
-                console.log(`[SubmitCheck] -> VALID: Quantity (${item.quantity}) <= Stock (${item.availableStock})`);
-            }
-            return invalid;
-        });
-        
-        console.log(`[SubmitCheck] Final result: isAnyItemInvalid = ${isAnyItemInvalid}`);
-        return isAnyItemInvalid;
-    }, [cart, isLoading, allowNegativeSales]);
-
-    const renderComboboxHeader = () => (
-        <div className="grid grid-cols-12 gap-4 px-3 py-2 text-xs font-semibold text-muted-foreground bg-muted">
-            <div className="col-span-2 text-center">Código</div>
-            <div className="col-span-4 text-center">Producto</div>
-            <div className="col-span-2 text-right">Stock</div>
-            <div className="col-span-2 text-right">Precio</div>
-            <div className="col-span-2 text-right">IVA</div>
-        </div>
-    );
-
-    const renderComboboxOption = (option: { value: string; label: string }) => {
-        const product = productMap.get(Number(option.value));
-        if (!product) return <div>{option.label}</div>;
-        return (
-            <div className="grid grid-cols-12 gap-4 w-full text-sm">
-                <div className="col-span-2 font-mono text-xs text-center">{product.sku || 'N/A'}</div>
-                <div className="col-span-4 truncate" title={product.name}>{product.name}</div>
-                <div className="col-span-2 text-right">{product.stock}</div>
-                <div className="col-span-2 text-right">${product.price.toFixed(2)}</div>
-                <div className="col-span-2 text-right">{product.tax_rate.toFixed(2)}%</div>
-            </div>
-        );
-    };
+    const isSubmitDisabled = isLoading || cart.length === 0;
 
     return (
         <TooltipProvider>
@@ -389,71 +244,65 @@ export default function SalesPage() {
             <div className="flex items-center justify-between">
                 <div className="flex-1">
                     <h1 className="font-semibold text-lg md:text-2xl">Ventas</h1>
-                    <p className="text-sm text-muted-foreground">{editingTransactionId ? `Editando venta a ${clientName}` : "Crea y gestiona facturas de venta."}</p>
+                    <p className="text-sm text-muted-foreground">Crea y gestiona facturas de venta.</p>
                 </div>
-                <Button variant="outline" onClick={() => setIsHistoryOpen(true)} disabled={editingTransactionId !== null}>
-                    <History className="mr-2 h-4 w-4" />
-                    Historial
-                </Button>
+                <Button variant="outline" onClick={() => setIsHistoryOpen(true)}><History className="mr-2 h-4 w-4" />Historial</Button>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
                 <div className="lg:col-span-2 space-y-6">
                     <Card>
-                        <CardHeader><CardTitle>{editingTransactionId ? "Editar Venta" : "Nueva Venta"}</CardTitle></CardHeader>
-                        <CardContent>
-                        <div className="grid gap-6">
+                        <CardHeader><CardTitle>Nueva Venta</CardTitle></CardHeader>
+                        <CardContent className="space-y-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="grid gap-2"><Label htmlFor="clientName">Cliente</Label><Input id="clientName" value={clientName} onChange={e => setClientName(e.target.value)} placeholder="Nombre del cliente" /></div>
                                 <div className="grid gap-2"><Label htmlFor="clientDni">DNI Cliente</Label><Input id="clientDni" value={clientDni} onChange={e => setClientDni(e.target.value)} placeholder="Cédula o RIF" /></div>
                             </div>
                             <div>
-                                <div className="grid grid-cols-12 gap-2 items-center mb-2 px-1">
-                                    <div className="col-span-12 md:col-span-6"><Label className="text-sm font-medium">Producto</Label></div>
-                                    <div className="col-span-4 md:col-span-2"><Label className="text-sm font-medium">Cantidad</Label></div>
-                                    <div className="col-span-4 md:col-span-2"><Label className="text-sm font-medium">Precio Unit.</Label></div>
-                                    <div className="col-span-4 md:col-span-2"><Label className="text-sm font-medium text-right w-full pr-2">Acción</Label></div>
-                                </div>
-                                <div className="grid gap-4 border p-4 rounded-md">
-                                    {cart.map((item, index) => (
-                                        <div key={item.id} className="grid grid-cols-12 gap-2 items-end">
-                                            <div className="col-span-12 md:col-span-6">
-                                                <Combobox 
-                                                    open={openComboboxIndex === index} 
-                                                    onOpenChange={(isOpen) => setOpenComboboxIndex(isOpen ? index : null)} 
-                                                    options={productOptions} 
-                                                    value={item.productId ? String(item.productId) : ''} 
-                                                    onChange={(value) => { handleCartItemChange(index, 'productId', value); setOpenComboboxIndex(null); }} 
-                                                    placeholder={isLoadingProducts ? "Cargando..." : "Seleccionar..."} 
-                                                    searchPlaceholder="Buscar por código o nombre..." 
-                                                    emptyMessage="No hay productos." 
-                                                    disabled={isLoadingProducts}
-                                                    popoverClassName="w-[700px]"
-                                                    align="start"
-                                                    sideOffset={10}
-                                                    renderHeader={renderComboboxHeader}
-                                                    renderOption={renderComboboxOption}
-                                                />
-                                            </div>
-                                            <div className="col-span-4 md:col-span-2">
-                                                <Input 
-                                                    type="number" 
-                                                    value={item.quantity} 
-                                                    onChange={(e) => handleCartItemChange(index, 'quantity', e.target.value)} 
-                                                    min="1" 
-                                                    max={allowNegativeSales ? undefined : item.availableStock} 
-                                                />
-                                                {console.log(`[InputQty] Item ${item.name}: max set to -> ${allowNegativeSales ? 'undefined' : item.availableStock}`)}
-                                            </div>
-                                            <div className="col-span-4 md:col-span-2"><Input type="number" value={item.price} onChange={(e) => handleCartItemChange(index, 'price', e.target.value)} min="0" /></div>
-                                            <div className="col-span-4 md:col-span-2 flex justify-end"><Button variant="outline" size="icon" className="text-muted-foreground" onClick={() => removeCartItem(index)} disabled={cart.length <= 1}><Trash2 className="h-4 w-4"/></Button></div>
-                                        </div>
-                                    ))}
-                                </div>
-                                <div className="flex items-center gap-2 mt-4">
-                                    <Button size="sm" className="gap-1" onClick={addCartItem}><PlusCircle className="h-3.5 w-3.5" />Añadir Producto</Button>
-                                </div>
+                                <Label>Añadir Producto</Label>
+                                <Combobox 
+                                    options={productOptions} 
+                                    value={""}
+                                    onChange={handleProductSelect} 
+                                    placeholder={isLoadingProducts ? "Cargando..." : "Buscar producto por nombre..."} 
+                                    searchPlaceholder="Buscar..." 
+                                    emptyMessage="No se encontraron productos." 
+                                    disabled={isLoadingProducts}
+                                />
                             </div>
-                        </div>
+                            <div className="border rounded-md">
+                                
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Cantidad</TableHead>
+                                            <TableHead>Producto</TableHead>
+                                            <TableHead>Precio Unit.</TableHead>
+                                            <TableHead>Total</TableHead>
+                                            <TableHead></TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {cart.length > 0 ? cart.map((item, index) => (
+                                            <TableRow key={item.id}>
+                                                <TableCell>{item.quantity}</TableCell>
+                                                <TableCell>
+                                                    <p className="font-medium">{item.productName}</p>
+                                                    <p className="text-xs text-muted-foreground">{item.variantName} ({item.sku})</p>
+                                                </TableCell>
+                                                <TableCell>${item.price.toFixed(2)}</TableCell>
+                                                <TableCell>${(item.quantity * item.price).toFixed(2)}</TableCell>
+                                                <TableCell>
+                                                    <Button variant="ghost" size="icon" onClick={() => removeCartItem(index)}>
+                                                        <Trash2 className="h-4 w-4 text-destructive"/>
+                                                    </Button>
+                                                </TableCell>
+                                            </TableRow>
+                                        )) : (
+                                            <TableRow><TableCell colSpan={5} className="text-center h-24">El carrito está vacío.</TableCell></TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </div>
                         </CardContent>
                     </Card>
                 </div>
@@ -480,21 +329,20 @@ export default function SalesPage() {
                     <div className="flex flex-col gap-2">
                          <Button onClick={handleOpenConfirmation} disabled={isSubmitDisabled} size="lg">
                             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            {isLoading ? "Procesando..." : (editingTransactionId ? "Guardar Cambios" : "Registrar Venta")}
+                            {isLoading ? "Procesando..." : "Registrar Venta"}
                         </Button>
-                        {editingTransactionId && (<Button variant="ghost" onClick={resetForm}><XCircle className="mr-2 h-4 w-4" />Cancelar Edición</Button>)}
-                        <Button variant="secondary" onClick={handleHoldSale} disabled={editingTransactionId !== null}>Poner en Espera</Button>
+                        <Button variant="secondary" onClick={handleHoldSale}>Poner en Espera</Button>
                     </div>
 
                     {pendingSales.length > 0 && (
                         <Card>
-                            <CardHeader><CardTitle>Ventas en Espera</CardTitle><CardDescription>Restaura o elimina las ventas que dejaste pendientes.</CardDescription></CardHeader>
+                            <CardHeader><CardTitle>Ventas en Espera</CardTitle><CardDescription>Restaura o elimina las ventas pendientes.</CardDescription></CardHeader>
                             <CardContent className="space-y-4">
                                 {pendingSales.map((sale) => (
                                     <div key={sale.id} className="flex items-center justify-between p-2 border rounded-lg">
                                         <div>
                                             <p className="font-medium">{sale.clientName || "Cliente General"}</p>
-                                            <p className="text-sm text-muted-foreground">{sale.cart.length} producto(s) - {format(sale.createdAt, "p", { locale: es })}</p>
+                                            <p className="text-sm text-muted-foreground">{sale.cart.length} producto(s) - {format(new Date(sale.createdAt), "p", { locale: es })}</p>
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <Tooltip><TooltipTrigger asChild><Button variant="outline" size="icon" onClick={() => handleRestoreSale(sale)}><ListRestart className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent><p>Restaurar</p></TooltipContent></Tooltip>
@@ -508,21 +356,23 @@ export default function SalesPage() {
                 </div>
             </div>
         </div>
+        
+        <VariantSelectionDialog
+            open={isVariantDialogOpen}
+            onOpenChange={setIsVariantDialogOpen}
+            product={selectedProductForVariants}
+            onVariantsSelected={handleVariantsSelected}
+        />
         <SalesHistoryDialog 
             open={isHistoryOpen} 
             onOpenChange={setIsHistoryOpen} 
-            onViewReceipt={handleViewReceiptFromHistory} 
-            onEditSale={handleEditSale} 
+            onViewReceipt={() => {}} 
+            onEditSale={() => {}} 
             refetchKey={refetchKey}
         />
         <SalesReceiptDialog 
             open={isReceiptOpen} 
-            onOpenChange={(open) => {
-                if (!open) {
-                    setSelectedTransactionId(null);
-                }
-                setIsReceiptOpen(open);
-            }} 
+            onOpenChange={(open) => !open && setSelectedTransactionId(null)} 
             transactionId={selectedTransactionId} 
         />
         <SalesConfirmationDialog 

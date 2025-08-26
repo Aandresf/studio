@@ -1,199 +1,332 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
-import { toastSuccess, toastError } from '@/hooks/use-toast';
 import { Textarea } from '@/components/ui/textarea';
-import { createProduct, updateProduct } from '@/lib/api';
-import { Product } from '@/lib/types';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Trash2, PlusCircle } from 'lucide-react';
+import { toastSuccess, toastError } from '@/hooks/use-toast';
+import { getBrands, getAttributes, getAttributeValues, createProduct, updateProduct } from '@/lib/api';
+import { Product, Brand, Attribute, AttributeValue, ProductVariant } from '@/lib/types';
+
+// --- Helper para generar combinaciones ---
+function getCombinations<T>(arrays: T[][]): T[][] {
+  if (!arrays || arrays.length === 0) return [];
+  let result: T[][] = [[]];
+  for (const array of arrays) {
+    if (array.length === 0) continue; // Ignorar atributos sin valores seleccionados
+    const newResult: T[][] = [];
+    for (const res of result) {
+      for (const item of array) {
+        newResult.push([...res, item]);
+      }
+    }
+    result = newResult;
+  }
+  return result;
+}
 
 interface ProductDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   product: Partial<Product> | null;
   onProductSaved: (product: Product) => void;
-  generateSku?: () => string;
 }
 
-export function ProductDialog({ open, onOpenChange, product, onProductSaved, generateSku }: ProductDialogProps) {
-  const [editingProduct, setEditingProduct] = useState<Partial<Product> | null>(null);
-  const [isTaxExempt, setIsTaxExempt] = useState(false);
-  const [formErrors, setFormErrors] = useState<{ price?: string; stock?: string; tax_rate?: string }>({});
+interface SelectedAttributesData {
+    name: string;
+    values: AttributeValue[];
+}
 
+export function ProductDialog({ open, onOpenChange, product, onProductSaved }: ProductDialogProps) {
+  // --- Estados para datos del producto y variantes ---
+  const [productBase, setProductBase] = useState<Partial<Product>>({});
+  const [variants, setVariants] = useState<Partial<ProductVariant>[]>([]);
+
+  // --- Estados para la UI y carga de datos ---
+  const [brands, setBrands] = useState<Brand[]>([]);
+  const [attributes, setAttributes] = useState<Attribute[]>([]);
+  const [selectedAttributes, setSelectedAttributes] = useState<Record<number, SelectedAttributesData>>({});
+  const [selectedValues, setSelectedValues] = useState<Record<string, boolean>>({});
+  const [isLoading, setIsLoading] = useState(false);
+
+  // --- Carga inicial de datos (marcas y atributos) ---
   useEffect(() => {
-    if (product) {
-      const initialProduct = { ...product };
-      if (product.id === undefined && generateSku) {
-        initialProduct.sku = generateSku();
-      }
-      // Si no hay tasa de impuesto definida, se asume 16 por defecto.
-      if (initialProduct.tax_rate === undefined) {
-        initialProduct.tax_rate = 16.00;
-      }
-      setEditingProduct(initialProduct);
-      // El producto es exento si su tasa es 0.
-      setIsTaxExempt(initialProduct.tax_rate === 0);
-    } else {
-      setEditingProduct(null);
-      setIsTaxExempt(false); // Reset al cerrar
+    if (open) {
+      const fetchData = async () => {
+        setIsLoading(true);
+        try {
+          const [brandsData, attributesData] = await Promise.all([getBrands(), getAttributes()]);
+          setBrands(brandsData);
+          setAttributes(attributesData);
+        } catch (error) {
+          // API layer handles toast
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      fetchData();
     }
-  }, [product, generateSku]);
+  }, [open]);
 
-  const handleSave = async () => {
-    if (!editingProduct) return;
-
-    const newErrors: { price?: string; stock?: string; tax_rate?: string } = {};
-    if (editingProduct.price === '' || editingProduct.price === null || isNaN(Number(editingProduct.price))) {
-      newErrors.price = 'El precio es obligatorio y debe ser un número.';
-    }
-    if (editingProduct.stock === '' || editingProduct.stock === null || isNaN(Number(editingProduct.stock))) {
-      newErrors.stock = 'El stock es obligatorio y debe ser un número.';
-    }
-    if (!isTaxExempt && (editingProduct.tax_rate === '' || editingProduct.tax_rate === null || isNaN(Number(editingProduct.tax_rate)))) {
-        newErrors.tax_rate = 'La tasa de impuesto es obligatoria y debe ser un número.';
-    }
-
-
-    setFormErrors(newErrors);
-
-    if (Object.keys(newErrors).length > 0) {
-      Object.values(newErrors).forEach(error => {
-        toastError("Error de validación", error as string);
+  // --- Inicialización del formulario al recibir un producto ---
+  useEffect(() => {
+    if (open && product) {
+      setProductBase({
+        id: product.id,
+        name: product.name,
+        description: product.description,
+        brand_id: product.brand_id,
+        category: product.category,
+        subcategory: product.subcategory,
+        status: product.status ?? 'Activo',
       });
-      return;
-    }
-
-    const productToSave = {
-      ...editingProduct,
-      price: parseFloat(String(editingProduct.price)),
-      stock: parseInt(String(editingProduct.stock), 10),
-      status: editingProduct.status ?? 'Activo',
-      tax_rate: isTaxExempt ? 0 : parseFloat(String(editingProduct.tax_rate)),
-    };
-
-    try {
-      if ('id' in productToSave && productToSave.id) {
-        // UPDATE operation
-        await updateProduct(productToSave.id, productToSave);
-        onProductSaved(productToSave as Product); // Pass the local state which has the updates
-      } else {
-        // CREATE operation
-        const newProduct = await createProduct(productToSave); // newProduct has the ID from the backend
-        onProductSaved(newProduct); // Pass the backend response
+      if (product.variants) {
+        setVariants(product.variants);
       }
-      handleClose();
-    } catch (e: any) {
-      console.error("Error al guardar el producto:", e);
-      // The API layer already shows an error toast
+    } else if (!open) {
+      setProductBase({});
+      setVariants([]);
+      setSelectedAttributes({});
+      setSelectedValues({});
+    }
+  }, [product, open]);
+
+  const handleAttributeSelection = async (attr: Attribute) => {
+    const attributeId = attr.id;
+    if (selectedAttributes[attributeId]) {
+      const newSelection = { ...selectedAttributes };
+      delete newSelection[attributeId];
+      setSelectedAttributes(newSelection);
+    } else {
+      try {
+        const values = await getAttributeValues(attributeId);
+        setSelectedAttributes(prev => ({ ...prev, [attributeId]: { name: attr.name, values: values } }));
+      } catch (error) {
+        toastError("Error", `No se pudieron cargar los valores para ${attr.name}`);
+      }
     }
   };
 
-  const handleClose = () => {
-    onOpenChange(false);
-    setFormErrors({});
+  const handleValueSelection = (attributeId: string, valueId: number, isSelected: boolean) => {
+    setSelectedValues(prev => ({ ...prev, [`${attributeId}-${valueId}`]: isSelected }));
+  };
+
+  const handleGenerateVariants = () => {
+    const arraysOfSelectedValues: AttributeValue[][] = Object.entries(selectedAttributes).map(([attrId, attrData]) => 
+        attrData.values.filter(value => selectedValues[`${attrId}-${value.id}`])
+    );
+
+    if (arraysOfSelectedValues.every(arr => arr.length === 0)) {
+        toastError("Aviso", "Selecciona al menos un valor para generar variantes.");
+        return;
+    }
+
+    const combinations = getCombinations(arraysOfSelectedValues);
+    
+    const newVariants = combinations.map(combo => {
+      const name = combo.map(v => v.value).join(' / ');
+      const skuSuffix = combo.map(v => v.value.substring(0, 3).toUpperCase()).join('-');
+      return {
+        id: undefined,
+        sku: `${productBase.name ? productBase.name.substring(0, 3).toUpperCase() : 'PROD'}-${skuSuffix}`,
+        sale_price: 0,
+        cost_price: 0,
+        current_stock: 0,
+        attribute_values: combo,
+      };
+    });
+
+    setVariants(newVariants);
+  };
+
+  const handleVariantChange = (index: number, field: keyof ProductVariant, value: string | number) => {
+    const updatedVariants = [...variants];
+    const variant = updatedVariants[index] as any;
+    variant[field] = value;
+    setVariants(updatedVariants);
+  };
+  
+  const handleRemoveVariant = (index: number) => {
+    setVariants(variants.filter((_, i) => i !== index));
+  };
+
+  const handleSave = async () => {
+    if (!productBase.name) {
+        toastError("Validación", "El nombre del producto es obligatorio.");
+        return;
+    }
+    if (variants.length === 0) {
+        toastError("Validación", "Debes generar al menos una variante para el producto.");
+        return;
+    }
+
+    const payload = {
+        ...productBase,
+        variants: variants.map(v => ({
+            ...v,
+            // Asegurarse de que solo enviamos los IDs de los valores de atributos
+            attribute_values: v.attribute_values?.map(av => ({ id: av.id }))
+        })),
+    };
+
+    try {
+        let savedProduct;
+        if (payload.id) {
+            // @ts-ignore
+            savedProduct = await updateProduct(payload.id, payload);
+        } else {
+            // @ts-ignore
+            savedProduct = await createProduct(payload);
+        }
+        toastSuccess("Éxito", "Producto guardado correctamente.");
+        onProductSaved(savedProduct);
+        onOpenChange(false);
+    } catch (error) {
+        // API layer handles toast
+    }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="max-w-4xl">
         <DialogHeader>
-          <DialogTitle>{editingProduct?.id ? 'Editar Producto' : 'Añadir Nuevo Producto'}</DialogTitle>
+          <DialogTitle>{product?.id ? 'Editar Producto y sus Variantes' : 'Añadir Nuevo Producto'}</DialogTitle>
           <DialogDescription>
-            {editingProduct?.id ? 'Modifica los detalles del producto.' : 'Completa los detalles para crear un nuevo producto.'}
+            Define la información base del producto y genera sus distintas variantes.
           </DialogDescription>
         </DialogHeader>
-        {editingProduct && (
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="name" className="text-right">Nombre</Label>
-              <Input id="name" value={editingProduct.name} onChange={(e) => setEditingProduct({ ...editingProduct, name: e.target.value })} className="col-span-3" />
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 py-4">
+          {/* --- COLUMNA IZQUIERDA: DATOS BASE --- */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium border-b pb-2">Datos del Producto</h3>
+            <div>
+              <Label htmlFor="name">Nombre del Producto</Label>
+              <Input id="name" value={productBase.name ?? ''} onChange={(e) => setProductBase(p => ({ ...p, name: e.target.value }))} />
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="sku" className="text-right">SKU</Label>
-              <Input id="sku" value={editingProduct.sku ?? ''} onChange={(e) => setEditingProduct({ ...editingProduct, sku: e.target.value })} className="col-span-3" />
+            <div>
+              <Label htmlFor="description">Descripción</Label>
+              <Textarea id="description" value={productBase.description ?? ''} onChange={(e) => setProductBase(p => ({ ...p, description: e.target.value }))} rows={4} />
             </div>
-            <div className="grid grid-cols-4 items-start gap-4">
-              <Label htmlFor="description" className="text-right pt-2">Descripción</Label>
-              <Textarea id="description" value={editingProduct.description ?? ''} onChange={(e) => setEditingProduct({ ...editingProduct, description: e.target.value })} className="col-span-3" rows={3} />
+            <div>
+              <Label htmlFor="brand">Marca</Label>
+              <Select value={String(productBase.brand_id ?? '')} onValueChange={(value) => setProductBase(p => ({ ...p, brand_id: Number(value) }))}>
+                <SelectTrigger><SelectValue placeholder="Selecciona una marca..." /></SelectTrigger>
+                <SelectContent>
+                  {brands.map(brand => <SelectItem key={brand.id} value={String(brand.id)}>{brand.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="price" className="text-right">Precio</Label>
-              <Input
-                id="price"
-                type="text"
-                value={editingProduct.price ?? ''}
-                onChange={(e) => {
-                  setEditingProduct({ ...editingProduct, price: e.target.value });
-                  if (formErrors.price) setFormErrors({ ...formErrors, price: undefined });
-                }}
-                className={`col-span-3 ${formErrors.price ? 'border-red-500' : ''}`}
-              />
+            <div>
+              <Label htmlFor="category">Departamento / Categoría</Label>
+              <Input id="category" value={productBase.category ?? ''} onChange={(e) => setProductBase(p => ({ ...p, category: e.target.value }))} />
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="stock" className="text-right">Stock</Label>
-              <Input
-                id="stock"
-                type="text"
-                value={editingProduct.stock ?? ''}
-                onChange={(e) => {
-                  setEditingProduct({ ...editingProduct, stock: e.target.value });
-                  if (formErrors.stock) setFormErrors({ ...formErrors, stock: undefined });
-                }}
-                className={`col-span-3 ${formErrors.stock ? 'border-red-500' : ''}`}
-              />
+            <div>
+              <Label htmlFor="subcategory">Sub-departamento / Sub-categoría</Label>
+              <Input id="subcategory" value={productBase.subcategory ?? ''} onChange={(e) => setProductBase(p => ({ ...p, subcategory: e.target.value }))} />
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="tax-exempt" className="text-right">Exento</Label>
-                <div className="flex items-center space-x-2 col-span-3">
-                    <Switch
-                        id="tax-exempt"
-                        checked={isTaxExempt}
-                        onCheckedChange={setIsTaxExempt}
-                    />
-                    <Label htmlFor="tax-exempt" className="font-normal">
-                        {isTaxExempt ? 'Sí, exento de impuestos' : 'No, sujeto a impuestos'}
-                    </Label>
-                </div>
-            </div>
-            {!isTaxExempt && (
-                <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="tax_rate" className="text-right">Tasa (%)</Label>
-                    <Input
-                        id="tax_rate"
-                        type="text"
-                        value={editingProduct.tax_rate ?? '16'}
-                        onChange={(e) => {
-                            setEditingProduct({ ...editingProduct, tax_rate: e.target.value });
-                            if (formErrors.tax_rate) setFormErrors({ ...formErrors, tax_rate: undefined });
-                        }}
-                        className={`col-span-3 ${formErrors.tax_rate ? 'border-red-500' : ''}`}
-                    />
-                </div>
-            )}
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="status" className="text-right">Estado</Label>
-              <div className="flex items-center space-x-2 col-span-3">
+             <div className="flex items-center space-x-2">
                 <Switch
                   id="status"
-                  checked={editingProduct.status === 'Activo'}
-                  onCheckedChange={(isChecked) =>
-                    setEditingProduct({ ...editingProduct, status: isChecked ? 'Activo' : 'Inactivo' })
-                  }
+                  checked={productBase.status === 'Activo'}
+                  onCheckedChange={(isChecked) => setProductBase(p => ({ ...p, status: isChecked ? 'Activo' : 'Inactivo' }))}
                 />
-                <Label htmlFor="status" className="font-normal">
-                  {editingProduct.status}
-                </Label>
+                <Label htmlFor="status">Producto {productBase.status}</Label>
               </div>
+          </div>
+
+          {/* --- COLUMNA DERECHA: ATRIBUTOS Y VARIANTES --- */}
+          <div className="space-y-4">
+            <div className="space-y-2">
+                <h3 className="text-lg font-medium border-b pb-2">1. Selecciona Atributos</h3>
+                <div className="flex flex-wrap gap-2 pt-2">
+                    {attributes.map(attr => (
+                    <Button key={attr.id} variant={selectedAttributes[attr.id] ? 'secondary' : 'outline'} onClick={() => handleAttributeSelection(attr)}>
+                        {selectedAttributes[attr.id] ? '✓ ' : ''}{attr.name}
+                    </Button>
+                    ))}
+                </div>
+            </div>
+            
+            {Object.keys(selectedAttributes).length > 0 && (
+                <div className="space-y-2">
+                    <h3 className="text-lg font-medium border-b pb-2">2. Selecciona Valores</h3>
+                    <div className="space-y-3 max-h-48 overflow-y-auto p-2 border rounded-md">
+                    {Object.entries(selectedAttributes).map(([attrId, attrData]) => (
+                        <div key={attrId}>
+                            <Label className="font-semibold">{attrData.name}</Label>
+                            <div className="grid grid-cols-3 gap-2 mt-1">
+                                {attrData.values.map(value => (
+                                    <div key={value.id} className="flex items-center space-x-2">
+                                        <Checkbox
+                                            id={`value-${value.id}`}
+                                            checked={!!selectedValues[`${attrId}-${value.id}`]}
+                                            onCheckedChange={(checked) => handleValueSelection(attrId, value.id, !!checked)}
+                                        />
+                                        <Label htmlFor={`value-${value.id}`} className="text-sm font-normal">{value.value}</Label>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ))}
+                    </div>
+                </div>
+            )}
+
+            <Button onClick={handleGenerateVariants} className="w-full">
+              <PlusCircle className="mr-2 h-4 w-4" />
+              3. Generar Variantes
+            </Button>
+
+            <div className="border rounded-md max-h-64 overflow-y-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Variante</TableHead>
+                    <TableHead>SKU</TableHead>
+                    <TableHead>Costo</TableHead>
+                    <TableHead>Precio</TableHead>
+                    <TableHead>Stock</TableHead>
+                    <TableHead></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {variants.length > 0 ? variants.map((variant, index) => (
+                    <TableRow key={index}>
+                      <TableCell className="font-medium text-sm">
+                        {variant.attribute_values?.map(v => v.value).join(' / ')}
+                      </TableCell>
+                      <TableCell><Input type="text" value={variant.sku ?? ''} onChange={e => handleVariantChange(index, 'sku', e.target.value)} className="w-24" /></TableCell>
+                      <TableCell><Input type="number" value={variant.cost_price ?? ''} onChange={e => handleVariantChange(index, 'cost_price', parseFloat(e.target.value))} className="w-20" /></TableCell>
+                      <TableCell><Input type="number" value={variant.sale_price ?? ''} onChange={e => handleVariantChange(index, 'sale_price', parseFloat(e.target.value))} className="w-20" /></TableCell>
+                      <TableCell><Input type="number" value={variant.current_stock ?? ''} onChange={e => handleVariantChange(index, 'current_stock', parseInt(e.target.value, 10))} className="w-20" /></TableCell>
+                      <TableCell>
+                        <Button variant="ghost" size="icon" onClick={() => handleRemoveVariant(index)}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  )) : (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center h-24">Aún no se han generado variantes.</TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
             </div>
           </div>
-        )}
+        </div>
+
         <DialogFooter>
-          <Button variant="outline" onClick={handleClose}>Cancelar</Button>
-          <Button type="submit" onClick={handleSave}>Guardar</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button onClick={handleSave}>Guardar Producto</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

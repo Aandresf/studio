@@ -112,7 +112,7 @@ Los endpoints actuales deben ser rediseñados para reflejar el nuevo modelo de d
 
 La experiencia de usuario para la gestión de productos y ventas cambiará significativamente.
 
-*   **Gestión de Atributos y Marcas:** Una nueva sección en "Configuración" para que el usuario defina sus propios atributos, valores y también para gestionar las marcas.
+*   ** - REALIZADO - Gestión de Atributos y Marcas:** Una nueva sección en "Configuración" para que el usuario defina sus propios atributos, valores y también para gestionar las marcas.
 *   **Formulario de Producto Rediseñado:** Un flujo de varios pasos:
     1.  Introducir datos del producto base (nombre, descripción, categoría y selección de marca desde una lista).
     2.  Seleccionar los atributos aplicables (Talla, Color).
