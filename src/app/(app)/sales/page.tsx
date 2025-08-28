@@ -431,7 +431,7 @@ export default function SalesPage() {
                 </div>
             </div>
         </div>
-        <VariantSelectionDialog open={isVariantDialogOpen} onOpenChange={setIsVariantDialogOpen} product={selectedProductForVariants} onVariantsSelected={handleVariantsSelected} />
+        <VariantSelectionDialog open={isVariantDialogOpen} onOpenChange={setIsVariantDialogOpen} product={selectedProductForVariants} onVariantsSelected={handleVariantsSelected} context="sale" />
         <SalesHistoryDialog open={isHistoryOpen} onOpenChange={setIsHistoryOpen} onViewReceipt={handleViewReceiptFromHistory} onEditSale={handleEditSale} refetchKey={refetchKey} />
         <SalesReceiptDialog open={isReceiptOpen} onOpenChange={(open) => { if (!open) setSelectedTransactionId(null); setIsReceiptOpen(open); }} transactionId={selectedTransactionId} />
         <SalesConfirmationDialog open={isConfirmationOpen} onOpenChange={setIsConfirmationOpen} saleItems={consolidatedItems} onConfirm={handleFormSubmit} isSaving={isLoading} />

@@ -133,4 +133,10 @@ La experiencia de usuario para la gestión de productos y ventas cambiará signi
 ### Notas y Tareas Pendientes (Agregado por el Usuario)
 
 *   **- REALIZADO - Dividir el panel de creación de productos en 3 pestañas:** Datos Principales, Atributos, y Costo/Precio. Esto evitará saturar la vista en un solo panel.
-*   ** Optimizar panel de compra y venta:** las variantes en venta filtran correctamente el stock en cero, pero necesito que las compras no lo filtren para poder reponer el inventario
+*   ** Optimizar panel de compra y venta:** no vender mas del stock disponible y evitar valore negativos. Permitir crear nuevas variantes de un producto al momento de registrar una compra mas alla de seleccionar las actuales.
+
+pendiente para despues: metodo de autenticacion de usuario, roles y permisos. Una pwa para solo lectura en vil con sincornizacion automatica en red local.
+
+correciones: Al crear un producto pero se cancela a media se aumenta la secuenciacion creando codigos fantasmas.
+
+Posibles cambios a considerar: Mover los atributos para que sean unicos por departamento y que el subdepartamento pueda usar los del padre o unicos para el mismo.

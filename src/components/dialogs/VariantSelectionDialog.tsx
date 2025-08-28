@@ -12,10 +12,13 @@ interface VariantSelectionDialogProps {
   onOpenChange: (open: boolean) => void;
   product: Product | null;
   onVariantsSelected: (selectedVariants: (ProductVariant & { quantity: number })[]) => void;
+  context: 'sale' | 'purchase'; // To determine the behavior of the dialog
 }
 
-export function VariantSelectionDialog({ open, onOpenChange, product, onVariantsSelected }: VariantSelectionDialogProps) {
+export function VariantSelectionDialog({ open, onOpenChange, product, onVariantsSelected, context }: VariantSelectionDialogProps) {
   const [quantities, setQuantities] = useState<Record<number, number>>({});
+
+  const isSale = context === 'sale';
 
   useEffect(() => {
     // Reset quantities when the dialog is opened or the product changes
@@ -46,13 +49,31 @@ export function VariantSelectionDialog({ open, onOpenChange, product, onVariants
     onOpenChange(false);
   };
 
+  const dialogTexts = {
+    sale: {
+      title: `Seleccionar Variantes de "${product?.name}"`,
+      description: 'Elige la cantidad para cada variante que deseas añadir a la venta.',
+      confirmButton: 'Añadir a la Venta',
+    },
+    purchase: {
+      title: `Registrar Compra de Variantes de "${product?.name}"`,
+      description: 'Introduce la cantidad de cada variante que estás ingresando al inventario.',
+      confirmButton: 'Añadir a la Compra',
+    }
+  };
+
+  const currentTexts = dialogTexts[context];
+  const filteredVariants = isSale 
+    ? product?.variants.filter(variant => variant.current_stock > 0) 
+    : product?.variants;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Seleccionar Variantes de "{product?.name}"</DialogTitle>
+          <DialogTitle>{currentTexts.title}</DialogTitle>
           <DialogDescription>
-            Elige la cantidad para cada variante que deseas añadir a la venta.
+            {currentTexts.description}
           </DialogDescription>
         </DialogHeader>
         <div className="py-4">
@@ -62,28 +83,26 @@ export function VariantSelectionDialog({ open, onOpenChange, product, onVariants
                 <TableRow>
                   <TableHead>Variante</TableHead>
                   <TableHead>SKU</TableHead>
-                  <TableHead className="text-right">Stock Disp.</TableHead>
-                  <TableHead className="text-right">Precio</TableHead>
+                  <TableHead className="text-right">Stock Actual</TableHead>
+                  <TableHead className="text-right">{isSale ? 'Precio Venta' : 'Costo'}</TableHead>
                   <TableHead className="w-[100px]">Cantidad</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {product?.variants && product.variants.length > 0 ? (
-                  product.variants
-                  .filter(variant => variant.current_stock > 0)
-                  .map(variant => (
+                {filteredVariants && filteredVariants.length > 0 ? (
+                  filteredVariants.map(variant => (
                     <TableRow key={variant.id}>
                       <TableCell className="font-medium">
                         {variant.attribute_values?.map(v => v.value).join(' / ') || 'Estándar'}
                       </TableCell>
                       <TableCell>{variant.sku}</TableCell>
                       <TableCell className="text-right">{variant.current_stock}</TableCell>
-                      <TableCell className="text-right">${variant.sale_price.toFixed(2)}</TableCell>
+                      <TableCell className="text-right">${isSale ? variant.sale_price.toFixed(2) : variant.cost_price.toFixed(2)}</TableCell>
                       <TableCell>
                         <Input
                           type="number"
                           min="0"
-                          max={variant.current_stock}
+                          max={isSale ? variant.current_stock : undefined}
                           value={quantities[variant.id] || ''}
                           onChange={(e) => handleQuantityChange(variant.id, e.target.value)}
                           className="text-center"
@@ -95,7 +114,7 @@ export function VariantSelectionDialog({ open, onOpenChange, product, onVariants
                 ) : (
                   <TableRow>
                     <TableCell colSpan={5} className="text-center h-24">
-                      Este producto no tiene variantes definidas.
+                      {isSale ? 'No hay variantes con stock disponible.' : 'Este producto no tiene variantes definidas.'}
                     </TableCell>
                   </TableRow>
                 )}
@@ -105,7 +124,7 @@ export function VariantSelectionDialog({ open, onOpenChange, product, onVariants
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={handleConfirm}>Añadir a la Venta</Button>
+          <Button onClick={handleConfirm}>{currentTexts.confirmButton}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
