@@ -1248,6 +1248,10 @@ body {
   border-radius: calc(var(--radius)  - 4px);
 }
 
+.rounded {
+  border-radius: .25rem;
+}
+
 .border {
   border-width: 1px;
 }
@@ -1974,6 +1978,11 @@ body {
 
 .hover\:bg-secondary\/80:hover {
   background-color: hsl(var(--secondary) / .8);
+}
+
+.hover\:bg-slate-100:hover {
+  --tw-bg-opacity: 1;
+  background-color: rgb(241 245 249 / var(--tw-bg-opacity, 1));
 }
 
 .hover\:text-accent-foreground:hover {

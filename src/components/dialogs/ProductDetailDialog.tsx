@@ -21,7 +21,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Product, InventoryMovement } from "@/lib/types";
-import { Edit, Trash2, History } from "lucide-react";
+import { Edit, Trash2, History, FileText } from "lucide-react";
 import { getVariantMovements } from "@/lib/api";
 
 interface ProductDetailDialogProps {
@@ -48,6 +48,16 @@ export function ProductDetailDialog({
   const [movementsOpen, setMovementsOpen] = useState(false);
   const [selectedVariantMovements, setSelectedVariantMovements] = useState<InventoryMovement[] | null>(null);
   const [loadingMovements, setLoadingMovements] = useState(false);
+  const [selectedMovement, setSelectedMovement] = useState<InventoryMovement | null>(null);
+
+  const formatDateSafe = (d?: string | null) => {
+    if (!d) return '-';
+    try {
+      return new Date(d).toLocaleDateString();
+    } catch (e) {
+      return d;
+    }
+  };
 
   const openMovementsForVariant = async (variantId: number) => {
     setLoadingMovements(true);
@@ -164,9 +174,27 @@ export function ProductDetailDialog({
                   <tr className="text-left"><th>Fecha</th><th>Tipo</th><th>Cantidad</th><th>Documento</th></tr>
                 </thead>
                 <tbody>
-                  {(selectedVariantMovements as any).map((m: any) => (
-                    <tr key={m.id} className="border-t"><td>{m.transaction_date}</td><td>{m.type}</td><td>{m.quantity}</td><td>{m.document_number || '-'}</td></tr>
-                  ))}
+                    {(selectedVariantMovements as any).map((m: any) => {
+                      // formatear fecha a solo fecha local sin hora
+                      let dateLabel = formatDateSafe(m.transaction_date);
+                        return (
+                          <tr key={m.id} className="border-t">
+                            <td>{dateLabel}</td>
+                            <td>{m.type}</td>
+                            <td>{m.quantity}</td>
+                            <td className="flex items-center gap-2">
+                              <span>{m.document_number || '-'}</span>
+                              <button
+                                className="inline-flex items-center justify-center p-1 rounded hover:bg-slate-100"
+                                title="Ver recibo"
+                                onClick={() => setSelectedMovement(m)}
+                              >
+                                <FileText className="h-4 w-4" />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
                 </tbody>
               </table>
             ) : (
@@ -179,6 +207,32 @@ export function ProductDetailDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+        {/* Receipt dialog for a single movement */}
+        <Dialog open={!!selectedMovement} onOpenChange={() => setSelectedMovement(null)}>
+          <DialogContent className="sm:max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Recibo de Movimiento</DialogTitle>
+              <DialogDescription>
+                Detalle del movimiento seleccionado.
+              </DialogDescription>
+            </DialogHeader>
+            {selectedMovement ? (
+              <div className="space-y-2 py-2 text-sm">
+                <p><strong>Fecha:</strong> {formatDateSafe(selectedMovement.transaction_date)}</p>
+                <p><strong>Tipo:</strong> {selectedMovement.type}</p>
+                <p><strong>Cantidad:</strong> {selectedMovement.quantity}</p>
+                <p><strong>Precio/Coste unitario:</strong> {selectedMovement.unit_cost ? `$${Number(selectedMovement.unit_cost).toFixed(2)}` : '-'}</p>
+                <p><strong>Documento:</strong> {selectedMovement.document_number || '-'}</p>
+                {selectedMovement.description && <div><strong>Descripción:</strong><p className="text-muted-foreground whitespace-pre-wrap">{selectedMovement.description}</p></div>}
+              </div>
+            ) : (
+              <p>No hay movimiento seleccionado.</p>
+            )}
+            <DialogFooter>
+              <Button onClick={() => setSelectedMovement(null)}>Cerrar</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
     </>
   );
 }

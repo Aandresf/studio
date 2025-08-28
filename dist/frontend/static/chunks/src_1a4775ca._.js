@@ -1797,6 +1797,7 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$b
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$square$2d$pen$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Edit$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/square-pen.js [app-client] (ecmascript) <export default as Edit>");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$trash$2d$2$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Trash2$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/trash-2.js [app-client] (ecmascript) <export default as Trash2>");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$history$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__History$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/history.js [app-client] (ecmascript) <export default as History>");
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$file$2d$text$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__FileText$3e$__ = __turbopack_context__.i("[project]/node_modules/lucide-react/dist/esm/icons/file-text.js [app-client] (ecmascript) <export default as FileText>");
 var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$api$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/lib/api.ts [app-client] (ecmascript)");
 ;
 var _s = __turbopack_context__.k.signature();
@@ -1816,6 +1817,15 @@ function ProductDetailDialog({ open, onOpenChange, product, onEdit, onDelete }) 
     const [movementsOpen, setMovementsOpen] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(false);
     const [selectedVariantMovements, setSelectedVariantMovements] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(null);
     const [loadingMovements, setLoadingMovements] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(false);
+    const [selectedMovement, setSelectedMovement] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(null);
+    const formatDateSafe = (d)=>{
+        if (!d) return '-';
+        try {
+            return new Date(d).toLocaleDateString();
+        } catch (e) {
+            return d;
+        }
+    };
     const openMovementsForVariant = async (variantId)=>{
         setLoadingMovements(true);
         try {
@@ -1843,7 +1853,7 @@ function ProductDetailDialog({ open, onOpenChange, product, onEdit, onDelete }) 
                                     children: product.name
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                    lineNumber: 71,
+                                    lineNumber: 81,
                                     columnNumber: 11
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["DialogDescription"], {
@@ -1853,13 +1863,13 @@ function ProductDetailDialog({ open, onOpenChange, product, onEdit, onDelete }) 
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                    lineNumber: 72,
+                                    lineNumber: 82,
                                     columnNumber: 11
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                            lineNumber: 70,
+                            lineNumber: 80,
                             columnNumber: 9
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1873,7 +1883,7 @@ function ProductDetailDialog({ open, onOpenChange, product, onEdit, onDelete }) 
                                             children: "Detalles del Producto"
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                            lineNumber: 79,
+                                            lineNumber: 89,
                                             columnNumber: 17
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1885,7 +1895,7 @@ function ProductDetailDialog({ open, onOpenChange, product, onEdit, onDelete }) 
                                                             children: "Stock Total:"
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                                            lineNumber: 81,
+                                                            lineNumber: 91,
                                                             columnNumber: 24
                                                         }, this),
                                                         " ",
@@ -1893,7 +1903,7 @@ function ProductDetailDialog({ open, onOpenChange, product, onEdit, onDelete }) 
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                                    lineNumber: 81,
+                                                    lineNumber: 91,
                                                     columnNumber: 21
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1902,7 +1912,7 @@ function ProductDetailDialog({ open, onOpenChange, product, onEdit, onDelete }) 
                                                             children: "Marca:"
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                                            lineNumber: 82,
+                                                            lineNumber: 92,
                                                             columnNumber: 24
                                                         }, this),
                                                         " ",
@@ -1910,7 +1920,7 @@ function ProductDetailDialog({ open, onOpenChange, product, onEdit, onDelete }) 
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                                    lineNumber: 82,
+                                                    lineNumber: 92,
                                                     columnNumber: 21
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1920,7 +1930,7 @@ function ProductDetailDialog({ open, onOpenChange, product, onEdit, onDelete }) 
                                                             children: "Estado:"
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                                            lineNumber: 85,
+                                                            lineNumber: 95,
                                                             columnNumber: 62
                                                         }, this),
                                                         " ",
@@ -1929,13 +1939,13 @@ function ProductDetailDialog({ open, onOpenChange, product, onEdit, onDelete }) 
                                                             children: product.status
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                                            lineNumber: 85,
+                                                            lineNumber: 95,
                                                             columnNumber: 87
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                                    lineNumber: 85,
+                                                    lineNumber: 95,
                                                     columnNumber: 21
                                                 }, this),
                                                 product.description && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1946,7 +1956,7 @@ function ProductDetailDialog({ open, onOpenChange, product, onEdit, onDelete }) 
                                                             children: "Descripción:"
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                                            lineNumber: 88,
+                                                            lineNumber: 98,
                                                             columnNumber: 27
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1954,25 +1964,25 @@ function ProductDetailDialog({ open, onOpenChange, product, onEdit, onDelete }) 
                                                             children: product.description
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                                            lineNumber: 89,
+                                                            lineNumber: 99,
                                                             columnNumber: 27
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                                    lineNumber: 87,
+                                                    lineNumber: 97,
                                                     columnNumber: 23
                                                 }, this)
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                            lineNumber: 80,
+                                            lineNumber: 90,
                                             columnNumber: 17
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                    lineNumber: 78,
+                                    lineNumber: 88,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1983,7 +1993,7 @@ function ProductDetailDialog({ open, onOpenChange, product, onEdit, onDelete }) 
                                             children: "Variantes"
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                            lineNumber: 95,
+                                            lineNumber: 105,
                                             columnNumber: 17
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1997,14 +2007,14 @@ function ProductDetailDialog({ open, onOpenChange, product, onEdit, onDelete }) 
                                                                     children: "Variante"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                                                    lineNumber: 100,
+                                                                    lineNumber: 110,
                                                                     columnNumber: 33
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableHead"], {
                                                                     children: "SKU"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                                                    lineNumber: 101,
+                                                                    lineNumber: 111,
                                                                     columnNumber: 33
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableHead"], {
@@ -2012,7 +2022,7 @@ function ProductDetailDialog({ open, onOpenChange, product, onEdit, onDelete }) 
                                                                     children: "Stock"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                                                    lineNumber: 102,
+                                                                    lineNumber: 112,
                                                                     columnNumber: 33
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableHead"], {
@@ -2020,7 +2030,7 @@ function ProductDetailDialog({ open, onOpenChange, product, onEdit, onDelete }) 
                                                                     children: "Costo"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                                                    lineNumber: 103,
+                                                                    lineNumber: 113,
                                                                     columnNumber: 33
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableHead"], {
@@ -2028,18 +2038,18 @@ function ProductDetailDialog({ open, onOpenChange, product, onEdit, onDelete }) 
                                                                     children: "Precio"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                                                    lineNumber: 104,
+                                                                    lineNumber: 114,
                                                                     columnNumber: 33
                                                                 }, this)
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                                            lineNumber: 99,
+                                                            lineNumber: 109,
                                                             columnNumber: 29
                                                         }, this)
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                                        lineNumber: 98,
+                                                        lineNumber: 108,
                                                         columnNumber: 25
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableBody"], {
@@ -2050,14 +2060,14 @@ function ProductDetailDialog({ open, onOpenChange, product, onEdit, onDelete }) 
                                                                         children: variant.attribute_values?.map((v)=>v.value).join(' / ') || 'Estándar'
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                                                        lineNumber: 111,
+                                                                        lineNumber: 121,
                                                                         columnNumber: 41
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableCell"], {
                                                                         children: variant.sku || 'N/A'
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                                                        lineNumber: 114,
+                                                                        lineNumber: 124,
                                                                         columnNumber: 41
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableCell"], {
@@ -2065,7 +2075,7 @@ function ProductDetailDialog({ open, onOpenChange, product, onEdit, onDelete }) 
                                                                         children: variant.current_stock
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                                                        lineNumber: 115,
+                                                                        lineNumber: 125,
                                                                         columnNumber: 23
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableCell"], {
@@ -2076,7 +2086,7 @@ function ProductDetailDialog({ open, onOpenChange, product, onEdit, onDelete }) 
                                                                         ]
                                                                     }, void 0, true, {
                                                                         fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                                                        lineNumber: 116,
+                                                                        lineNumber: 126,
                                                                         columnNumber: 23
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableCell"], {
@@ -2087,7 +2097,7 @@ function ProductDetailDialog({ open, onOpenChange, product, onEdit, onDelete }) 
                                                                         ]
                                                                     }, void 0, true, {
                                                                         fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                                                        lineNumber: 117,
+                                                                        lineNumber: 127,
                                                                         columnNumber: 23
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableCell"], {
@@ -2100,23 +2110,23 @@ function ProductDetailDialog({ open, onOpenChange, product, onEdit, onDelete }) 
                                                                                 className: "h-4 w-4"
                                                                             }, void 0, false, {
                                                                                 fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                                                                lineNumber: 120,
+                                                                                lineNumber: 130,
                                                                                 columnNumber: 27
                                                                             }, this)
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                                                            lineNumber: 119,
+                                                                            lineNumber: 129,
                                                                             columnNumber: 25
                                                                         }, this)
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                                                        lineNumber: 118,
+                                                                        lineNumber: 128,
                                                                         columnNumber: 23
                                                                     }, this)
                                                                 ]
                                                             }, variant.id, true, {
                                                                 fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                                                lineNumber: 110,
+                                                                lineNumber: 120,
                                                                 columnNumber: 37
                                                             }, this)) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableRow"], {
                                                             children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableCell"], {
@@ -2125,40 +2135,40 @@ function ProductDetailDialog({ open, onOpenChange, product, onEdit, onDelete }) 
                                                                 children: "No hay variantes para este producto."
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                                                lineNumber: 127,
+                                                                lineNumber: 137,
                                                                 columnNumber: 37
                                                             }, this)
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                                            lineNumber: 126,
+                                                            lineNumber: 136,
                                                             columnNumber: 33
                                                         }, this)
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                                        lineNumber: 107,
+                                                        lineNumber: 117,
                                                         columnNumber: 25
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                                lineNumber: 97,
+                                                lineNumber: 107,
                                                 columnNumber: 21
                                             }, this)
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                            lineNumber: 96,
+                                            lineNumber: 106,
                                             columnNumber: 17
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                    lineNumber: 94,
+                                    lineNumber: 104,
                                     columnNumber: 13
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                            lineNumber: 77,
+                            lineNumber: 87,
                             columnNumber: 9
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["DialogFooter"], {
@@ -2172,14 +2182,14 @@ function ProductDetailDialog({ open, onOpenChange, product, onEdit, onDelete }) 
                                             className: "mr-2 h-4 w-4"
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                            lineNumber: 138,
+                                            lineNumber: 148,
                                             columnNumber: 15
                                         }, this),
                                         "Eliminar Producto"
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                    lineNumber: 137,
+                                    lineNumber: 147,
                                     columnNumber: 11
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Button"], {
@@ -2189,31 +2199,31 @@ function ProductDetailDialog({ open, onOpenChange, product, onEdit, onDelete }) 
                                             className: "mr-2 h-4 w-4"
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                            lineNumber: 142,
+                                            lineNumber: 152,
                                             columnNumber: 15
                                         }, this),
                                         "Editar Producto y Variantes"
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                    lineNumber: 141,
+                                    lineNumber: 151,
                                     columnNumber: 11
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                            lineNumber: 136,
+                            lineNumber: 146,
                             columnNumber: 9
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                    lineNumber: 69,
+                    lineNumber: 79,
                     columnNumber: 7
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                lineNumber: 68,
+                lineNumber: 78,
                 columnNumber: 9
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Dialog"], {
@@ -2228,20 +2238,20 @@ function ProductDetailDialog({ open, onOpenChange, product, onEdit, onDelete }) 
                                     children: "Movimientos de la Variante"
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                    lineNumber: 152,
+                                    lineNumber: 162,
                                     columnNumber: 11
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["DialogDescription"], {
                                     children: "Últimos movimientos relacionados con la variante seleccionada."
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                    lineNumber: 153,
+                                    lineNumber: 163,
                                     columnNumber: 11
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                            lineNumber: 151,
+                            lineNumber: 161,
                             columnNumber: 9
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2252,7 +2262,7 @@ function ProductDetailDialog({ open, onOpenChange, product, onEdit, onDelete }) 
                                     children: "Cargando..."
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                    lineNumber: 160,
+                                    lineNumber: 170,
                                     columnNumber: 15
                                 }, this) : selectedVariantMovements && selectedVariantMovements.length > 0 ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("table", {
                                     className: "w-full text-sm",
@@ -2265,105 +2275,134 @@ function ProductDetailDialog({ open, onOpenChange, product, onEdit, onDelete }) 
                                                         children: "Fecha"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                                        lineNumber: 164,
+                                                        lineNumber: 174,
                                                         columnNumber: 45
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("th", {
                                                         children: "Tipo"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                                        lineNumber: 164,
+                                                        lineNumber: 174,
                                                         columnNumber: 59
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("th", {
                                                         children: "Cantidad"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                                        lineNumber: 164,
+                                                        lineNumber: 174,
                                                         columnNumber: 72
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("th", {
                                                         children: "Documento"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                                        lineNumber: 164,
+                                                        lineNumber: 174,
                                                         columnNumber: 89
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                                lineNumber: 164,
+                                                lineNumber: 174,
                                                 columnNumber: 19
                                             }, this)
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                            lineNumber: 163,
+                                            lineNumber: 173,
                                             columnNumber: 17
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("tbody", {
-                                            children: selectedVariantMovements.map((m)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("tr", {
+                                            children: selectedVariantMovements.map((m)=>{
+                                                // formatear fecha a solo fecha local sin hora
+                                                let dateLabel = formatDateSafe(m.transaction_date);
+                                                return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("tr", {
                                                     className: "border-t",
                                                     children: [
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("td", {
-                                                            children: m.transaction_date
+                                                            children: dateLabel
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                                            lineNumber: 168,
-                                                            columnNumber: 57
+                                                            lineNumber: 182,
+                                                            columnNumber: 29
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("td", {
                                                             children: m.type
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                                            lineNumber: 168,
-                                                            columnNumber: 86
+                                                            lineNumber: 183,
+                                                            columnNumber: 29
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("td", {
                                                             children: m.quantity
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                                            lineNumber: 168,
-                                                            columnNumber: 103
+                                                            lineNumber: 184,
+                                                            columnNumber: 29
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("td", {
-                                                            children: m.document_number || '-'
-                                                        }, void 0, false, {
+                                                            className: "flex items-center gap-2",
+                                                            children: [
+                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                                                    children: m.document_number || '-'
+                                                                }, void 0, false, {
+                                                                    fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
+                                                                    lineNumber: 186,
+                                                                    columnNumber: 31
+                                                                }, this),
+                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
+                                                                    className: "inline-flex items-center justify-center p-1 rounded hover:bg-slate-100",
+                                                                    title: "Ver recibo",
+                                                                    onClick: ()=>setSelectedMovement(m),
+                                                                    children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$file$2d$text$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__FileText$3e$__["FileText"], {
+                                                                        className: "h-4 w-4"
+                                                                    }, void 0, false, {
+                                                                        fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
+                                                                        lineNumber: 192,
+                                                                        columnNumber: 33
+                                                                    }, this)
+                                                                }, void 0, false, {
+                                                                    fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
+                                                                    lineNumber: 187,
+                                                                    columnNumber: 31
+                                                                }, this)
+                                                            ]
+                                                        }, void 0, true, {
                                                             fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                                            lineNumber: 168,
-                                                            columnNumber: 124
+                                                            lineNumber: 185,
+                                                            columnNumber: 29
                                                         }, this)
                                                     ]
                                                 }, m.id, true, {
                                                     fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                                    lineNumber: 168,
-                                                    columnNumber: 21
-                                                }, this))
+                                                    lineNumber: 181,
+                                                    columnNumber: 27
+                                                }, this);
+                                            })
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                            lineNumber: 166,
+                                            lineNumber: 176,
                                             columnNumber: 17
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                    lineNumber: 162,
+                                    lineNumber: 172,
                                     columnNumber: 15
                                 }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                                     className: "text-center",
                                     children: "No se encontraron movimientos."
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                    lineNumber: 173,
+                                    lineNumber: 201,
                                     columnNumber: 15
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                lineNumber: 158,
+                                lineNumber: 168,
                                 columnNumber: 11
                             }, this)
                         }, void 0, false, {
                             fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                            lineNumber: 157,
+                            lineNumber: 167,
                             columnNumber: 9
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["DialogFooter"], {
@@ -2372,29 +2411,205 @@ function ProductDetailDialog({ open, onOpenChange, product, onEdit, onDelete }) 
                                 children: "Cerrar"
                             }, void 0, false, {
                                 fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                                lineNumber: 178,
+                                lineNumber: 206,
                                 columnNumber: 11
                             }, this)
                         }, void 0, false, {
                             fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                            lineNumber: 177,
+                            lineNumber: 205,
                             columnNumber: 9
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                    lineNumber: 150,
+                    lineNumber: 160,
                     columnNumber: 7
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
-                lineNumber: 149,
+                lineNumber: 159,
                 columnNumber: 5
+            }, this),
+            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Dialog"], {
+                open: !!selectedMovement,
+                onOpenChange: ()=>setSelectedMovement(null),
+                children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["DialogContent"], {
+                    className: "sm:max-w-sm",
+                    children: [
+                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["DialogHeader"], {
+                            children: [
+                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["DialogTitle"], {
+                                    children: "Recibo de Movimiento"
+                                }, void 0, false, {
+                                    fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
+                                    lineNumber: 214,
+                                    columnNumber: 15
+                                }, this),
+                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["DialogDescription"], {
+                                    children: "Detalle del movimiento seleccionado."
+                                }, void 0, false, {
+                                    fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
+                                    lineNumber: 215,
+                                    columnNumber: 15
+                                }, this)
+                            ]
+                        }, void 0, true, {
+                            fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
+                            lineNumber: 213,
+                            columnNumber: 13
+                        }, this),
+                        selectedMovement ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                            className: "space-y-2 py-2 text-sm",
+                            children: [
+                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                    children: [
+                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("strong", {
+                                            children: "Fecha:"
+                                        }, void 0, false, {
+                                            fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
+                                            lineNumber: 221,
+                                            columnNumber: 20
+                                        }, this),
+                                        " ",
+                                        formatDateSafe(selectedMovement.transaction_date)
+                                    ]
+                                }, void 0, true, {
+                                    fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
+                                    lineNumber: 221,
+                                    columnNumber: 17
+                                }, this),
+                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                    children: [
+                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("strong", {
+                                            children: "Tipo:"
+                                        }, void 0, false, {
+                                            fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
+                                            lineNumber: 222,
+                                            columnNumber: 20
+                                        }, this),
+                                        " ",
+                                        selectedMovement.type
+                                    ]
+                                }, void 0, true, {
+                                    fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
+                                    lineNumber: 222,
+                                    columnNumber: 17
+                                }, this),
+                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                    children: [
+                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("strong", {
+                                            children: "Cantidad:"
+                                        }, void 0, false, {
+                                            fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
+                                            lineNumber: 223,
+                                            columnNumber: 20
+                                        }, this),
+                                        " ",
+                                        selectedMovement.quantity
+                                    ]
+                                }, void 0, true, {
+                                    fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
+                                    lineNumber: 223,
+                                    columnNumber: 17
+                                }, this),
+                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                    children: [
+                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("strong", {
+                                            children: "Precio/Coste unitario:"
+                                        }, void 0, false, {
+                                            fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
+                                            lineNumber: 224,
+                                            columnNumber: 20
+                                        }, this),
+                                        " ",
+                                        selectedMovement.unit_cost ? `$${Number(selectedMovement.unit_cost).toFixed(2)}` : '-'
+                                    ]
+                                }, void 0, true, {
+                                    fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
+                                    lineNumber: 224,
+                                    columnNumber: 17
+                                }, this),
+                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                    children: [
+                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("strong", {
+                                            children: "Documento:"
+                                        }, void 0, false, {
+                                            fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
+                                            lineNumber: 225,
+                                            columnNumber: 20
+                                        }, this),
+                                        " ",
+                                        selectedMovement.document_number || '-'
+                                    ]
+                                }, void 0, true, {
+                                    fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
+                                    lineNumber: 225,
+                                    columnNumber: 17
+                                }, this),
+                                selectedMovement.description && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                    children: [
+                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("strong", {
+                                            children: "Descripción:"
+                                        }, void 0, false, {
+                                            fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
+                                            lineNumber: 226,
+                                            columnNumber: 55
+                                        }, this),
+                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                            className: "text-muted-foreground whitespace-pre-wrap",
+                                            children: selectedMovement.description
+                                        }, void 0, false, {
+                                            fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
+                                            lineNumber: 226,
+                                            columnNumber: 84
+                                        }, this)
+                                    ]
+                                }, void 0, true, {
+                                    fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
+                                    lineNumber: 226,
+                                    columnNumber: 50
+                                }, this)
+                            ]
+                        }, void 0, true, {
+                            fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
+                            lineNumber: 220,
+                            columnNumber: 15
+                        }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                            children: "No hay movimiento seleccionado."
+                        }, void 0, false, {
+                            fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
+                            lineNumber: 229,
+                            columnNumber: 15
+                        }, this),
+                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["DialogFooter"], {
+                            children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Button"], {
+                                onClick: ()=>setSelectedMovement(null),
+                                children: "Cerrar"
+                            }, void 0, false, {
+                                fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
+                                lineNumber: 232,
+                                columnNumber: 15
+                            }, this)
+                        }, void 0, false, {
+                            fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
+                            lineNumber: 231,
+                            columnNumber: 13
+                        }, this)
+                    ]
+                }, void 0, true, {
+                    fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
+                    lineNumber: 212,
+                    columnNumber: 11
+                }, this)
+            }, void 0, false, {
+                fileName: "[project]/src/components/dialogs/ProductDetailDialog.tsx",
+                lineNumber: 211,
+                columnNumber: 9
             }, this)
         ]
     }, void 0, true);
 }
-_s(ProductDetailDialog, "mOWZ2jDCHxTe5BrBzggYo4uiNtI=");
+_s(ProductDetailDialog, "Byi9fpcRUvP2gpV5nnZbe83VyIw=");
 _c = ProductDetailDialog;
 var _c;
 __turbopack_context__.k.register(_c, "ProductDetailDialog");

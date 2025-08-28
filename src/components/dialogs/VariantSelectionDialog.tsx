@@ -54,6 +54,16 @@ export function VariantSelectionDialog({ open, onOpenChange, product, onVariants
   const [movementsOpen, setMovementsOpen] = useState(false);
   const [selectedVariantMovements, setSelectedVariantMovements] = useState<InventoryMovement[] | null>(null);
   const [loadingMovements, setLoadingMovements] = useState(false);
+  const [selectedMovement, setSelectedMovement] = useState<InventoryMovement | null>(null);
+
+  const formatDateSafe = (d?: string | null) => {
+    if (!d) return '-';
+    try {
+      return new Date(d).toLocaleDateString();
+    } catch (e) {
+      return d as any;
+    }
+  };
 
   const openMovementsForVariant = async (variantId: number) => {
     setLoadingMovements(true);
@@ -171,7 +181,17 @@ export function VariantSelectionDialog({ open, onOpenChange, product, onVariants
                 </thead>
                 <tbody>
                   {(selectedVariantMovements as any).map((m: any) => (
-                    <tr key={m.id} className="border-t"><td>{m.transaction_date}</td><td>{m.type}</td><td>{m.quantity}</td><td>{m.document_number || '-'}</td></tr>
+                    <tr key={m.id} className="border-t">
+                      <td>{formatDateSafe(m.transaction_date)}</td>
+                      <td>{m.type}</td>
+                      <td>{m.quantity}</td>
+                      <td className="flex items-center gap-2">
+                        <span>{m.document_number || '-'}</span>
+                        <button className="inline-flex items-center justify-center p-1 rounded hover:bg-slate-100" title="Ver recibo" onClick={() => setSelectedMovement(m)}>
+                          <svg className="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6M9 16h6M7 8h10M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z"/></svg>
+                        </button>
+                      </td>
+                    </tr>
                   ))}
                 </tbody>
               </table>
@@ -182,6 +202,30 @@ export function VariantSelectionDialog({ open, onOpenChange, product, onVariants
         </div>
         <DialogFooter>
           <Button onClick={() => setMovementsOpen(false)}>Cerrar</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    {/* Receipt dialog for a single movement */}
+    <Dialog open={!!selectedMovement} onOpenChange={() => setSelectedMovement(null)}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Recibo de Movimiento</DialogTitle>
+          <DialogDescription>Detalle del movimiento seleccionado.</DialogDescription>
+        </DialogHeader>
+        {selectedMovement ? (
+          <div className="space-y-2 py-2 text-sm">
+            <p><strong>Fecha:</strong> {formatDateSafe(selectedMovement.transaction_date)}</p>
+            <p><strong>Tipo:</strong> {selectedMovement.type}</p>
+            <p><strong>Cantidad:</strong> {selectedMovement.quantity}</p>
+            <p><strong>Precio/Coste unitario:</strong> {selectedMovement.unit_cost ? `$${Number(selectedMovement.unit_cost).toFixed(2)}` : '-'}</p>
+            <p><strong>Documento:</strong> {selectedMovement.document_number || '-'}</p>
+            {selectedMovement.description && <div><strong>Descripción:</strong><p className="text-muted-foreground whitespace-pre-wrap">{selectedMovement.description}</p></div>}
+          </div>
+        ) : (
+          <p>No hay movimiento seleccionado.</p>
+        )}
+        <DialogFooter>
+          <Button onClick={() => setSelectedMovement(null)}>Cerrar</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

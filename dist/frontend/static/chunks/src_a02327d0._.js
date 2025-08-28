@@ -1969,6 +1969,15 @@ function VariantSelectionDialog({ open, onOpenChange, product, onVariantsSelecte
     const [movementsOpen, setMovementsOpen] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(false);
     const [selectedVariantMovements, setSelectedVariantMovements] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(null);
     const [loadingMovements, setLoadingMovements] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(false);
+    const [selectedMovement, setSelectedMovement] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(null);
+    const formatDateSafe = (d)=>{
+        if (!d) return '-';
+        try {
+            return new Date(d).toLocaleDateString();
+        } catch (e) {
+            return d;
+        }
+    };
     const openMovementsForVariant = async (variantId)=>{
         setLoadingMovements(true);
         try {
@@ -2010,20 +2019,20 @@ function VariantSelectionDialog({ open, onOpenChange, product, onVariantsSelecte
                                     children: currentTexts.title
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                    lineNumber: 95,
+                                    lineNumber: 105,
                                     columnNumber: 11
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["DialogDescription"], {
                                     children: currentTexts.description
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                    lineNumber: 96,
+                                    lineNumber: 106,
                                     columnNumber: 11
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                            lineNumber: 94,
+                            lineNumber: 104,
                             columnNumber: 9
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2039,14 +2048,14 @@ function VariantSelectionDialog({ open, onOpenChange, product, onVariantsSelecte
                                                         children: "Variante"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                                        lineNumber: 105,
+                                                        lineNumber: 115,
                                                         columnNumber: 19
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableHead"], {
                                                         children: "SKU"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                                        lineNumber: 106,
+                                                        lineNumber: 116,
                                                         columnNumber: 19
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableHead"], {
@@ -2054,7 +2063,7 @@ function VariantSelectionDialog({ open, onOpenChange, product, onVariantsSelecte
                                                         children: "Stock Actual"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                                        lineNumber: 107,
+                                                        lineNumber: 117,
                                                         columnNumber: 19
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableHead"], {
@@ -2062,7 +2071,7 @@ function VariantSelectionDialog({ open, onOpenChange, product, onVariantsSelecte
                                                         children: isSale ? 'Precio Venta' : 'Costo'
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                                        lineNumber: 108,
+                                                        lineNumber: 118,
                                                         columnNumber: 19
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableHead"], {
@@ -2070,18 +2079,18 @@ function VariantSelectionDialog({ open, onOpenChange, product, onVariantsSelecte
                                                         children: "Cantidad"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                                        lineNumber: 109,
+                                                        lineNumber: 119,
                                                         columnNumber: 19
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                                lineNumber: 104,
+                                                lineNumber: 114,
                                                 columnNumber: 17
                                             }, this)
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                            lineNumber: 103,
+                                            lineNumber: 113,
                                             columnNumber: 15
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableBody"], {
@@ -2092,14 +2101,14 @@ function VariantSelectionDialog({ open, onOpenChange, product, onVariantsSelecte
                                                             children: variant.attribute_values?.map((v)=>v.value).join(' / ') || 'Estándar'
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                                            lineNumber: 116,
+                                                            lineNumber: 126,
                                                             columnNumber: 23
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableCell"], {
                                                             children: variant.sku
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                                            lineNumber: 119,
+                                                            lineNumber: 129,
                                                             columnNumber: 23
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableCell"], {
@@ -2107,7 +2116,7 @@ function VariantSelectionDialog({ open, onOpenChange, product, onVariantsSelecte
                                                             children: variant.current_stock
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                                            lineNumber: 120,
+                                                            lineNumber: 130,
                                                             columnNumber: 23
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableCell"], {
@@ -2118,7 +2127,7 @@ function VariantSelectionDialog({ open, onOpenChange, product, onVariantsSelecte
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                                            lineNumber: 121,
+                                                            lineNumber: 131,
                                                             columnNumber: 23
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableCell"], {
@@ -2132,18 +2141,18 @@ function VariantSelectionDialog({ open, onOpenChange, product, onVariantsSelecte
                                                                 placeholder: "0"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                                                lineNumber: 123,
+                                                                lineNumber: 133,
                                                                 columnNumber: 25
                                                             }, this)
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                                            lineNumber: 122,
+                                                            lineNumber: 132,
                                                             columnNumber: 23
                                                         }, this)
                                                     ]
                                                 }, variant.id, true, {
                                                     fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                                    lineNumber: 115,
+                                                    lineNumber: 125,
                                                     columnNumber: 21
                                                 }, this)) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableRow"], {
                                                 children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableCell"], {
@@ -2152,33 +2161,33 @@ function VariantSelectionDialog({ open, onOpenChange, product, onVariantsSelecte
                                                     children: isSale ? 'No hay variantes con stock disponible.' : 'Este producto no tiene variantes definidas.'
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                                    lineNumber: 138,
+                                                    lineNumber: 148,
                                                     columnNumber: 21
                                                 }, this)
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                                lineNumber: 137,
+                                                lineNumber: 147,
                                                 columnNumber: 19
                                             }, this)
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                            lineNumber: 112,
+                                            lineNumber: 122,
                                             columnNumber: 15
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                    lineNumber: 102,
+                                    lineNumber: 112,
                                     columnNumber: 13
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                lineNumber: 101,
+                                lineNumber: 111,
                                 columnNumber: 11
                             }, this)
                         }, void 0, false, {
                             fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                            lineNumber: 100,
+                            lineNumber: 110,
                             columnNumber: 9
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["DialogFooter"], {
@@ -2189,7 +2198,7 @@ function VariantSelectionDialog({ open, onOpenChange, product, onVariantsSelecte
                                     children: "Cancelar"
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                    lineNumber: 148,
+                                    lineNumber: 158,
                                     columnNumber: 11
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Button"], {
@@ -2197,24 +2206,24 @@ function VariantSelectionDialog({ open, onOpenChange, product, onVariantsSelecte
                                     children: currentTexts.confirmButton
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                    lineNumber: 149,
+                                    lineNumber: 159,
                                     columnNumber: 11
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                            lineNumber: 147,
+                            lineNumber: 157,
                             columnNumber: 9
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                    lineNumber: 93,
+                    lineNumber: 103,
                     columnNumber: 7
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                lineNumber: 92,
+                lineNumber: 102,
                 columnNumber: 5
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Dialog"], {
@@ -2229,20 +2238,20 @@ function VariantSelectionDialog({ open, onOpenChange, product, onVariantsSelecte
                                     children: "Movimientos de la Variante"
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                    lineNumber: 158,
+                                    lineNumber: 168,
                                     columnNumber: 11
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["DialogDescription"], {
                                     children: "Últimos movimientos relacionados con la variante seleccionada."
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                    lineNumber: 159,
+                                    lineNumber: 169,
                                     columnNumber: 11
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                            lineNumber: 157,
+                            lineNumber: 167,
                             columnNumber: 9
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2253,7 +2262,7 @@ function VariantSelectionDialog({ open, onOpenChange, product, onVariantsSelecte
                                     children: "Cargando..."
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                    lineNumber: 166,
+                                    lineNumber: 176,
                                     columnNumber: 15
                                 }, this) : selectedVariantMovements && selectedVariantMovements.length > 0 ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("table", {
                                     className: "w-full text-sm",
@@ -2266,39 +2275,39 @@ function VariantSelectionDialog({ open, onOpenChange, product, onVariantsSelecte
                                                         children: "Fecha"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                                        lineNumber: 170,
+                                                        lineNumber: 180,
                                                         columnNumber: 45
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("th", {
                                                         children: "Tipo"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                                        lineNumber: 170,
+                                                        lineNumber: 180,
                                                         columnNumber: 59
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("th", {
                                                         children: "Cantidad"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                                        lineNumber: 170,
+                                                        lineNumber: 180,
                                                         columnNumber: 72
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("th", {
                                                         children: "Documento"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                                        lineNumber: 170,
+                                                        lineNumber: 180,
                                                         columnNumber: 89
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                                lineNumber: 170,
+                                                lineNumber: 180,
                                                 columnNumber: 19
                                             }, this)
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                            lineNumber: 169,
+                                            lineNumber: 179,
                                             columnNumber: 17
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("tbody", {
@@ -2306,65 +2315,104 @@ function VariantSelectionDialog({ open, onOpenChange, product, onVariantsSelecte
                                                     className: "border-t",
                                                     children: [
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("td", {
-                                                            children: m.transaction_date
+                                                            children: formatDateSafe(m.transaction_date)
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                                            lineNumber: 174,
-                                                            columnNumber: 57
+                                                            lineNumber: 185,
+                                                            columnNumber: 23
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("td", {
                                                             children: m.type
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                                            lineNumber: 174,
-                                                            columnNumber: 86
+                                                            lineNumber: 186,
+                                                            columnNumber: 23
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("td", {
                                                             children: m.quantity
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                                            lineNumber: 174,
-                                                            columnNumber: 103
+                                                            lineNumber: 187,
+                                                            columnNumber: 23
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("td", {
-                                                            children: m.document_number || '-'
-                                                        }, void 0, false, {
+                                                            className: "flex items-center gap-2",
+                                                            children: [
+                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                                                    children: m.document_number || '-'
+                                                                }, void 0, false, {
+                                                                    fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
+                                                                    lineNumber: 189,
+                                                                    columnNumber: 25
+                                                                }, this),
+                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
+                                                                    className: "inline-flex items-center justify-center p-1 rounded hover:bg-slate-100",
+                                                                    title: "Ver recibo",
+                                                                    onClick: ()=>setSelectedMovement(m),
+                                                                    children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("svg", {
+                                                                        className: "h-4 w-4",
+                                                                        xmlns: "http://www.w3.org/2000/svg",
+                                                                        fill: "none",
+                                                                        viewBox: "0 0 24 24",
+                                                                        strokeWidth: "1.5",
+                                                                        stroke: "currentColor",
+                                                                        children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("path", {
+                                                                            strokeLinecap: "round",
+                                                                            strokeLinejoin: "round",
+                                                                            d: "M9 12h6M9 16h6M7 8h10M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z"
+                                                                        }, void 0, false, {
+                                                                            fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
+                                                                            lineNumber: 191,
+                                                                            columnNumber: 159
+                                                                        }, this)
+                                                                    }, void 0, false, {
+                                                                        fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
+                                                                        lineNumber: 191,
+                                                                        columnNumber: 27
+                                                                    }, this)
+                                                                }, void 0, false, {
+                                                                    fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
+                                                                    lineNumber: 190,
+                                                                    columnNumber: 25
+                                                                }, this)
+                                                            ]
+                                                        }, void 0, true, {
                                                             fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                                            lineNumber: 174,
-                                                            columnNumber: 124
+                                                            lineNumber: 188,
+                                                            columnNumber: 23
                                                         }, this)
                                                     ]
                                                 }, m.id, true, {
                                                     fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                                    lineNumber: 174,
+                                                    lineNumber: 184,
                                                     columnNumber: 21
                                                 }, this))
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                            lineNumber: 172,
+                                            lineNumber: 182,
                                             columnNumber: 17
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                    lineNumber: 168,
+                                    lineNumber: 178,
                                     columnNumber: 15
                                 }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                                     className: "text-center",
                                     children: "No se encontraron movimientos."
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                    lineNumber: 179,
+                                    lineNumber: 199,
                                     columnNumber: 15
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                lineNumber: 164,
+                                lineNumber: 174,
                                 columnNumber: 11
                             }, this)
                         }, void 0, false, {
                             fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                            lineNumber: 163,
+                            lineNumber: 173,
                             columnNumber: 9
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["DialogFooter"], {
@@ -2373,29 +2421,205 @@ function VariantSelectionDialog({ open, onOpenChange, product, onVariantsSelecte
                                 children: "Cerrar"
                             }, void 0, false, {
                                 fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                lineNumber: 184,
+                                lineNumber: 204,
                                 columnNumber: 11
                             }, this)
                         }, void 0, false, {
                             fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                            lineNumber: 183,
+                            lineNumber: 203,
                             columnNumber: 9
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                    lineNumber: 156,
+                    lineNumber: 166,
                     columnNumber: 7
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                lineNumber: 155,
+                lineNumber: 165,
                 columnNumber: 3
+            }, this),
+            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Dialog"], {
+                open: !!selectedMovement,
+                onOpenChange: ()=>setSelectedMovement(null),
+                children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["DialogContent"], {
+                    className: "sm:max-w-sm",
+                    children: [
+                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["DialogHeader"], {
+                            children: [
+                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["DialogTitle"], {
+                                    children: "Recibo de Movimiento"
+                                }, void 0, false, {
+                                    fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
+                                    lineNumber: 212,
+                                    columnNumber: 11
+                                }, this),
+                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["DialogDescription"], {
+                                    children: "Detalle del movimiento seleccionado."
+                                }, void 0, false, {
+                                    fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
+                                    lineNumber: 213,
+                                    columnNumber: 11
+                                }, this)
+                            ]
+                        }, void 0, true, {
+                            fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
+                            lineNumber: 211,
+                            columnNumber: 9
+                        }, this),
+                        selectedMovement ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                            className: "space-y-2 py-2 text-sm",
+                            children: [
+                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                    children: [
+                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("strong", {
+                                            children: "Fecha:"
+                                        }, void 0, false, {
+                                            fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
+                                            lineNumber: 217,
+                                            columnNumber: 16
+                                        }, this),
+                                        " ",
+                                        formatDateSafe(selectedMovement.transaction_date)
+                                    ]
+                                }, void 0, true, {
+                                    fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
+                                    lineNumber: 217,
+                                    columnNumber: 13
+                                }, this),
+                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                    children: [
+                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("strong", {
+                                            children: "Tipo:"
+                                        }, void 0, false, {
+                                            fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
+                                            lineNumber: 218,
+                                            columnNumber: 16
+                                        }, this),
+                                        " ",
+                                        selectedMovement.type
+                                    ]
+                                }, void 0, true, {
+                                    fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
+                                    lineNumber: 218,
+                                    columnNumber: 13
+                                }, this),
+                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                    children: [
+                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("strong", {
+                                            children: "Cantidad:"
+                                        }, void 0, false, {
+                                            fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
+                                            lineNumber: 219,
+                                            columnNumber: 16
+                                        }, this),
+                                        " ",
+                                        selectedMovement.quantity
+                                    ]
+                                }, void 0, true, {
+                                    fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
+                                    lineNumber: 219,
+                                    columnNumber: 13
+                                }, this),
+                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                    children: [
+                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("strong", {
+                                            children: "Precio/Coste unitario:"
+                                        }, void 0, false, {
+                                            fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
+                                            lineNumber: 220,
+                                            columnNumber: 16
+                                        }, this),
+                                        " ",
+                                        selectedMovement.unit_cost ? `$${Number(selectedMovement.unit_cost).toFixed(2)}` : '-'
+                                    ]
+                                }, void 0, true, {
+                                    fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
+                                    lineNumber: 220,
+                                    columnNumber: 13
+                                }, this),
+                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                    children: [
+                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("strong", {
+                                            children: "Documento:"
+                                        }, void 0, false, {
+                                            fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
+                                            lineNumber: 221,
+                                            columnNumber: 16
+                                        }, this),
+                                        " ",
+                                        selectedMovement.document_number || '-'
+                                    ]
+                                }, void 0, true, {
+                                    fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
+                                    lineNumber: 221,
+                                    columnNumber: 13
+                                }, this),
+                                selectedMovement.description && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                    children: [
+                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("strong", {
+                                            children: "Descripción:"
+                                        }, void 0, false, {
+                                            fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
+                                            lineNumber: 222,
+                                            columnNumber: 51
+                                        }, this),
+                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                                            className: "text-muted-foreground whitespace-pre-wrap",
+                                            children: selectedMovement.description
+                                        }, void 0, false, {
+                                            fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
+                                            lineNumber: 222,
+                                            columnNumber: 80
+                                        }, this)
+                                    ]
+                                }, void 0, true, {
+                                    fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
+                                    lineNumber: 222,
+                                    columnNumber: 46
+                                }, this)
+                            ]
+                        }, void 0, true, {
+                            fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
+                            lineNumber: 216,
+                            columnNumber: 11
+                        }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
+                            children: "No hay movimiento seleccionado."
+                        }, void 0, false, {
+                            fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
+                            lineNumber: 225,
+                            columnNumber: 11
+                        }, this),
+                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["DialogFooter"], {
+                            children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Button"], {
+                                onClick: ()=>setSelectedMovement(null),
+                                children: "Cerrar"
+                            }, void 0, false, {
+                                fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
+                                lineNumber: 228,
+                                columnNumber: 11
+                            }, this)
+                        }, void 0, false, {
+                            fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
+                            lineNumber: 227,
+                            columnNumber: 9
+                        }, this)
+                    ]
+                }, void 0, true, {
+                    fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
+                    lineNumber: 210,
+                    columnNumber: 7
+                }, this)
+            }, void 0, false, {
+                fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
+                lineNumber: 209,
+                columnNumber: 5
             }, this)
         ]
     }, void 0, true);
 }
-_s(VariantSelectionDialog, "TdGPJGKes8AvR//r1eA3NAvIwt8=");
+_s(VariantSelectionDialog, "nU1rIYvX+MlvgX7WPVJX0Q+Zjts=");
 _c = VariantSelectionDialog;
 var _c;
 __turbopack_context__.k.register(_c, "VariantSelectionDialog");
