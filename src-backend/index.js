@@ -40,6 +40,8 @@ app.use('/api/brands', require('./routes/brands'));
 app.use('/api/stores', require('./routes/stores'));
 // Subdepartments route (compatibilidad)
 app.use('/api/subdepartments', require('./routes/subdepartments'));
+// Users and roles management
+app.use('/api/users', require('./routes/users'));
 // --- INVENTORY (migrado a routes/inventory.js) ---
 app.use('/api/inventory', require('./routes/inventory'));
 // Purchases, Sales and Reports routers (migrated to routes/)
@@ -93,7 +95,7 @@ const startServer = () => {
     if (!isTestEnv) {
       console.log(`Backend server listening on http://localhost:${PORT}`);
       
-      try {
+  try {
         const db = databaseManager.getActiveDb();
         db.serialize(() => {
           const sqlSetup = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
@@ -130,6 +132,13 @@ const startServer = () => {
     }
   });
 };
+
+// Initialize default users and roles in the JSON file
+try {
+  require('./routes/init-default-users').ensureDefaults();
+} catch (e) {
+  console.error('No se pudo inicializar usuarios por defecto:', e.message);
+}
 
 const shutdown = (signal) => {
   if (!isTestEnv) console.log(`\n${signal} received. Shutting down gracefully...`);

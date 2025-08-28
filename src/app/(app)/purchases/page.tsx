@@ -9,6 +9,7 @@ import { useBackendStatus } from '@/app/(app)/layout';
 import { getProducts, createPurchase, getPendingTransactions, addPendingTransaction, removePendingTransaction, updatePurchase } from '@/lib/api';
 import { Product, PurchasePayload, ProductVariant, TransactionItemPayload, GroupedPurchase } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { useCurrentUser } from '@/hooks/use-current-user';
 import { toastSuccess, toastError } from '@/hooks/use-toast';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -26,7 +27,6 @@ import { PurchaseConfirmationDialog } from '@/components/dialogs/PurchaseConfirm
 import { VariantSelectionDialog } from '@/components/dialogs/VariantSelectionDialog';
 import { ProductDialog } from '@/components/dialogs/ProductDialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { string } from 'zod';
 
 interface CartItem {
     id: string;
@@ -51,6 +51,21 @@ interface PendingPurchase {
 }
 
 export default function PurchasesPage() {
+    const currentUser = useCurrentUser?.();
+    const hasPermission = (perm: string) => currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes(perm);
+
+    const canReadCostsGlobal = currentUser?.permissions?.includes('products:read_costs') || currentUser?.permissions?.includes('*');
+    const canEditCostsGlobal = currentUser?.permissions?.includes('products:edit') || currentUser?.permissions?.includes('*');
+
+    // If the user doesn't have purchases read/create permissions, block access to the page
+    if (!hasPermission('purchases:read') && !hasPermission('purchases:create')) {
+        return (
+            <div className="p-6">
+                <h2 className="text-lg font-semibold">Acceso restringido</h2>
+                <p className="text-sm text-muted-foreground">No tienes permisos para ver o gestionar compras. Contacta con un administrador.</p>
+            </div>
+        );
+    }
     const [date, setDate] = React.useState<Date>(new Date());
     const [supplier, setSupplier] = React.useState('');
     const [supplierRif, setSupplierRif] = React.useState('');
@@ -111,8 +126,8 @@ export default function PurchasesPage() {
                 product.name,
                 product.category || '',
                 product.brand?.name || '',
-                ...product.variants.map(v => v.sku || ''),
-                ...product.variants.flatMap(v => v.attribute_values?.map(av => av.value) || [])
+                ...((product.variants ?? []).map(v => v.sku || '')),
+                ...((product.variants ?? []).flatMap(v => v.attribute_values?.map(av => av.value) || []))
             ].join(' ').toLowerCase();
 
             return searchIn.includes(lowerCaseSearch);
@@ -120,23 +135,22 @@ export default function PurchasesPage() {
     };
 
     const renderProductOption = (product: Product) => {
-        console.log(product);
 
-        const totalStock = product.variants.reduce((acc, v) => acc + v.current_stock, 0);
+        const totalStock = (product.variants ?? []).reduce((acc, v) => acc + v.current_stock, 0);
         const attributes = () => {
-            const productAttributes = product.variants?.reduce((acc, variant) => {
+            const productAttributes = (product.variants ?? []).reduce((acc, variant) => {
                 if (variant.current_stock > 0 && variant.attribute_values) {
                     variant.attribute_values.forEach(av => {
                         const attributeName = av.attribute_name;
                         if (!acc[attributeName]) {
-                            acc[attributeName] = new Set();
+                            acc[attributeName] = new Set<string>();
                         }
                         acc[attributeName].add(av.value)
                     });
                 }
                 return acc;
-            }, {});
-            const attributesForDisplay = {};
+            }, {} as Record<string, Set<string>>);
+            const attributesForDisplay: Record<string, string> = {};
             for (const name in productAttributes) {
                 attributesForDisplay[name] = Array.from(productAttributes[name]).join(', ');
             }
@@ -394,12 +408,18 @@ export default function PurchasesPage() {
                                                     <TableCell><p className="font-medium">{item.productName}</p><p className="text-xs text-muted-foreground">{item.variantName} ({item.sku})</p></TableCell>
                                                     <TableCell>{item.quantity}</TableCell>
                                                     <TableCell>
-                                                        <Input
-                                                            type="number"
-                                                            value={item.unitCost}
-                                                            onChange={(e) => handleCostChange(index, parseFloat(e.target.value) || 0)}
-                                                            className="text-right w-24"
-                                                        />
+                                                        {canReadCostsGlobal ? (
+                                                            <Input
+                                                                type="number"
+                                                                value={item.unitCost}
+                                                                onChange={(e) => handleCostChange(index, parseFloat(e.target.value) || 0)}
+                                                                className="text-right w-24"
+                                                                disabled={!canEditCostsGlobal}
+                                                                aria-label={`Costo unitario ${item.productName}`}
+                                                            />
+                                                        ) : (
+                                                            <div className="text-right w-24">—</div>
+                                                        )}
                                                     </TableCell>
                                                     <TableCell>${(item.quantity * item.unitCost).toFixed(2)}</TableCell>
                                                     <TableCell><Button variant="ghost" size="icon" onClick={() => removeCartItem(index)}><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell>

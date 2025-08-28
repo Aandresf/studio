@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { PlusCircle, Search } from 'lucide-react';
 
 import { useBackendStatus } from '@/app/(app)/layout';
+import { useCurrentUser } from '@/hooks/use-current-user';
 import { getProducts, deleteProduct, getStoreDetails, getStores } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -56,6 +57,10 @@ export default function ProductsPage() {
     const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
+    const currentUser = useCurrentUser();
+    const canCreateProducts = currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('products:create');
+    const canEditProducts = currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('products:edit');
+    const canDeleteProducts = currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('products:delete');
 
     const { isBackendReady, triggerRefetch, refetchKey } = useBackendStatus();
 
@@ -92,13 +97,14 @@ export default function ProductsPage() {
     const generateNextSku = () => {
         if (products.length === 0) return '1';
         const maxSku = products.reduce((max, p) => {
-            const skuNumber = parseInt(p.sku || '0', 10);
+            const skuNumber = parseInt(((p as any).sku) || '0', 10);
             return !isNaN(skuNumber) && skuNumber > max ? skuNumber : max;
         }, 0);
         return (maxSku + 1).toString();
     };
 
     const handleAddNew = () => {
+        if (!canCreateProducts) return;
         setSelectedProduct(null); // Clear selection
         setIsCreateOrEditDialogOpen(true);
     };
@@ -139,9 +145,9 @@ export default function ProductsPage() {
         if (!showInactive && product.status === 'Inactivo') {
             return false;
         }
-        const query = searchQuery.toLowerCase();
-        const nameMatch = product.name.toLowerCase().includes(query);
-        const skuMatch = product.sku?.toLowerCase().includes(query) ?? false;
+    const query = searchQuery.toLowerCase();
+    const nameMatch = product.name.toLowerCase().includes(query);
+    const skuMatch = (((product as any).sku as string | undefined)?.toLowerCase().includes(query)) ?? false;
         return nameMatch || skuMatch;
     });
 
@@ -153,7 +159,7 @@ export default function ProductsPage() {
                         <h1 className="font-semibold text-lg md:text-2xl">Productos</h1>
                         <p className="text-sm text-muted-foreground">Gestiona tus productos aquí.</p>
                     </div>
-                    <Button size="sm" className="gap-1" onClick={handleAddNew}>
+                    <Button size="sm" className="gap-1" onClick={handleAddNew} disabled={!canCreateProducts}>
                         <PlusCircle className="h-3.5 w-3.5" />
                         <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
                             Añadir Producto
@@ -197,7 +203,7 @@ export default function ProductsPage() {
                                                     alt={product.name}
                                                     className="aspect-square rounded-md object-cover"
                                                     height="64"
-                                                    src={product.image || "https://placehold.co/64x64.png"}
+                                                    src={((product as any).image) || "https://placehold.co/64x64.png"}
                                                     width="64"
                                                 />
                                             </TableCell>
@@ -205,19 +211,19 @@ export default function ProductsPage() {
                                             <TableCell className="font-medium">{product.name}</TableCell>
                                             <TableCell className="hidden md:table-cell">{
                                                 (() => {
-                                                    const productAttributes = product.variants.reduce((acc, variant) => {
-                                                        if (variant.current_stock > 0 && variant.attribute_values){
-                                                            variant.attribute_values.forEach(av => {
+                                                    const productAttributes: Record<string, Set<any>> = (product.variants ?? []).reduce((acc, variant) => {
+                                                        if ((variant as any).current_stock > 0 && (variant as any).attribute_values){
+                                                            (variant as any).attribute_values.forEach((av: any) => {
                                                                 const attributeName = av.attribute_name;
                                                                 if (!acc[attributeName]) {
                                                                     acc[attributeName] = new Set();
                                                                 }
-                                                                acc[attributeName].add(av.value)
+                                                                acc[attributeName].add(av.value);
                                                             });
                                                         }
                                                         return acc;
-                                                    }, {});
-                                                    const attributesForDisplay = {};
+                                                    }, {} as Record<string, Set<any>>);
+                                                    const attributesForDisplay: Record<string, string> = {};
                                                     for (const name in productAttributes){
                                                         attributesForDisplay[name] = Array.from(productAttributes[name]).join(', ');
                                                     }
@@ -230,7 +236,10 @@ export default function ProductsPage() {
                                                 })()
                                             }</TableCell>
                                             <TableCell className="hidden md:table-cell">{
-                                                product.variants?.map(v => v.current_stock).reduce((a, b) => a + b, 0) ?? 'Sin Stock'
+                                                (() => {
+                                                    const total = (product.variants ?? []).map(v => (v as any).current_stock || 0).reduce((a, b) => a + b, 0);
+                                                    return total > 0 ? total : 'Sin Stock';
+                                                })()
 
                                             }</TableCell>
                                         </TableRow>
@@ -245,9 +254,8 @@ export default function ProductsPage() {
             <ProductDialog
                 open={isCreateOrEditDialogOpen}
                 onOpenChange={setIsCreateOrEditDialogOpen}
-                product={selectedProduct || { name: '', price: 0, stock: 0, status: 'Activo' }}
+                product={selectedProduct ?? null}
                 onProductSaved={handleProductSaved}
-                generateSku={generateNextSku}
             />
 
             <ProductDetailDialog
@@ -256,7 +264,6 @@ export default function ProductsPage() {
                 product={selectedProduct}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
-                onDataChange={triggerRefetch}
             />
         </>
     );

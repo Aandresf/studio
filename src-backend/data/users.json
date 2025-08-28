@@ -1,0 +1,79 @@
+{
+  "users": [
+    {
+      "id": "IhPquMfl",
+      "username": "master",
+      "displayName": "Administrador",
+      "roleId": "master",
+      "permissions": [
+        "*"
+      ],
+      "createdAt": "2025-08-28T22:10:04.956Z"
+    },
+    {
+      "id": "9PD-3Etg",
+      "username": "ventas_admin",
+      "displayName": "Encargado de Ventas",
+      "roleId": "sales_admin",
+      "permissions": [],
+      "createdAt": "2025-08-28T22:10:04.956Z"
+    },
+    {
+      "id": "xIetViNG",
+      "username": "vendedor",
+      "displayName": "Vendedor",
+      "roleId": "sales_only",
+      "permissions": [],
+      "createdAt": "2025-08-28T22:10:04.956Z"
+    },
+    {
+      "id": "F8a0MT2q",
+      "username": "lector",
+      "displayName": "Usuario Lectura",
+      "roleId": "read_only",
+      "permissions": [],
+      "createdAt": "2025-08-28T22:10:04.956Z"
+    }
+  ],
+  "roles": [
+    {
+      "id": "master",
+      "name": "Master",
+      "permissions": [
+        "*"
+      ]
+    },
+    {
+      "id": "sales_admin",
+      "name": "Ventas y Consulta",
+      "permissions": [
+        "sales:create",
+        "sales:read",
+        "products:read",
+        "products:read_prices_sale",
+        "products:read_costs_disabled",
+        "products:edit:false",
+        "products:delete:false"
+      ]
+    },
+    {
+      "id": "sales_only",
+      "name": "Solo Venta y Consulta",
+      "permissions": [
+        "sales:create",
+        "sales:read",
+        "products:read",
+        "products:read_prices_sale"
+      ]
+    },
+    {
+      "id": "read_only",
+      "name": "Solo Lectura",
+      "permissions": [
+        "products:read",
+        "reports:read",
+        "dashboard:read"
+      ]
+    }
+  ]
+}

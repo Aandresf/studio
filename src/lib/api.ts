@@ -2,7 +2,8 @@
 import { toastError, toastInfo } from "@/hooks/use-toast";
 import { Product, DashboardSummary, RecentSale, InventoryMovement, ReportMetadata, FullReport, ReportType, StoreSettings, PurchasePayload, SalePayload, GroupedPurchase, GroupedSale } from './types';
 
-const API_BASE_URL = 'http://localhost:3001/api';
+// Use NEXT_PUBLIC_API_URL at build/runtime if provided, otherwise default to localhost:3001
+const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001') + '/api';
 
 // Definimos una clase de error personalizada para manejar errores de la API
 class ApiError extends Error {
@@ -400,4 +401,13 @@ export const removePendingTransaction = (id: string): Promise<{ message: string 
         method: 'DELETE',
     });
 };
+
+// Users & Roles API
+export const getUsers = (): Promise<{ users: any[]; roles: any[] }> => fetchAPI('/users');
+export const getUser = (id: string): Promise<any> => fetchAPI(`/users/${id}`);
+export const createUser = (payload: { username: string; displayName?: string; roleId?: string; permissions?: string[] }) => fetchAPI('/users', { method: 'POST', body: JSON.stringify(payload) });
+export const updateUser = (id: string, payload: { username?: string; displayName?: string; roleId?: string; permissions?: string[] }) => fetchAPI(`/users/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
+export const deleteUser = (id: string) => fetchAPI(`/users/${id}`, { method: 'DELETE' });
+export const getUserPermissions = (id: string) => fetchAPI(`/users/${id}/permissions`);
+export const updateUserPermissions = (id: string, permissions: string[]) => fetchAPI(`/users/${id}/permissions`, { method: 'PUT', body: JSON.stringify({ permissions }) });
 
