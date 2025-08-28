@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -19,8 +20,9 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Product } from "@/lib/types";
-import { Edit, Trash2 } from "lucide-react";
+import { Product, InventoryMovement } from "@/lib/types";
+import { Edit, Trash2, History } from "lucide-react";
+import { getVariantMovements } from "@/lib/api";
 
 interface ProductDetailDialogProps {
   open: boolean;
@@ -42,13 +44,33 @@ export function ProductDetailDialog({
 
   const totalStock = product.variants?.reduce((sum, v) => sum + v.current_stock, 0) ?? 0;
 
+  // Movements modal state
+  const [movementsOpen, setMovementsOpen] = useState(false);
+  const [selectedVariantMovements, setSelectedVariantMovements] = useState<InventoryMovement[] | null>(null);
+  const [loadingMovements, setLoadingMovements] = useState(false);
+
+  const openMovementsForVariant = async (variantId: number) => {
+    setLoadingMovements(true);
+    try {
+      const data = await getVariantMovements(variantId);
+      setSelectedVariantMovements(data || []);
+      setMovementsOpen(true);
+    } catch (err) {
+      setSelectedVariantMovements([]);
+      setMovementsOpen(true);
+    } finally {
+      setLoadingMovements(false);
+    }
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+      <>
+        <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl">
         <DialogHeader>
           <DialogTitle>{product.name}</DialogTitle>
           <DialogDescription>
-            {product.category}{product.subcategory ? ` > ${product.subcategory}` : ''}
+            {product.category}{product.subcategory ? ` > ${product.subcategory}` : ""}
           </DialogDescription>
         </DialogHeader>
 
@@ -90,9 +112,14 @@ export function ProductDetailDialog({
                                             {variant.attribute_values?.map(v => v.value).join(' / ') || 'Estándar'}
                                         </TableCell>
                                         <TableCell>{variant.sku || 'N/A'}</TableCell>
-                                        <TableCell className="text-right">{variant.current_stock}</TableCell>
-                                        <TableCell className="text-right">${variant.cost_price.toFixed(2)}</TableCell>
-                                        <TableCell className="text-right">${variant.sale_price.toFixed(2)}</TableCell>
+                      <TableCell className="text-right">{variant.current_stock}</TableCell>
+                      <TableCell className="text-right">${variant.cost_price.toFixed(2)}</TableCell>
+                      <TableCell className="text-right">${variant.sale_price.toFixed(2)}</TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="icon" onClick={() => openMovementsForVariant(variant.id)}>
+                          <History className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
                                     </TableRow>
                                 ))
                             ) : (
@@ -117,6 +144,41 @@ export function ProductDetailDialog({
           </Button>
         </DialogFooter>
       </DialogContent>
+      </Dialog>
+    {/* Movements dialog */}
+    <Dialog open={movementsOpen} onOpenChange={setMovementsOpen}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Movimientos de la Variante</DialogTitle>
+          <DialogDescription>
+            Últimos movimientos relacionados con la variante seleccionada.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="py-2">
+          <div className="border rounded-md max-h-64 overflow-y-auto p-2">
+            {loadingMovements ? (
+              <p>Cargando...</p>
+            ) : (selectedVariantMovements && selectedVariantMovements.length > 0 ? (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left"><th>Fecha</th><th>Tipo</th><th>Cantidad</th><th>Documento</th></tr>
+                </thead>
+                <tbody>
+                  {(selectedVariantMovements as any).map((m: any) => (
+                    <tr key={m.id} className="border-t"><td>{m.transaction_date}</td><td>{m.type}</td><td>{m.quantity}</td><td>{m.document_number || '-'}</td></tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <p className="text-center">No se encontraron movimientos.</p>
+            ))}
+          </div>
+        </div>
+        <DialogFooter>
+          <Button onClick={() => setMovementsOpen(false)}>Cerrar</Button>
+        </DialogFooter>
+      </DialogContent>
     </Dialog>
+    </>
   );
 }

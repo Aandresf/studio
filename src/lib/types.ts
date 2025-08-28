@@ -79,7 +79,10 @@ export interface InventoryMovement {
     quantity: number;
     unit_cost?: number;
     price?: number;
-    date: string;
+  date: string;
+  // Campos que el backend a veces envía con nombres distintos
+  transaction_date?: string;
+  document_number?: string;
     description?: string;
 }
 

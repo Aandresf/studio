@@ -1,5 +1,11 @@
 {
   "/(app)/dashboard/page": "app/(app)/dashboard/page.js",
+  "/(app)/products/page": "app/(app)/products/page.js",
+  "/(app)/purchases/page": "app/(app)/purchases/page.js",
+  "/(app)/reports/page": "app/(app)/reports/page.js",
+  "/(app)/sales/page": "app/(app)/sales/page.js",
+  "/(app)/settings/page": "app/(app)/settings/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
   "/favicon.ico/route": "app/favicon.ico/route.js",
   "/page": "app/page.js"
 }

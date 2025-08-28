@@ -1,6 +1,6 @@
 
 import { toastError, toastInfo } from "@/hooks/use-toast";
-import { Product, DashboardSummary, RecentSale, InventoryMovement, ReportMetadata, FullReport, ReportType, StoreSettings, PurchasePayload, SalePayload, PurchaseHistoryMovement, SalesHistoryMovement } from './types';
+import { Product, DashboardSummary, RecentSale, InventoryMovement, ReportMetadata, FullReport, ReportType, StoreSettings, PurchasePayload, SalePayload, GroupedPurchase, GroupedSale } from './types';
 
 const API_BASE_URL = 'http://localhost:3001/api';
 
@@ -195,8 +195,14 @@ export const deleteSubdepartment = (id: number): Promise<null> => {
 };
 
 // SKU Generation API
+// Preview next SKU (no reserva)
 export const getNextSku = (depId: number, subId: number): Promise<{ nextSku: string }> => {
-    return fetchAPI(`/sku/next?depId=${depId}&subId=${subId}`);
+    return fetchAPI(`/sku/preview?depId=${depId}&subId=${subId}`);
+};
+
+// Movements by variant (compatibility)
+export const getVariantMovements = (variantId: number): Promise<InventoryMovement[]> => {
+    return fetchAPI(`/variants/${variantId}/movements`);
 };
 
 

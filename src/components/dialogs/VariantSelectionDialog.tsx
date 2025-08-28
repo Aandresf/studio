@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
-import { Product, ProductVariant } from '@/lib/types';
+import { Product, ProductVariant, InventoryMovement } from '@/lib/types';
+import { getVariantMovements } from '@/lib/api';
 
 interface VariantSelectionDialogProps {
   open: boolean;
@@ -49,6 +50,25 @@ export function VariantSelectionDialog({ open, onOpenChange, product, onVariants
     onOpenChange(false);
   };
 
+  // Movements modal state
+  const [movementsOpen, setMovementsOpen] = useState(false);
+  const [selectedVariantMovements, setSelectedVariantMovements] = useState<InventoryMovement[] | null>(null);
+  const [loadingMovements, setLoadingMovements] = useState(false);
+
+  const openMovementsForVariant = async (variantId: number) => {
+    setLoadingMovements(true);
+    try {
+      const data = await getVariantMovements(variantId);
+      setSelectedVariantMovements(data || []);
+      setMovementsOpen(true);
+    } catch (err) {
+      setSelectedVariantMovements([]);
+      setMovementsOpen(true);
+    } finally {
+      setLoadingMovements(false);
+    }
+  };
+
   const dialogTexts = {
     sale: {
       title: `Seleccionar Variantes de "${product?.name}"`,
@@ -63,11 +83,12 @@ export function VariantSelectionDialog({ open, onOpenChange, product, onVariants
   };
 
   const currentTexts = dialogTexts[context];
-  const filteredVariants = isSale 
-    ? product?.variants.filter(variant => variant.current_stock > 0) 
-    : product?.variants;
+  const filteredVariants = isSale
+    ? (product?.variants || []).filter(variant => variant.current_stock > 0)
+    : (product?.variants || []);
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
@@ -89,7 +110,7 @@ export function VariantSelectionDialog({ open, onOpenChange, product, onVariants
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredVariants && filteredVariants.length > 0 ? (
+                {filteredVariants.length > 0 ? (
                   filteredVariants.map(variant => (
                     <TableRow key={variant.id}>
                       <TableCell className="font-medium">
@@ -108,6 +129,7 @@ export function VariantSelectionDialog({ open, onOpenChange, product, onVariants
                           className="text-center"
                           placeholder="0"
                         />
+                        {/* Movements button removed - moved to ProductDetailDialog (kardex) */}
                       </TableCell>
                     </TableRow>
                   ))
@@ -127,6 +149,42 @@ export function VariantSelectionDialog({ open, onOpenChange, product, onVariants
           <Button onClick={handleConfirm}>{currentTexts.confirmButton}</Button>
         </DialogFooter>
       </DialogContent>
+  </Dialog>
+
+  {/* Movements dialog */}
+  <Dialog open={movementsOpen} onOpenChange={setMovementsOpen}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Movimientos de la Variante</DialogTitle>
+          <DialogDescription>
+            Últimos movimientos relacionados con la variante seleccionada.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="py-2">
+          <div className="border rounded-md max-h-64 overflow-y-auto p-2">
+            {loadingMovements ? (
+              <p>Cargando...</p>
+            ) : (selectedVariantMovements && selectedVariantMovements.length > 0 ? (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left"><th>Fecha</th><th>Tipo</th><th>Cantidad</th><th>Documento</th></tr>
+                </thead>
+                <tbody>
+                  {(selectedVariantMovements as any).map((m: any) => (
+                    <tr key={m.id} className="border-t"><td>{m.transaction_date}</td><td>{m.type}</td><td>{m.quantity}</td><td>{m.document_number || '-'}</td></tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <p className="text-center">No se encontraron movimientos.</p>
+            ))}
+          </div>
+        </div>
+        <DialogFooter>
+          <Button onClick={() => setMovementsOpen(false)}>Cerrar</Button>
+        </DialogFooter>
+      </DialogContent>
     </Dialog>
+    </>
   );
 }

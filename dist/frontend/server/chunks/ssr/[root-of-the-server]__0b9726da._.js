@@ -890,6 +890,7 @@ __turbopack_context__.s({
     "getStoreSettings": (()=>getStoreSettings),
     "getStores": (()=>getStores),
     "getSubdepartments": (()=>getSubdepartments),
+    "getVariantMovements": (()=>getVariantMovements),
     "quitApplication": (()=>quitApplication),
     "removePendingTransaction": (()=>removePendingTransaction),
     "setActiveStore": (()=>setActiveStore),
@@ -1092,7 +1093,10 @@ const deleteSubdepartment = (id)=>{
     });
 };
 const getNextSku = (depId, subId)=>{
-    return fetchAPI(`/sku/next?depId=${depId}&subId=${subId}`);
+    return fetchAPI(`/sku/preview?depId=${depId}&subId=${subId}`);
+};
+const getVariantMovements = (variantId)=>{
+    return fetchAPI(`/variants/${variantId}/movements`);
 };
 const createPurchase = (purchase)=>{
     // El payload ya viene estructurado correctamente desde el frontend.
