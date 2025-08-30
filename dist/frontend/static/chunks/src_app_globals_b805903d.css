@@ -785,6 +785,10 @@ body {
   min-height: 100vh;
 }
 
+.min-h-\[400px\] {
+  min-height: 400px;
+}
+
 .w-0 {
   width: 0;
 }
@@ -899,6 +903,10 @@ body {
 
 .w-full {
   width: 100%;
+}
+
+.w-56 {
+  width: 14rem;
 }
 
 .min-w-0 {
@@ -1940,6 +1948,10 @@ body {
   z-index: 20;
 }
 
+.hover\:visible:hover {
+  visibility: visible;
+}
+
 .hover\:border-primary:hover {
   border-color: hsl(var(--primary));
 }
@@ -1987,6 +1999,10 @@ body {
 .hover\:bg-slate-100:hover {
   --tw-bg-opacity: 1;
   background-color: rgb(241 245 249 / var(--tw-bg-opacity, 1));
+}
+
+.hover\:bg-muted:hover {
+  background-color: hsl(var(--muted));
 }
 
 .hover\:text-accent-foreground:hover {
@@ -2095,6 +2111,10 @@ body {
 
 .disabled\:opacity-50:disabled {
   opacity: .5;
+}
+
+.group:hover .group-hover\:visible {
+  visibility: visible;
 }
 
 .group:hover .group-hover\:opacity-100 {

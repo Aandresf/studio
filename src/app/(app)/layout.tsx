@@ -24,19 +24,26 @@ export const useBackendStatus = () => {
 };
 
 const navItems = [
-  { href: '/dashboard', icon: Home, label: 'Panel de Control' },
-  { href: '/sales', icon: ShoppingCart, label: 'Ventas' },
-  { href: '/purchases', icon: Package, label: 'Compras' },
-  { href: '/products', icon: Box, label: 'Productos' },
-  { href: '/users', icon: Home, label: 'Usuarios' },
-  { href: '/reports', icon: BarChart3, label: 'Informes' },
+  { href: '/dashboard', icon: Home, label: 'Panel de Control', permission: null },
+  { href: '/sales', icon: ShoppingCart, label: 'Ventas', permission: 'sales:read' },
+  { href: '/purchases', icon: Package, label: 'Compras', permission: 'purchases:read' },
+  { href: '/products', icon: Box, label: 'Productos', permission: 'products:read' },
+  { href: '/users', icon: Home, label: 'Usuarios', permission: 'users:read' },
+  { href: '/reports', icon: BarChart3, label: 'Informes', permission: 'reports:read' },
 ];
 
 function SidebarNav() {
+  const currentUser = useCurrentUser();
+  const userPermissions = currentUser?.permissions || [];
+  const hasPermission = (permission: string | null) => {
+    if (!permission) return true;
+    return userPermissions.includes('*') || userPermissions.includes(permission);
+  };
+
   const pathname = usePathname();
   return (
     <nav className="flex flex-col items-start px-2 text-sm font-medium lg:px-4 gap-1">
-      {navItems.map((item) => (
+      {navItems.filter(item => hasPermission(item.permission)).map((item) => (
         <Link
           key={item.label}
           href={item.href}
@@ -53,22 +60,47 @@ function SidebarNav() {
   );
 }
 
-function UserSelectorInner() {
+function UserMenu() {
   try {
     const current = useCurrentUser();
     if (!current) return null;
     const { users, userId, setCurrentUser, permissions, loading } = current;
+    const currentUserData = users.find((u: any) => u.id === userId);
+    
     return (
-      <div className="flex items-center gap-2">
-        <select className="rounded border px-2 py-1 text-sm" value={userId || ''} onChange={(e) => setCurrentUser(e.target.value || null)}>
-          <option value="">(Sin usuario)</option>
-          {users.map((u: any) => (
-            <option key={u.id} value={u.id}>
-              {u.displayName || u.username}
-            </option>
-          ))}
-        </select>
-        <div className="text-xs text-muted-foreground">{loading ? 'Cargando...' : `${permissions.length} permisos`}</div>
+      <div className="relative group">
+        <button className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-muted">
+          <div className="flex flex-col items-end">
+            <span className="text-sm font-medium">
+              {currentUserData ? (currentUserData.displayName || currentUserData.username) : 'Seleccionar Usuario'}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {loading ? 'Cargando...' : `${permissions.length} permisos`}
+            </span>
+          </div>
+        </button>
+        <div className="absolute right-0 mt-1 w-56 bg-card border rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-200 invisible group-hover:visible hover:visible hover:opacity-100 z-50">
+          <div className="p-2">
+            <select 
+              className="w-full rounded border px-2 py-1.5 text-sm mb-2"
+              value={userId || ''} 
+              onChange={(e) => setCurrentUser(e.target.value || null)}
+            >
+              <option value="">(Sin usuario)</option>
+              {users.map((u: any) => (
+                <option key={u.id} value={u.id}>
+                  {u.displayName || u.username}
+                </option>
+              ))}
+            </select>
+            <Link
+              href="/settings"
+              className="block w-full text-left px-3 py-1.5 text-sm rounded hover:bg-muted"
+            >
+              Configuración
+            </Link>
+          </div>
+        </div>
       </div>
     );
   } catch (e) {
@@ -145,7 +177,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <span>{activeStoreName}</span>
               </div>
               <div className="ml-4">
-                <UserSelectorInner />
+                <UserMenu />
               </div>
             </header>
             <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 overflow-auto">{children}</main>

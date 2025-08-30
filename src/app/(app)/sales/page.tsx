@@ -6,6 +6,7 @@ import { es } from 'date-fns/locale';
 import { Calendar as CalendarIcon, PlusCircle, Trash2, History, Loader2, ListRestart, Trash, XCircle, TableProperties } from 'lucide-react';
 
 import { useBackendStatus } from '@/app/(app)/layout';
+import { useCurrentUser } from '@/hooks/use-current-user';
 import { getProducts, createSale, getPendingTransactions, addPendingTransaction, removePendingTransaction, updateSale } from '@/lib/api';
 import { Product, SalePayload, ProductVariant, TransactionItemPayload, GroupedSale } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -50,30 +51,37 @@ interface PendingSale {
 }
 
 export default function SalesPage() {
+    // 1. Hooks de contexto
+    const currentUser = useCurrentUser();
+    const { isBackendReady, refetchKey, triggerRefetch } = useBackendStatus();
+
+    // 2. Estados (useState)
+    // Formulario principal
     const [date, setDate] = React.useState<Date>(new Date());
     const [clientName, setClientName] = React.useState('');
     const [clientDni, setClientDni] = React.useState('');
     const [invoiceNumber, setInvoiceNumber] = React.useState('');
-    
-    const [products, setProducts] = React.useState<Product[]>([]);
-    const [cart, setCart] = React.useState<CartItem[]>([]);
-    
     const [isLoading, setIsLoading] = React.useState(false);
     const [isLoadingProducts, setIsLoadingProducts] = React.useState(true);
-
-    const [isVariantDialogOpen, setIsVariantDialogOpen] = React.useState(false);
+    
+    // Productos y carrito
+    const [products, setProducts] = React.useState<Product[]>([]);
+    const [cart, setCart] = React.useState<CartItem[]>([]);
     const [selectedProductForVariants, setSelectedProductForVariants] = React.useState<Product | null>(null);
 
-    const [pendingSales, setPendingSales] = React.useState<PendingSale[]>([]);
+    // Diálogos y modales
+    const [isVariantDialogOpen, setIsVariantDialogOpen] = React.useState(false);
     const [isHistoryOpen, setIsHistoryOpen] = React.useState(false);
     const [isReceiptOpen, setIsReceiptOpen] = React.useState(false);
     const [isConfirmationOpen, setIsConfirmationOpen] = React.useState(false);
+
+    // Ventas y transacciones
+    const [pendingSales, setPendingSales] = React.useState<PendingSale[]>([]);
     const [consolidatedItems, setConsolidatedItems] = React.useState<(TransactionItemPayload & { name: string })[]>([]);
     const [selectedTransactionId, setSelectedTransactionId] = React.useState<string | null>(null);
     const [editingTransactionId, setEditingTransactionId] = React.useState<string | null>(null);
 
-    const { isBackendReady, refetchKey, triggerRefetch } = useBackendStatus();
-
+    // 3. Efectos (useEffect)
     React.useEffect(() => {
         if (!isBackendReady) return;
         const fetchInitialData = async () => {
@@ -92,7 +100,26 @@ export default function SalesPage() {
         fetchInitialData();
     }, [isBackendReady, refetchKey]);
 
+    // 4. Memos (useMemo)
     const productMap = React.useMemo(() => new Map(products.map(p => [p.id, p])), [products]);
+
+    // 2. Después las variables derivadas del estado
+    const canReadSales = currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('sales:read');
+    const canCreateSales = currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('sales:create');
+    const canEditSales = currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('sales:edit');
+    const canAnnulSales = currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('sales:annul');
+    const isReadOnly = !canCreateSales && !canEditSales && !canAnnulSales;
+    const hasAnySalesPermission = canReadSales || canCreateSales || canEditSales || canAnnulSales;
+
+    // 3. Finalmente la lógica de renderizado condicional
+    if (!hasAnySalesPermission) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+                <h1 className="text-2xl font-semibold">Acceso Restringido</h1>
+                <p className="text-muted-foreground">No tienes permisos para acceder al módulo de ventas.</p>
+            </div>
+        );
+    }
 
     const getProductDisplayValue = (productId: string) => {
         const product = productMap.get(Number(productId));
@@ -168,6 +195,7 @@ export default function SalesPage() {
     };
 
     const handleProductSelect = (productId: string) => {
+        if (isReadOnly) return;
         const product = productMap.get(Number(productId));
         if (product) {
             setSelectedProductForVariants(product);
@@ -176,6 +204,7 @@ export default function SalesPage() {
     };
 
     const handleVariantsSelected = (selectedVariants: (ProductVariant & { quantity: number })[]) => {
+        if (isReadOnly) return;
         const newCartItems: CartItem[] = selectedVariants.map(variant => ({
             id: `temp-${variant.id}-${Date.now()}`,
             variantId: variant.id,
@@ -402,12 +431,26 @@ export default function SalesPage() {
                         </CardContent>
                     </Card>
                     <div className="flex flex-col gap-2">
-                         <Button onClick={handleOpenConfirmation} disabled={isSubmitDisabled} size="lg">
+                         <Button 
+                            onClick={handleOpenConfirmation} 
+                            disabled={true} 
+                            size="lg"
+                         >
                             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             {isLoading ? "Procesando..." : (editingTransactionId ? "Guardar Cambios" : "Registrar Venta")}
                         </Button>
-                        {editingTransactionId && (<Button variant="ghost" size="sm" onClick={resetForm}><XCircle className="mr-2 h-4 w-4" />Cancelar Edición</Button>)}
-                        <Button variant="secondary" onClick={handleHoldSale} disabled={editingTransactionId !== null}>Poner en Espera</Button>
+                        {editingTransactionId && (
+                            <Button variant="ghost" size="sm" onClick={resetForm} disabled={true}>
+                                <XCircle className="mr-2 h-4 w-4" />Cancelar Edición
+                            </Button>
+                        )}
+                        <Button 
+                            variant="secondary" 
+                            onClick={handleHoldSale} 
+                            disabled={true}
+                        >
+                            Poner en Espera
+                        </Button>
                     </div>
                     {pendingSales.length > 0 && (
                         <Card>
@@ -432,7 +475,15 @@ export default function SalesPage() {
             </div>
         </div>
         <VariantSelectionDialog open={isVariantDialogOpen} onOpenChange={setIsVariantDialogOpen} product={selectedProductForVariants} onVariantsSelected={handleVariantsSelected} context="sale" />
-        <SalesHistoryDialog open={isHistoryOpen} onOpenChange={setIsHistoryOpen} onViewReceipt={handleViewReceiptFromHistory} onEditSale={handleEditSale} refetchKey={refetchKey} />
+        <SalesHistoryDialog 
+            open={isHistoryOpen} 
+            onOpenChange={setIsHistoryOpen} 
+            onViewReceipt={handleViewReceiptFromHistory} 
+            onEditSale={handleEditSale} 
+            refetchKey={refetchKey}
+            canEdit={false}
+            canAnnul={false}
+        />
         <SalesReceiptDialog open={isReceiptOpen} onOpenChange={(open) => { if (!open) setSelectedTransactionId(null); setIsReceiptOpen(open); }} transactionId={selectedTransactionId} />
         <SalesConfirmationDialog open={isConfirmationOpen} onOpenChange={setIsConfirmationOpen} saleItems={consolidatedItems} onConfirm={handleFormSubmit} isSaving={isLoading} />
         </TooltipProvider>

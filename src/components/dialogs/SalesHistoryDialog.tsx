@@ -20,9 +20,19 @@ interface SalesHistoryDialogProps {
   onViewReceipt: (sale: GroupedSale) => void;
   onEditSale: (sale: GroupedSale) => void;
   refetchKey: number;
+  canEdit?: boolean;
+  canAnnul?: boolean;
 }
 
-export function SalesHistoryDialog({ open, onOpenChange, onViewReceipt, onEditSale, refetchKey }: SalesHistoryDialogProps) {
+export function SalesHistoryDialog({ 
+  open, 
+  onOpenChange, 
+  onViewReceipt, 
+  onEditSale, 
+  refetchKey,
+  canEdit = false,
+  canAnnul = false 
+}: SalesHistoryDialogProps) {
   const [history, setHistory] = React.useState<GroupedSale[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
 
@@ -86,9 +96,23 @@ export function SalesHistoryDialog({ open, onOpenChange, onViewReceipt, onEditSa
                   </AccordionTrigger>
                   <AccordionContent>
                     <div className="flex justify-end gap-2 pt-2">
-                        <Button variant="outline" size="sm" onClick={() => onViewReceipt(sale)}><Eye className="mr-2 h-4 w-4" />Ver Recibo</Button>
-                        <Button variant="secondary" size="sm" onClick={() => onEditSale(sale)} disabled={sale.status !== 'Activo'}><Edit className="mr-2 h-4 w-4" />Editar</Button>
-                        <Button variant="destructive" size="sm" onClick={() => handleAnnul(sale.transaction_id)} disabled={sale.status !== 'Activo'}><Trash2 className="mr-2 h-4 w-4" />Anular</Button>
+                        <Button variant="outline" size="sm" onClick={() => onViewReceipt(sale)}>
+                          <Eye className="mr-2 h-4 w-4" />Ver Recibo
+                        </Button>
+                        <Button 
+                          variant="secondary" 
+                          size="sm" 
+                          disabled={true}
+                        >
+                          <Edit className="mr-2 h-4 w-4" />Editar
+                        </Button>
+                        <Button 
+                          variant="destructive" 
+                          size="sm" 
+                          disabled={true}
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />Anular
+                        </Button>
                     </div>
                   </AccordionContent>
                 </AccordionItem>

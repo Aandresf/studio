@@ -31,8 +31,13 @@
       "username": "lector",
       "displayName": "Usuario Lectura",
       "roleId": "read_only",
-      "permissions": [],
-      "createdAt": "2025-08-28T22:10:04.956Z"
+      "permissions": [
+        "products:read",
+        "reports:read",
+        "dashboard:read"
+      ],
+      "createdAt": "2025-08-28T22:10:04.956Z",
+      "updatedAt": "2025-08-29T01:32:21.609Z"
     }
   ],
   "roles": [
@@ -71,6 +76,7 @@
       "name": "Solo Lectura",
       "permissions": [
         "products:read",
+        "sales:read",
         "reports:read",
         "dashboard:read"
       ]
