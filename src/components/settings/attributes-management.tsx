@@ -53,7 +53,8 @@ function AttributeValuesDialog({ attribute, isOpen, onClose }: { attribute: Attr
     }, [isOpen, fetchValues]);
 
     const currentUser = useCurrentUser();
-    const canManageAttributes = !!(currentUser?.permissions?.includes('*') || currentUser?.permissions?.some((p: string) => p.startsWith('attributes:') || p.startsWith('settings:')));
+    // require either global '*' or catalog management permission, or attributes-specific permissions
+    const canManageAttributes = !!(currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('catalog:manage') || currentUser?.permissions?.some((p: string) => p.startsWith('attributes:') || p.startsWith('settings:')));
     const isReadOnly = !canManageAttributes;
 
     const handleAddNewValue = () => {
@@ -223,6 +224,10 @@ export function AttributesManagementCard() {
         fetchAttributes();
     }, [fetchAttributes]);
 
+    const currentUser = useCurrentUser();
+    const canManageAttributes = !!(currentUser?.permissions?.includes('*') || currentUser?.permissions?.some((p: string) => p.startsWith('attributes:') || p.startsWith('settings:')));
+    const isReadOnly = !canManageAttributes;
+
     const handleAddNew = () => {
         setEditingAttribute(null);
         setAttributeName('');
@@ -281,7 +286,7 @@ export function AttributesManagementCard() {
                         <CardTitle>Gestión de Atributos</CardTitle>
                         <CardDescription>Define atributos (ej. Talla, Color) y sus valores.</CardDescription>
                     </div>
-                    <Button size="sm" onClick={handleAddNew}>
+                    <Button size="sm" onClick={() => { if (!isReadOnly) handleAddNew(); }} disabled={isReadOnly}>
                         <PlusCircle className="h-4 w-4 mr-2" />
                         Añadir Atributo
                     </Button>
@@ -316,15 +321,15 @@ export function AttributesManagementCard() {
                                                         </Button>
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end">
-                                                        <DropdownMenuItem onClick={() => handleManageValues(attribute)}>
+                                                        <DropdownMenuItem onClick={() => { if (!isReadOnly) handleManageValues(attribute); }} disabled={isReadOnly}>
                                                             <List className="mr-2 h-4 w-4" />
                                                             <span>Gestionar Valores</span>
                                                         </DropdownMenuItem>
-                                                        <DropdownMenuItem onClick={() => handleEdit(attribute)}>
+                                                        <DropdownMenuItem onClick={() => { if (!isReadOnly) handleEdit(attribute); }} disabled={isReadOnly}>
                                                             <Edit className="mr-2 h-4 w-4" />
                                                             <span>Editar</span>
                                                         </DropdownMenuItem>
-                                                        <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(attribute.id)}>
+                                                        <DropdownMenuItem className="text-destructive" onClick={() => { if (!isReadOnly) handleDelete(attribute.id); }} disabled={isReadOnly}>
                                                             <Trash2 className="mr-2 h-4 w-4" />
                                                             <span>Eliminar</span>
                                                         </DropdownMenuItem>

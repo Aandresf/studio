@@ -36,7 +36,7 @@ module.exports = async function attachCurrentUser(req, res, next) {
     const db = databaseManager.getActiveDb();
     // Get basic user info
     const user = await new Promise((resolve, reject) => {
-      db.get('SELECT id, name as username, email, role_id as roleId FROM users WHERE id = ?', [userId], (err, row) => {
+      db.get('SELECT id, username as username, display_name as displayName, email, role_id as roleId FROM users WHERE id = ?', [userId], (err, row) => {
         if (err) return reject(err);
         resolve(row || null);
       });
@@ -54,6 +54,7 @@ module.exports = async function attachCurrentUser(req, res, next) {
     req.currentUser = {
       id: user.id,
       username: user.username,
+      displayName: user.displayName,
       email: user.email,
       roleId: user.roleId,
       permissions: effective,

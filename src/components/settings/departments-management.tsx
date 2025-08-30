@@ -45,7 +45,8 @@ export function DepartmentsManagementCard() {
   }, [fetchData]);
 
   const currentUser = useCurrentUser();
-  const canManageSettings = !!(currentUser?.permissions?.includes('*') || currentUser?.permissions?.some((p: string) => p.startsWith('settings:') || p.startsWith('departments:')));
+  // require either global '*' or catalog management permission, or existing departments-specific permissions
+  const canManageSettings = !!(currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('catalog:manage') || currentUser?.permissions?.some((p: string) => p.startsWith('settings:') || p.startsWith('departments:')));
   const isReadOnly = !canManageSettings;
 
   const handleEditDepartment = (department: Department) => {

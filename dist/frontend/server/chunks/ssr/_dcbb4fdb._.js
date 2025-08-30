@@ -534,6 +534,27 @@ const PERMISSIONS_META = [
         ]
     },
     {
+        key: 'settings:advanced',
+        label: 'Acceder configuración avanzada',
+        description: 'Permite acceder y modificar opciones de configuración avanzada.',
+        category: 'configuracion',
+        affected: [
+            'Configuración Avanzada'
+        ]
+    },
+    {
+        key: 'catalog:manage',
+        label: 'Gestionar catálogo',
+        description: 'Permite modificar la configuración del catálogo: departamentos, marcas, atributos y otras opciones relacionadas con el catálogo de productos.',
+        category: 'configuracion',
+        affected: [
+            'Catálogo',
+            'Departamentos',
+            'Marcas',
+            'Atributos'
+        ]
+    },
+    {
         key: 'stores:create',
         label: 'Crear sucursales',
         description: 'Permite crear nuevas sucursales/tiendas.',

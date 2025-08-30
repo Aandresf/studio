@@ -41,6 +41,8 @@ export const PERMISSIONS_META: PermissionMeta[] = [
 
   // Settings / Configuración
   { key: 'settings:edit', label: 'Editar configuración', description: 'Permite modificar configuraciones del sistema.', category: 'configuracion', affected: ['Ajustes'] },
+  { key: 'settings:advanced', label: 'Acceder configuración avanzada', description: 'Permite acceder y modificar opciones de configuración avanzada.', category: 'configuracion', affected: ['Configuración Avanzada'] },
+  { key: 'catalog:manage', label: 'Gestionar catálogo', description: 'Permite modificar la configuración del catálogo: departamentos, marcas, atributos y otras opciones relacionadas con el catálogo de productos.', category: 'configuracion', affected: ['Catálogo', 'Departamentos', 'Marcas', 'Atributos'] },
   { key: 'stores:create', label: 'Crear sucursales', description: 'Permite crear nuevas sucursales/tiendas.', category: 'configuracion', affected: ['Crear Tienda'] },
   { key: 'stores:delete', label: 'Eliminar sucursales', description: 'Permite eliminar sucursales/tiendas.', category: 'configuracion', affected: ['Eliminar Tienda'] },
   { key: 'stores:set_active', label: 'Seleccionar tienda activa', description: 'Permite cambiar la tienda activa.', category: 'configuracion', affected: ['Seleccionar Tienda'] },

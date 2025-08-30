@@ -17,6 +17,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
+import { PERMISSIONS_META } from '@/lib/permissionsMeta';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -49,6 +51,9 @@ interface SnapshotResult {
 }
 
 function InventorySnapshotCard() {
+    const currentUser = useCurrentUser();
+    const canCreateSnapshot = !!(currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('reports:create_snapshot'));
+    const snapshotPermMeta = PERMISSIONS_META.find(p => p.key === 'reports:create_snapshot');
     const [latestSnapshotDate, setLatestSnapshotDate] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
@@ -132,9 +137,21 @@ function InventorySnapshotCard() {
                             />
                         </PopoverContent>
                     </Popover>
-                    <Button onClick={handleCreateSnapshot} disabled={isCreating || !selectedDate}>
-                        {isCreating ? 'Generando Cierre...' : 'Generar Cierre'}
-                    </Button>
+                                        <TooltipProvider>
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <Button onClick={handleCreateSnapshot} disabled={isCreating || !selectedDate || !canCreateSnapshot}>
+                                                        {isCreating ? 'Generando Cierre...' : 'Generar Cierre'}
+                                                    </Button>
+                                                </TooltipTrigger>
+                                                {!canCreateSnapshot && (
+                                                    <TooltipContent>
+                                                        <p>{snapshotPermMeta?.label || 'Crear snapshot'}</p>
+                                                        <p className="text-xs text-muted-foreground">{snapshotPermMeta?.description || 'Requiere permiso reports:create_snapshot'}</p>
+                                                    </TooltipContent>
+                                                )}
+                                            </Tooltip>
+                                        </TooltipProvider>
                 </div>
                 {snapshotResult && (
                      <Dialog open={!!snapshotResult} onOpenChange={(isOpen) => !isOpen && setSnapshotResult(null)}>
@@ -174,6 +191,8 @@ function DangerZone({ activeStoreId, stores, onStoreDeleted }: { activeStoreId: 
     const [confirmationText, setConfirmationText] = useState('');
     const [isDeleting, setIsDeleting] = useState(false);
     const activeStore = stores.find(s => s.id === activeStoreId);
+    const currentUser = useCurrentUser();
+    const canDeleteStore = currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('stores:delete');
 
     const handleDelete = async () => {
         if (confirmationText !== activeStore?.name) {
@@ -202,7 +221,7 @@ function DangerZone({ activeStoreId, stores, onStoreDeleted }: { activeStoreId: 
             <CardContent>
                 <Dialog open={isOpen} onOpenChange={setIsOpen}>
                     <DialogTrigger asChild>
-                        <Button variant="destructive" disabled={stores.length <= 1}>
+                        <Button variant="destructive" disabled={stores.length <= 1 || !canDeleteStore}>
                             <Trash2 className="mr-2 h-4 w-4" />
                             Eliminar Tienda Actual
                         </Button>
@@ -316,9 +335,11 @@ export default function SettingsPage() {
     }
   };
 
-        // permisos para edición de configuración
-        const currentUser = useCurrentUser();
-        const canEditSettings = currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('settings:edit') || false;
+    // permisos para edición de configuración
+    const currentUser = useCurrentUser();
+    const canEditSettings = currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('settings:edit') || false;
+    // permiso específico para los ajustes avanzados (ej. permitir vender bajo costo, stock negativo)
+    const canManageAdvanced = !!(currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('settings:advanced'));
 
   const themes = [
     { value: 'light', label: 'Claro' },
@@ -422,6 +443,7 @@ export default function SettingsPage() {
                             id="allowNegativeStockSales"
                             checked={storeDetails.advanced?.allowNegativeStockSales || false}
                             onCheckedChange={(checked) => handleAdvancedChange('allowNegativeStockSales', checked)}
+                            disabled={!canManageAdvanced}
                         />
                     </div>
                     <div className="flex items-center justify-between rounded-lg border p-4">
@@ -435,6 +457,7 @@ export default function SettingsPage() {
                             id="allowSellBelowCost"
                             checked={storeDetails.advanced?.allowSellBelowCost || false}
                             onCheckedChange={(checked) => handleAdvancedChange('allowSellBelowCost', checked)}
+                            disabled={!canManageAdvanced}
                         />
                     </div>
                     <div className="flex items-center justify-between rounded-lg border p-4">
@@ -448,6 +471,7 @@ export default function SettingsPage() {
                             id="showOutOfStockProducts"
                             checked={storeDetails.advanced?.showOutOfStockProducts || false}
                             onCheckedChange={(checked) => handleAdvancedChange('showOutOfStockProducts', checked)}
+                            disabled={!canManageAdvanced}
                         />
                     </div>
                     <div className="flex items-center justify-between rounded-lg border p-4">
@@ -461,9 +485,10 @@ export default function SettingsPage() {
                             id="showInactiveProducts"
                             checked={storeDetails.advanced?.showInactiveProducts || false}
                             onCheckedChange={(checked) => handleAdvancedChange('showInactiveProducts', checked)}
+                            disabled={!canManageAdvanced}
                         />
                     </div>
-                    <Button onClick={handleSaveChanges} disabled={isSaving}>
+                    <Button onClick={handleSaveChanges} disabled={isSaving || !canManageAdvanced}>
                         {isSaving ? 'Guardando...' : 'Guardar Cambios Avanzados'}
                     </Button>
                 </CardContent>
@@ -479,10 +504,62 @@ export default function SettingsPage() {
                   Realiza respaldos y restauraciones de tu base de datos.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="flex flex-col sm:flex-row gap-4">
-                <Button><Upload className="mr-2 h-4 w-4" />Respaldar</Button>
-                <Button variant="outline"><Download className="mr-2 h-4 w-4" />Restaurar</Button>
-              </CardContent>
+                            <CardContent className="flex flex-col sm:flex-row gap-4">
+                                {(() => {
+                                    const canBackup = !!(currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('admin:backup'));
+                                    const canRestore = !!(currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('admin:restore'));
+                                    return (
+                                        <>
+                                                                        {(() => {
+                                                                            const backupMeta = PERMISSIONS_META.find(p => p.key === 'admin:backup');
+                                                                            const restoreMeta = PERMISSIONS_META.find(p => p.key === 'admin:restore');
+                                                                            return (
+                                                                                <>
+                                                                                    <TooltipProvider>
+                                                                                        <Tooltip>
+                                                                                            <TooltipTrigger asChild>
+                                                                                                <Button onClick={async () => {
+                                                                                                    try {
+                                                                                                        await (await import('@/lib/api')).backupDatabase();
+                                                                                                        toastSuccess('Éxito', 'Respaldo creado correctamente.');
+                                                                                                    } catch (err) {
+                                                                                                        // handled by API
+                                                                                                    }
+                                                                                                }} disabled={!canBackup}>
+                                                                                                    <Upload className="mr-2 h-4 w-4" />Respaldar
+                                                                                                </Button>
+                                                                                            </TooltipTrigger>
+                                                                                            {!canBackup && (
+                                                                                                <TooltipContent>
+                                                                                                    <p>{backupMeta?.label || 'Backup'}</p>
+                                                                                                    <p className="text-xs text-muted-foreground">{backupMeta?.description || 'Requiere permiso admin:backup'}</p>
+                                                                                                </TooltipContent>
+                                                                                            )}
+                                                                                        </Tooltip>
+                                                                                    </TooltipProvider>
+
+                                                                                    <TooltipProvider>
+                                                                                        <Tooltip>
+                                                                                            <TooltipTrigger asChild>
+                                                                                                <Button variant="outline" disabled={!canRestore}>
+                                                                                                    <Download className="mr-2 h-4 w-4" />Restaurar
+                                                                                                </Button>
+                                                                                            </TooltipTrigger>
+                                                                                            {!canRestore && (
+                                                                                                <TooltipContent>
+                                                                                                    <p>{restoreMeta?.label || 'Restaurar'}</p>
+                                                                                                    <p className="text-xs text-muted-foreground">{restoreMeta?.description || 'Requiere permiso admin:restore'}</p>
+                                                                                                </TooltipContent>
+                                                                                            )}
+                                                                                        </Tooltip>
+                                                                                    </TooltipProvider>
+                                                                                </>
+                                                                            );
+                                                                        })()}
+                                        </>
+                                    );
+                                })()}
+                            </CardContent>
             </Card>
            </div>
         </TabsContent>

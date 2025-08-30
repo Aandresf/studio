@@ -5,7 +5,7 @@ const sqlite3 = require('sqlite3').verbose();
 const { nanoid } = require('nanoid');
 
 const router = express.Router();
-const { requirePermission } = require('../lib/authorize');
+const { requirePermission, requireAnyPermission } = require('../lib/authorize');
 
 const { dataDir, schemaPath } = require('../config');
 const databaseManager = require('../database-manager');
@@ -117,7 +117,7 @@ router.get('/:id/details', (req, res) => {
 });
 
 // PUT /:id/details - write store settings
-router.put('/:id/details', requirePermission('settings:edit'), (req, res) => {
+router.put('/:id/details', requireAnyPermission('settings:edit', 'settings:advanced'), (req, res) => {
     const { id } = req.params;
     const settingsPath = path.join(dataDir, `database_${id}_settings.json`);
     try {

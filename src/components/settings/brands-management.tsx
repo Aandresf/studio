@@ -40,7 +40,8 @@ export function BrandsManagementCard() {
     }, []);
 
     const currentUser = useCurrentUser();
-    const canManage = !!(currentUser?.permissions?.includes('*') || currentUser?.permissions?.some((p: string) => p.startsWith('brands:') || p.startsWith('settings:')));
+    // require either global '*' or catalog management permission, or brands-specific permissions
+    const canManage = !!(currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('catalog:manage') || currentUser?.permissions?.some((p: string) => p.startsWith('brands:') || p.startsWith('settings:')));
     const isReadOnly = !canManage;
 
     useEffect(() => {

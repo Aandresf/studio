@@ -106,7 +106,8 @@ router.post('/', requirePermission('users:create'), async (req, res) => {
     if (existing) return res.status(400).json({ error: 'username ya existe' });
 
     const userId = nanoid(8);
-  await runSql(db, 'INSERT INTO users (id, username, display_name, email, role_id, created_at) VALUES (?, ?, ?, ?, ?, datetime("now"))', [userId, username, displayName || username, null, roleId || null]);
+  // Also set legacy `name` column to keep schema compatibility (NOT NULL constraint)
+  await runSql(db, 'INSERT INTO users (id, name, username, display_name, email, role_id, created_at) VALUES (?, ?, ?, ?, ?, ?, datetime("now"))', [userId, username, username, displayName || username, null, roleId || null]);
 
     // Determine permissions to assign: if provided, use them; otherwise copy from role
     let keysToAssign = [];
@@ -142,7 +143,8 @@ router.put('/:id', requirePermission('users:edit'), async (req, res) => {
     }
 
     // Update basic fields
-  await runSql(db, 'UPDATE users SET username = ?, display_name = ?, role_id = ?, updated_at = datetime("now") WHERE id = ?', [username || user.username, displayName || user.display_name || username || user.username, roleId || user.roleId, req.params.id]);
+  // Keep legacy `name` in sync for backward compatibility
+  await runSql(db, 'UPDATE users SET name = ?, username = ?, display_name = ?, role_id = ?, updated_at = datetime("now") WHERE id = ?', [username || user.username, username || user.username, displayName || user.display_name || username || user.username, roleId || user.roleId, req.params.id]);
 
     // If permissions provided, replace user_permissions
     if (typeof permissions !== 'undefined') {

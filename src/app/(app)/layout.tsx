@@ -3,7 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, ShoppingCart, Package, Box, BarChart3, Store } from 'lucide-react';
+import { Home, ShoppingCart, Package, Box, BarChart3, Store, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getStores } from '@/lib/api';
 import { CurrentUserProvider, useCurrentUser } from '@/hooks/use-current-user';
@@ -80,6 +80,22 @@ function SidebarNav() {
           </Link>
         ))}
       </nav>
+
+      {/* Footer area: configuración en la parte inferior del menú */}
+      <div className="w-full">
+        {hasPermission('settings:edit') && (
+          <Link
+            href="/settings"
+            className={cn(
+              'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary',
+              pathname.startsWith('/settings') && 'text-primary bg-muted'
+            )}
+          >
+            <Settings className="h-4 w-4" />
+            Configuración
+          </Link>
+        )}
+      </div>
     </div>
   );
 }
@@ -117,12 +133,7 @@ function UserMenu() {
                 </option>
               ))}
             </select>
-            <Link
-              href="/settings"
-              className="block w-full text-left px-3 py-1.5 text-sm rounded hover:bg-muted"
-            >
-              Configuración
-            </Link>
+            {/* Configuración movida al pie del menú lateral */}
           </div>
         </div>
       </div>
