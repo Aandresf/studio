@@ -72,6 +72,15 @@ export default function PurchasesPage() {
             </div>
         );
     }
+    // Debug: imprimir usuario y permisos al montar / actualizar
+    React.useEffect(() => {
+        try {
+            console.info('[PurchasesPage] currentUserId:', currentUser?.userId);
+            console.info('[PurchasesPage] permissions:', currentUser?.permissions);
+        } catch (e) {
+            console.error('[PurchasesPage] error logging currentUser', e);
+        }
+    }, [currentUser?.userId, currentUser?.permissions]);
     const [date, setDate] = React.useState<Date>(new Date());
     const [supplier, setSupplier] = React.useState('');
     const [supplierRif, setSupplierRif] = React.useState('');

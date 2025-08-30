@@ -35,28 +35,51 @@ const navItems = [
 function SidebarNav() {
   const currentUser = useCurrentUser();
   const userPermissions = currentUser?.permissions || [];
+  const users = currentUser?.users || [];
+  const roles = currentUser?.roles || [];
+  const userId = currentUser?.userId;
+
   const hasPermission = (permission: string | null) => {
     if (!permission) return true;
-    return userPermissions.includes('*') || userPermissions.includes(permission);
+    // permisos directos
+    if (userPermissions.includes('*') || userPermissions.includes(permission)) return true;
+    // permisos mediante role (útil mientras permissions aún cargan)
+    const me = users.find((u: any) => u.id === userId);
+    const role = me ? roles.find((r: any) => r.id === me.roleId) : null;
+    if (role && (role.permissions?.includes('*') || role.permissions?.includes(permission))) return true;
+    return false;
   };
 
   const pathname = usePathname();
+  const mainItems = navItems;
+  // Debug: mostrar en consola el usuario y permisos al renderizar la navegación
+  React.useEffect(() => {
+    try {
+      console.info('[SidebarNav] currentUserId:', userId);
+      console.info('[SidebarNav] userPermissions:', userPermissions);
+    } catch (e) {
+      /* ignore */
+    }
+  }, [userId, userPermissions]);
+
   return (
-    <nav className="flex flex-col items-start px-2 text-sm font-medium lg:px-4 gap-1">
-      {navItems.filter(item => hasPermission(item.permission)).map((item) => (
-        <Link
-          key={item.label}
-          href={item.href}
-          className={cn(
-            'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary',
-            pathname.startsWith(item.href) && 'text-primary bg-muted'
-          )}
-        >
-          <item.icon className="h-4 w-4" />
-          {item.label}
-        </Link>
-      ))}
-    </nav>
+    <div className="flex h-full flex-col justify-between px-2 text-sm font-medium lg:px-4">
+      <nav className="flex flex-col items-start gap-1">
+        {mainItems.filter(item => hasPermission(item.permission)).map((item) => (
+          <Link
+            key={item.label}
+            href={item.href}
+            className={cn(
+              'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary',
+              pathname.startsWith(item.href) && 'text-primary bg-muted'
+            )}
+          >
+            <item.icon className="h-4 w-4" />
+            {item.label}
+          </Link>
+        ))}
+      </nav>
+    </div>
   );
 }
 

@@ -34,6 +34,7 @@
       "permissions": [
         "products:read",
         "reports:read",
+        "purchases:read",
         "dashboard:read"
       ],
       "createdAt": "2025-08-28T22:10:04.956Z",
@@ -77,6 +78,7 @@
       "permissions": [
         "products:read",
         "sales:read",
+        "purchases:read",
         "reports:read",
         "dashboard:read"
       ]
