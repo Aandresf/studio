@@ -28,6 +28,8 @@ export interface AttributeValue {
   id: number;
   attribute_id: number;
   value: string;
+  // Some API responses include the attribute name directly
+  attribute_name?: string;
 }
 
 export interface ProductVariant {
@@ -51,6 +53,9 @@ export interface Product {
   category?: string;
   subcategory?: string;
   brand_id?: number;
+  // Some API responses include brand metadata or a denormalized brand_name
+  brand?: Brand;
+  brand_name?: string;
   status: 'Activo' | 'Inactivo';
   variants?: ProductVariant[]; // Un producto ahora puede tener muchas variantes
 }
@@ -145,6 +150,8 @@ export interface HistoryMovement {
   quantity: number;
   unit_cost?: number;
   unit_price?: number;
+  // Some history movements may include sku in the payload
+  sku?: string;
   status: 'Activo' | 'Reemplazado' | 'Anulado';
 }
 

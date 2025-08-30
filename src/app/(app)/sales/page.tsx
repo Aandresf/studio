@@ -155,9 +155,7 @@ export default function SalesPage() {
                 variants.forEach(variant => {
                     if (variant.current_stock > 0 && variant.attribute_values) {
                         variant.attribute_values.forEach(av => {
-                            // AttributeValue has id, attribute_id and value
-                            // no attribute_name field — use attribute_id as key or value itself
-                            const attributeName = `attr_${av.attribute_id}`;
+                            const attributeName = av.attribute_name ? av.attribute_name : `attr_${av.attribute_id}`;
                             if (!productAttributes[attributeName]) {
                                 productAttributes[attributeName] = new Set<string>();
                             }
@@ -181,7 +179,7 @@ export default function SalesPage() {
                 <div className="grid grid-cols-4 items-center w-full gap-2">
                     <div className="flex flex-col justify-self-start">
                         <span className="font-semibold">{product.name}</span>
-                        <span className="text-xs text-muted-foreground">{(product as any).brand_name || ''}</span>
+                        <span className="text-xs text-muted-foreground">{product.brand_name || product.brand?.name || ''}</span>
                     </div>
                     <span className="text-xs text-muted-foreground justify-self-center">SKU: {product.base_sku || 'N/A'}</span>
                     <span className="justify-self-center">Stock: {totalStock}</span>
@@ -220,7 +218,7 @@ export default function SalesPage() {
             price: variant.sale_price,
             tax_rate: 16.00,
             availableStock: variant.current_stock,
-            sku: variant.sku,
+                sku: variant.sku ?? null,
         }));
 
         const newCart = [...cart];

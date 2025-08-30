@@ -159,8 +159,7 @@ export default function PurchasesPage() {
             const productAttributes = (product.variants ?? []).reduce((acc, variant) => {
                 if (variant.current_stock > 0 && variant.attribute_values) {
                     variant.attribute_values.forEach(av => {
-                        // AttributeValue has attribute_id and value
-                        const attributeName = `attr_${av.attribute_id}`;
+                        const attributeName = av.attribute_name ? av.attribute_name : `attr_${av.attribute_id}`;
                         if (!acc[attributeName]) {
                             acc[attributeName] = new Set<string>();
                         }
@@ -185,7 +184,7 @@ export default function PurchasesPage() {
             <div className="grid grid-cols-4 items-center w-full gap-2">
                 <div className="flex flex-col justify-self-start">
                     <span className="font-semibold">{product.name}</span>
-                    <span className="text-xs text-muted-foreground">{(product as any).brand_name || ''}</span>
+                    <span className="text-xs text-muted-foreground">{product.brand_name || product.brand?.name || ''}</span>
                 </div>
                 <span className="text-xs text-muted-foreground justify-self-center">SKU: {product.base_sku || 'N/A'}</span>
                 <span className="justify-self-center">Stock: {totalStock}</span>
@@ -365,7 +364,7 @@ export default function PurchasesPage() {
             quantity: m.quantity,
             unitCost: m.unit_cost || 0,
             tax_rate: 16.00, // TODO
-            sku: (m as any).sku,
+            sku: m.sku ?? null,
             // @ts-ignore
             availableStock: 0, // No es crucial para editar
         }));
