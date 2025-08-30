@@ -51,36 +51,8 @@ interface PendingPurchase {
 }
 
 export default function PurchasesPage() {
-    const currentUser = useCurrentUser?.();
-    const hasPermission = (perm: string) => currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes(perm);
+    const currentUser = useCurrentUser();
 
-    const canReadCostsGlobal = currentUser?.permissions?.includes('products:read_costs') || currentUser?.permissions?.includes('*');
-    const canEditCostsGlobal = currentUser?.permissions?.includes('products:edit') || currentUser?.permissions?.includes('*');
-
-    const canReadPurchases = hasPermission('purchases:read');
-    const canCreatePurchases = hasPermission('purchases:create');
-    const canEditPurchases = hasPermission('purchases:edit');
-    const canAnnulPurchases = hasPermission('purchases:annul');
-    const isReadOnly = canReadPurchases && !canCreatePurchases && !canEditPurchases && !canAnnulPurchases;
-
-    // If the user doesn't have any purchases-related permission, block access to the page
-    if (!(canReadPurchases || canCreatePurchases || canEditPurchases || canAnnulPurchases)) {
-        return (
-            <div className="p-6">
-                <h2 className="text-lg font-semibold">Acceso restringido</h2>
-                <p className="text-sm text-muted-foreground">No tienes permisos para ver o gestionar compras. Contacta con un administrador.</p>
-            </div>
-        );
-    }
-    // Debug: imprimir usuario y permisos al montar / actualizar
-    React.useEffect(() => {
-        try {
-            console.info('[PurchasesPage] currentUserId:', currentUser?.userId);
-            console.info('[PurchasesPage] permissions:', currentUser?.permissions);
-        } catch (e) {
-            console.error('[PurchasesPage] error logging currentUser', e);
-        }
-    }, [currentUser?.userId, currentUser?.permissions]);
     const [date, setDate] = React.useState<Date>(new Date());
     const [supplier, setSupplier] = React.useState('');
     const [supplierRif, setSupplierRif] = React.useState('');
@@ -125,12 +97,53 @@ export default function PurchasesPage() {
         fetchInitialData();
     }, [fetchInitialData, refetchKey]);
 
+    // Debug: imprimir usuario y permisos al montar / actualizar
+    React.useEffect(() => {
+        try {
+            console.info('[PurchasesPage] currentUserId:', currentUser?.userId);
+            console.info('[PurchasesPage] permissions:', currentUser?.permissions);
+        } catch (e) {
+            console.error('[PurchasesPage] error logging currentUser', e);
+        }
+    }, [currentUser?.userId, currentUser?.permissions]);
+
     const productMap = React.useMemo(() => new Map(products.map(p => [p.id, p])), [products]);
 
     const getProductDisplayValue = (productId: string) => {
         const product = productMap.get(Number(productId));
         return product ? product.name : '';
     };
+
+    // Permisos y estado de solo lectura (declarados después de los hooks para mantener el orden)
+    const hasPermission = (perm: string) => currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes(perm);
+
+    const canReadCostsGlobal = currentUser?.permissions?.includes('products:read_costs') || currentUser?.permissions?.includes('*');
+    const canEditCostsGlobal = currentUser?.permissions?.includes('products:edit') || currentUser?.permissions?.includes('*');
+
+    const canReadPurchases = hasPermission('purchases:read');
+    const canCreatePurchases = hasPermission('purchases:create');
+    const canEditPurchases = hasPermission('purchases:edit');
+    const canAnnulPurchases = hasPermission('purchases:annul');
+    const isReadOnly = canReadPurchases && !canCreatePurchases && !canEditPurchases && !canAnnulPurchases;
+
+    // Mostrar un placeholder mientras cargan los permisos/usuario (evita cambio en el orden de hooks)
+    if (currentUser?.loading) {
+        return (
+            <div className="p-6 flex items-center justify-center">
+                <Loader2 className="mr-2 h-6 w-6 animate-spin" />Cargando usuario...
+            </div>
+        );
+    }
+
+    // Si el usuario no tiene ningún permiso relacionado con compras, mostrar acceso restringido
+    if (!(canReadPurchases || canCreatePurchases || canEditPurchases || canAnnulPurchases)) {
+        return (
+            <div className="p-6">
+                <h2 className="text-lg font-semibold">Acceso restringido</h2>
+                <p className="text-sm text-muted-foreground">No tienes permisos para ver o gestionar compras. Contacta con un administrador.</p>
+            </div>
+        );
+    }
 
     const productFilterFn = (options: Product[], searchValue: string): Product[] => {
         if (!searchValue) return options;
