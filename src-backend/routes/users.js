@@ -1,163 +1,176 @@
 const express = require('express');
-const fs = require('fs');
-const path = require('path');
 const { nanoid } = require('nanoid');
 const router = express.Router();
 const { requirePermission } = require('../lib/authorize');
+const databaseManager = require('../database-manager');
 
-const { dataDir } = require('../config');
-const USERS_FILE = path.join(dataDir, 'users.json');
-
-function readUsersData() {
-  if (!fs.existsSync(USERS_FILE)) {
-    fs.writeFileSync(USERS_FILE, JSON.stringify({ users: [], roles: [] }, null, 2));
-  }
-  return JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
-}
-
-function writeUsersData(data) {
-  fs.writeFileSync(USERS_FILE, JSON.stringify(data, null, 2));
-}
-
-function expandPermissionsArray(arr, permissionsList) {
-  if (!Array.isArray(arr)) return [];
-  return arr.map(p => {
-    if (typeof p === 'number') return permissionsList?.[p] ?? null;
-    return p;
-  }).filter(Boolean);
-}
-
-function mapPermsToIndices(permsInput, data) {
-  // permsInput can be array of strings or numbers; ensure storage as indices
-  const list = data.permissionsList || [];
-  const indices = [];
-  (permsInput || []).forEach(p => {
-    if (typeof p === 'number') {
-      if (typeof list[p] !== 'undefined') indices.push(p);
-      return;
-    }
-    // p is string
-    let idx = list.indexOf(p);
-    if (idx === -1) {
-      // add new permission to list and use new index
-      idx = list.length;
-      list.push(p);
-    }
-    indices.push(idx);
+// Utilities for DB
+function runSql(db, sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.run(sql, params, function(err) {
+      if (err) return reject(err);
+      resolve(this);
+    });
   });
-  // persist any new permissions added to list back into data
-  data.permissionsList = list;
-  return indices;
 }
 
-function expandUserForResponse(user, data) {
-  const out = { ...user };
-  out.permissions = expandPermissionsArray(user.permissions, data.permissionsList);
-  return out;
+function allSql(db, sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.all(sql, params, (err, rows) => {
+      if (err) return reject(err);
+      resolve(rows);
+    });
+  });
 }
 
-function expandRoleForResponse(role, data) {
-  const out = { ...role };
-  out.permissions = expandPermissionsArray(role.permissions, data.permissionsList);
-  return out;
+function getSql(db, sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.get(sql, params, (err, row) => {
+      if (err) return reject(err);
+      resolve(row);
+    });
+  });
+}
+
+async function ensurePermissionIds(db, keys) {
+  // keys: array of permission keys (strings). Returns map key->id
+  const map = {};
+  for (const key of keys) {
+    if (!key) continue;
+    const existing = await getSql(db, 'SELECT id FROM permissions WHERE key = ?', [key]);
+    if (existing) {
+      map[key] = existing.id;
+    } else {
+      const res = await runSql(db, 'INSERT INTO permissions (key) VALUES (?)', [key]);
+      map[key] = res.lastID;
+    }
+  }
+  return map;
+}
+
+async function getPermissionsForUser(db, userId) {
+  const rows = await allSql(db, `SELECT p.key FROM permissions p JOIN user_permissions up ON p.id = up.permission_id WHERE up.user_id = ?`, [userId]);
+  return rows.map(r => r.key);
+}
+
+async function getPermissionsForRole(db, roleId) {
+  const rows = await allSql(db, `SELECT p.key FROM permissions p JOIN role_permissions rp ON p.id = rp.permission_id WHERE rp.role_id = ?`, [roleId]);
+  return rows.map(r => r.key);
 }
 
 // GET / - listar usuarios y roles
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   try {
-  const data = readUsersData();
-  const users = (data.users || []).map(u => expandUserForResponse(u, data));
-  const roles = (data.roles || []).map(r => expandRoleForResponse(r, data));
-  res.json({ users, roles, permissionsList: data.permissionsList || [] });
+    const db = databaseManager.getActiveDb();
+    const users = await allSql(db, 'SELECT id, name, email, role_id FROM users');
+    const roles = await allSql(db, 'SELECT id, name, description FROM roles');
+
+    // Expand permissions for each user and role
+    for (const u of users) {
+      u.permissions = await getPermissionsForUser(db, u.id);
+    }
+    for (const r of roles) {
+      r.permissions = await getPermissionsForRole(db, r.id);
+    }
+
+    const permissionsListRows = await allSql(db, 'SELECT key FROM permissions ORDER BY id');
+    const permissionsList = permissionsListRows.map(r => r.key);
+    res.json({ users, roles, permissionsList });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
 // GET /:id - obtener usuario
-router.get('/:id', (req, res) => {
+router.get('/:id', async (req, res) => {
   try {
-    const data = readUsersData();
-    const user = data.users.find(u => u.id === req.params.id);
+    const db = databaseManager.getActiveDb();
+    const user = await getSql(db, 'SELECT id, name, email, role_id as roleId FROM users WHERE id = ?', [req.params.id]);
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
-  res.json(expandUserForResponse(user, data));
+    user.permissions = await getPermissionsForUser(db, user.id);
+    res.json(user);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
 // POST / - crear usuario
-router.post('/', requirePermission('users:create'), (req, res) => {
+router.post('/', requirePermission('users:create'), async (req, res) => {
   try {
     const { username, displayName, roleId, permissions } = req.body;
     if (!username) return res.status(400).json({ error: 'username es requerido' });
-    const data = readUsersData();
-    if (data.users.some(u => u.username === username)) {
-      return res.status(400).json({ error: 'username ya existe' });
-    }
-    // Si no se envían permisos explícitos, usar el rol como plantilla y copiar sus permisos
-    let newPermissionsIndices = [];
-    if (typeof permissions !== 'undefined' && Array.isArray(permissions)) {
-      newPermissionsIndices = mapPermsToIndices(permissions || [], data);
+    const db = databaseManager.getActiveDb();
+
+    // Check username uniqueness
+    const existing = await getSql(db, 'SELECT id FROM users WHERE name = ?', [username]);
+    if (existing) return res.status(400).json({ error: 'username ya existe' });
+
+    const userId = nanoid(8);
+    await runSql(db, 'INSERT INTO users (id, name, email, role_id, created_at) VALUES (?, ?, ?, ?, datetime("now"))', [userId, username, null, roleId || null]);
+
+    // Determine permissions to assign: if provided, use them; otherwise copy from role
+    let keysToAssign = [];
+    if (Array.isArray(permissions)) {
+      keysToAssign = permissions;
     } else if (roleId) {
-      const role = (data.roles || []).find(r => r.id === roleId);
-      if (role && Array.isArray(role.permissions)) {
-        // copiar índices del rol como permisos directos
-        newPermissionsIndices = [...role.permissions];
-      }
+      keysToAssign = await getPermissionsForRole(db, roleId);
     }
 
-    const newUser = {
-      id: nanoid(8),
-      username,
-      displayName: displayName || username,
-      roleId: roleId || null,
-      permissions: newPermissionsIndices,
-      createdAt: new Date().toISOString()
-    };
-    data.users.push(newUser);
-    writeUsersData(data);
-    res.status(201).json(expandUserForResponse(newUser, data));
+    // Ensure permission rows exist and assign
+    const map = await ensurePermissionIds(db, keysToAssign);
+    for (const key of Object.keys(map)) {
+      await runSql(db, 'INSERT OR IGNORE INTO user_permissions (user_id, permission_id) VALUES (?, ?)', [userId, map[key]]);
+    }
+
+    const user = await getSql(db, 'SELECT id, name, email, role_id as roleId, created_at as createdAt FROM users WHERE id = ?', [userId]);
+    user.permissions = await getPermissionsForUser(db, userId);
+    res.status(201).json(user);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
 // PUT /:id - actualizar usuario (incluye roleId y permisos)
-router.put('/:id', requirePermission('users:edit'), (req, res) => {
+router.put('/:id', requirePermission('users:edit'), async (req, res) => {
   try {
     const { username, displayName, roleId, permissions } = req.body;
-    const data = readUsersData();
-    const idx = data.users.findIndex(u => u.id === req.params.id);
-    if (idx === -1) return res.status(404).json({ error: 'Usuario no encontrado' });
-    const user = data.users[idx];
-    // No permitir eliminar al master accidentalmente por username
-    if (user.username === 'master' && req.body.deleted) {
+    const db = databaseManager.getActiveDb();
+    const user = await getSql(db, 'SELECT id, name, email, role_id as roleId FROM users WHERE id = ?', [req.params.id]);
+    if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+    if (user.name === 'master' && req.body.deleted) {
       return res.status(400).json({ error: 'No se puede eliminar el usuario master' });
     }
-    user.username = username || user.username;
-    user.displayName = displayName || user.displayName;
-    user.roleId = typeof roleId !== 'undefined' ? roleId : user.roleId;
-  user.permissions = typeof permissions !== 'undefined' ? mapPermsToIndices(permissions, data) : user.permissions;
-    user.updatedAt = new Date().toISOString();
-    data.users[idx] = user;
-    writeUsersData(data);
-  res.json(expandUserForResponse(user, data));
+
+    // Update basic fields
+    await runSql(db, 'UPDATE users SET name = ?, role_id = ?, updated_at = datetime("now") WHERE id = ?', [username || user.name, roleId || user.roleId, req.params.id]);
+
+    // If permissions provided, replace user_permissions
+    if (typeof permissions !== 'undefined') {
+      // Ensure permission records
+      const map = await ensurePermissionIds(db, permissions);
+      // Delete current user_permissions
+      await runSql(db, 'DELETE FROM user_permissions WHERE user_id = ?', [req.params.id]);
+      for (const key of Object.keys(map)) {
+        await runSql(db, 'INSERT OR IGNORE INTO user_permissions (user_id, permission_id) VALUES (?, ?)', [req.params.id, map[key]]);
+      }
+    }
+
+    const updated = await getSql(db, 'SELECT id, name, email, role_id as roleId, updated_at as updatedAt FROM users WHERE id = ?', [req.params.id]);
+    updated.permissions = await getPermissionsForUser(db, req.params.id);
+    res.json(updated);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
 // DELETE /:id - eliminar usuario (marcar o eliminar físicamente)
-router.delete('/:id', requirePermission('users:delete'), (req, res) => {
+router.delete('/:id', requirePermission('users:delete'), async (req, res) => {
   try {
-    const data = readUsersData();
-    const idx = data.users.findIndex(u => u.id === req.params.id);
-    if (idx === -1) return res.status(404).json({ error: 'Usuario no encontrado' });
-    const user = data.users[idx];
-    if (user.username === 'master') return res.status(400).json({ error: 'No se puede eliminar el usuario master' });
-    data.users.splice(idx, 1);
-    writeUsersData(data);
+    const db = databaseManager.getActiveDb();
+    const user = await getSql(db, 'SELECT id, name FROM users WHERE id = ?', [req.params.id]);
+    if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+    if (user.name === 'master') return res.status(400).json({ error: 'No se puede eliminar el usuario master' });
+    await runSql(db, 'DELETE FROM users WHERE id = ?', [req.params.id]);
     res.json({ message: 'Usuario eliminado' });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -165,29 +178,34 @@ router.delete('/:id', requirePermission('users:delete'), (req, res) => {
 });
 
 // GET /:id/permissions - obtener permisos efectivos (role + directos)
-router.get('/:id/permissions', (req, res) => {
+router.get('/:id/permissions', async (req, res) => {
   try {
-    const data = readUsersData();
-    const user = data.users.find(u => u.id === req.params.id);
+    const db = databaseManager.getActiveDb();
+    const user = await getSql(db, 'SELECT id FROM users WHERE id = ?', [req.params.id]);
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
-  // Devolver sólo permisos directos del usuario. Los roles se usan como plantilla en creación.
-  const direct = expandPermissionsArray(user.permissions, data.permissionsList);
-  res.json({ permissions: direct });
+    const direct = await getPermissionsForUser(db, req.params.id);
+    res.json({ permissions: direct });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
 // PUT /:id/permissions - reemplazar permisos directos (no cambia role)
-router.put('/:id/permissions', requirePermission('users:permissions'), (req, res) => {
+router.put('/:id/permissions', requirePermission('users:permissions'), async (req, res) => {
   try {
     const { permissions } = req.body;
-    const data = readUsersData();
-    const idx = data.users.findIndex(u => u.id === req.params.id);
-    if (idx === -1) return res.status(404).json({ error: 'Usuario no encontrado' });
-  data.users[idx].permissions = mapPermsToIndices(permissions, data);
-  writeUsersData(data);
-  res.json({ permissions: expandPermissionsArray(data.users[idx].permissions, data.permissionsList) });
+    const db = databaseManager.getActiveDb();
+    const user = await getSql(db, 'SELECT id FROM users WHERE id = ?', [req.params.id]);
+    if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+    // Ensure permission records exist and replace user_permissions
+    const map = await ensurePermissionIds(db, permissions || []);
+    await runSql(db, 'DELETE FROM user_permissions WHERE user_id = ?', [req.params.id]);
+    for (const key of Object.keys(map)) {
+      await runSql(db, 'INSERT OR IGNORE INTO user_permissions (user_id, permission_id) VALUES (?, ?)', [req.params.id, map[key]]);
+    }
+    const direct = await getPermissionsForUser(db, req.params.id);
+    res.json({ permissions: direct });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

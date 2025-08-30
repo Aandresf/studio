@@ -194,3 +194,55 @@ CREATE INDEX IF NOT EXISTS idx_variants_product_id ON product_variants (product_
 CREATE INDEX IF NOT EXISTS idx_brands_name ON brands (name);
 CREATE INDEX IF NOT EXISTS idx_departments_name ON departments (name);
 CREATE INDEX IF NOT EXISTS idx_subdepartments_name ON subdepartments (name);
+ 
+-- -----------------------------------------------------
+-- Tablas de autenticación y permisos
+-- -----------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS users (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  email TEXT,
+  role_id TEXT,
+  password_hash TEXT,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now')),
+  updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now')),
+  FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS roles (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE,
+  description TEXT,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now')),
+  updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now'))
+);
+
+CREATE TABLE IF NOT EXISTS permissions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  key TEXT NOT NULL UNIQUE,
+  label TEXT,
+  description TEXT,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now'))
+);
+
+CREATE TABLE IF NOT EXISTS role_permissions (
+  role_id TEXT NOT NULL,
+  permission_id INTEGER NOT NULL,
+  PRIMARY KEY (role_id, permission_id),
+  FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE CASCADE,
+  FOREIGN KEY (permission_id) REFERENCES permissions (id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS user_permissions (
+  user_id TEXT NOT NULL,
+  permission_id INTEGER NOT NULL,
+  PRIMARY KEY (user_id, permission_id),
+  FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+  FOREIGN KEY (permission_id) REFERENCES permissions (id) ON DELETE CASCADE
+);
+
+-- Índices para tablas de permisos
+CREATE INDEX IF NOT EXISTS idx_permissions_key ON permissions (key);
+CREATE INDEX IF NOT EXISTS idx_role_permissions_role_id ON role_permissions (role_id);
+CREATE INDEX IF NOT EXISTS idx_user_permissions_user_id ON user_permissions (user_id);

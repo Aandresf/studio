@@ -1,33 +1,91 @@
-const fs = require('fs');
-const path = require('path');
 const { nanoid } = require('nanoid');
-const { dataDir } = require('../config');
+const databaseManager = require('../database-manager');
 
-const USERS_FILE = path.join(dataDir, 'users.json');
+async function ensureDefaults() {
+  try {
+    const db = databaseManager.getActiveDb();
 
-function ensureDefaults() {
-  if (!fs.existsSync(USERS_FILE)) {
-    // If the file doesn't exist, copy from package data default if present
-    const defaultPath = path.join(__dirname, '..', 'data', 'users.json');
-    if (fs.existsSync(defaultPath)) {
-      fs.copyFileSync(defaultPath, USERS_FILE);
-    } else {
-      fs.writeFileSync(USERS_FILE, JSON.stringify({ users: [], roles: [] }, null, 2));
+    // Ensure basic permissions exist
+    const defaultPerms = ['*','sales:create','sales:read','sales:edit','sales:annul','products:read','products:create','products:edit','products:delete','products:read_prices_sale','products:read_costs','products:read_costs_disabled','purchases:read','purchases:create','purchases:edit','purchases:annul','reports:read','dashboard:read','settings:edit'];
+    for (const key of defaultPerms) {
+      await new Promise((resolve, reject) => {
+        db.run('INSERT OR IGNORE INTO permissions (key) VALUES (?)', [key], function(err) {
+          if (err) return reject(err);
+          resolve(this);
+        });
+      });
     }
-  }
 
-  const data = JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
-  // If no users, create master and sample users
-  if (!data.users || data.users.length === 0) {
-    // Create a normalized initial structure with a permissionsList and indices
-    data.permissionsList = ["*","sales:create","sales:read","products:read","products:read_prices_sale","products:read_costs","purchases:read","reports:read","dashboard:read"];
-    data.users = [
-      { id: nanoid(8), username: 'master', displayName: 'Administrador', roleId: 'master', permissions: [0], createdAt: new Date().toISOString() },
-      { id: nanoid(8), username: 'ventas_admin', displayName: 'Encargado de Ventas', roleId: 'sales_admin', permissions: [], createdAt: new Date().toISOString() },
-      { id: nanoid(8), username: 'vendedor', displayName: 'Vendedor', roleId: 'sales_only', permissions: [], createdAt: new Date().toISOString() },
-      { id: nanoid(8), username: 'lector', displayName: 'Usuario Lectura', roleId: 'read_only', permissions: [], createdAt: new Date().toISOString() }
+    // Ensure roles exist
+    const roles = [
+      { id: 'master', name: 'Master', perms: ['*'] },
+      { id: 'sales_admin', name: 'Ventas y Consulta', perms: ['sales:create','sales:read','sales:edit','sales:annul','dashboard:read'] },
+      { id: 'sales_only', name: 'Solo Venta y Consulta', perms: ['sales:create','sales:read','dashboard:read'] },
+      { id: 'read_only', name: 'Solo Lectura', perms: ['products:read','sales:read','purchases:read','reports:read','dashboard:read'] }
     ];
-    fs.writeFileSync(USERS_FILE, JSON.stringify(data, null, 2));
+
+    for (const r of roles) {
+      await new Promise((resolve, reject) => {
+        db.run('INSERT OR IGNORE INTO roles (id, name, description) VALUES (?, ?, ?)', [r.id, r.name, r.name], function(err) {
+          if (err) return reject(err);
+          resolve(this);
+        });
+      });
+
+      // Link role permissions
+      for (const key of r.perms) {
+        const pid = await new Promise((resolve, reject) => {
+          db.get('SELECT id FROM permissions WHERE key = ?', [key], (err, row) => {
+            if (err) return reject(err);
+            resolve(row ? row.id : null);
+          });
+        });
+        if (pid) {
+          await new Promise((resolve, reject) => {
+            db.run('INSERT OR IGNORE INTO role_permissions (role_id, permission_id) VALUES (?, ?)', [r.id, pid], function(err) {
+              if (err) return reject(err);
+              resolve(this);
+            });
+          });
+        }
+      }
+    }
+
+    // Ensure master user exists
+    const master = await new Promise((resolve, reject) => {
+      db.get('SELECT id FROM users WHERE name = ?', ['master'], (err, row) => {
+        if (err) return reject(err);
+        resolve(row || null);
+      });
+    });
+
+    if (!master) {
+      const id = nanoid(8);
+      await new Promise((resolve, reject) => {
+        db.run('INSERT INTO users (id, name, role_id, created_at) VALUES (?, ?, ?, datetime("now"))', [id, 'master', 'master'], function(err) {
+          if (err) return reject(err);
+          resolve(this);
+        });
+      });
+
+      // Give master the '*' permission
+      const star = await new Promise((resolve, reject) => {
+        db.get('SELECT id FROM permissions WHERE key = ?', ['*'], (err, row) => {
+          if (err) return reject(err);
+          resolve(row ? row.id : null);
+        });
+      });
+      if (star) {
+        await new Promise((resolve, reject) => {
+          db.run('INSERT OR IGNORE INTO user_permissions (user_id, permission_id) VALUES (?, ?)', [id, star], function(err) {
+            if (err) return reject(err);
+            resolve(this);
+          });
+        });
+      }
+    }
+  } catch (e) {
+    console.error('Error ensuring default users/roles:', e.message);
   }
 }
 

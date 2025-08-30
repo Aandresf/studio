@@ -1,60 +1,66 @@
-const fs = require('fs');
-const path = require('path');
+const databaseManager = require('../database-manager');
 
-const USERS_FILE = path.join(__dirname, '..', 'data', 'users.json');
-
-function loadUsersData() {
-  try {
-    const raw = fs.readFileSync(USERS_FILE, 'utf8');
-    return JSON.parse(raw);
-  } catch (e) {
-    return { users: [], roles: [], permissionsList: [] };
-  }
+function uniq(arr) {
+  return Array.from(new Set(arr || []));
 }
 
-function expandPermissions(indicesOrStrings, permissionsList) {
-  if (!Array.isArray(indicesOrStrings)) return [];
-  return indicesOrStrings.map(p => {
-    if (typeof p === 'number') return permissionsList[p] || null;
-    if (typeof p === 'string') return p;
-    return null;
-  }).filter(Boolean);
+async function getPermissionsForUser(db, userId) {
+  const rows = await new Promise((resolve, reject) => {
+    db.all('SELECT p.key FROM permissions p JOIN user_permissions up ON p.id = up.permission_id WHERE up.user_id = ?', [userId], (err, rows) => {
+      if (err) return reject(err);
+      resolve(rows || []);
+    });
+  });
+  return rows.map(r => r.key);
 }
 
-// Middleware: reads x-user-id header and attaches req.currentUser = { id, username, permissions }
-module.exports = function attachCurrentUser(req, res, next) {
+async function getPermissionsForRole(db, roleId) {
+  const rows = await new Promise((resolve, reject) => {
+    db.all('SELECT p.key FROM permissions p JOIN role_permissions rp ON p.id = rp.permission_id WHERE rp.role_id = ?', [roleId], (err, rows) => {
+      if (err) return reject(err);
+      resolve(rows || []);
+    });
+  });
+  return rows.map(r => r.key);
+}
+
+// Middleware: reads x-user-id header and attaches req.currentUser = { id, username, displayName, roleId, permissions (effective), directPermissions }
+module.exports = async function attachCurrentUser(req, res, next) {
   try {
     const userId = req.headers['x-user-id'] || req.headers['x_user_id'];
-    const data = loadUsersData();
-    const permissionsList = data.permissionsList || [];
-
     if (!userId) {
       req.currentUser = null;
       return next();
     }
 
-    const user = (data.users || []).find(u => String(u.id) === String(userId));
+    const db = databaseManager.getActiveDb();
+    // Get basic user info
+    const user = await new Promise((resolve, reject) => {
+      db.get('SELECT id, name as username, email, role_id as roleId FROM users WHERE id = ?', [userId], (err, row) => {
+        if (err) return reject(err);
+        resolve(row || null);
+      });
+    });
+
     if (!user) {
       req.currentUser = null;
       return next();
     }
 
-    // Collect role permissions (indices) and user-level permissions
-    const role = (data.roles || []).find(r => r.id === user.roleId);
-    const rolePerms = role ? expandPermissions(role.permissions, permissionsList) : [];
-    const userPerms = expandPermissions(user.permissions, permissionsList);
-
-    // Unique set
-    const effective = Array.from(new Set([...(rolePerms || []), ...(userPerms || [])]));
+    const direct = await getPermissionsForUser(db, user.id);
+    const rolePerms = user.roleId ? await getPermissionsForRole(db, user.roleId) : [];
+    const effective = uniq([...(rolePerms || []), ...(direct || [])]);
 
     req.currentUser = {
       id: user.id,
       username: user.username,
-      displayName: user.displayName,
+      email: user.email,
       roleId: user.roleId,
       permissions: effective,
+      directPermissions: direct
     };
   } catch (e) {
+    // On error, don't block requests; just leave currentUser null
     req.currentUser = null;
   }
   return next();
