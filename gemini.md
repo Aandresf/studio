@@ -140,3 +140,87 @@ pendiente para despues: metodo de autenticacion de usuario, roles y permisos. Un
 correciones: Al crear un producto pero se cancela a media se aumenta la secuenciacion creando codigos fantasmas.
 
 Posibles cambios a considerar: Mover los atributos para que sean unicos por departamento y que el subdepartamento pueda usar los del padre o unicos para el mismo.
+
+## Ruta de seguimiento: Usuarios y Permisos
+
+Objetivo: Corregir y endurecer la gestión de usuarios y permisos para cumplir con buenas prácticas de seguridad, integridad de datos, auditoría y mantenibilidad. La ruta está priorizada por riesgo y esfuerzo.
+
+Fase 0 — Validación y contexto (rápido, 1-2 h)
+- Revisar contrato actual API (formas de usuario) y documentar la shape de `users` y `roles` usada por el frontend.
+- Identificar y listar scripts y utilidades que aún usan `src-backend/data/users.json`.
+- Criterio de éxito: Documento corto (README) que describe shape y lista de scripts a migrar.
+
+Fase 1 — Seguridad de identidad (CRÍTICO, 1-2 días)
+- Objetivo: eliminar la confianza en `x-user-id` desde el cliente y establecer autenticación segura.
+- Tareas:
+  1. Implementar endpoints de autenticación: `POST /api/auth/login` y `POST /api/auth/logout`.
+  2. Usar password hashing (bcrypt o argon2) y almacenar en `users.password_hash`.
+  3. Devolver un JWT firmado (o cookie de sesión HttpOnly) con claims mínimos (userId, roleId). Preferencia: cookie HttpOnly para app de escritorio, JWT si prefieres stateless.
+  4. Modificar `middleware/auth.js` para derivar `req.currentUser` desde la sesión/JWT, no desde la cabecera `x-user-id`.
+  5. Añadir endpoint `POST /api/auth/change-password` y `POST /api/auth/reset-password` (opcional: correo).
+- Criterio de éxito: No existe manera de convertirse en otro usuario mediante un header; login/logout funcionan y `req.currentUser` es seguro.
+
+Fase 2 — Integridad y constraints en DB (alta, 0.5-1 día)
+- Objetivo: proteger integridad con constraints y migraciones seguras.
+- Tareas:
+  1. Añadir UNIQUE constraint en `users.name` y, si aplica, `users.email`.
+  2. Añadir índices y constraints faltantes (p.ej. `roles.name UNIQUE`).
+  3. Crear migrations idempotentes (scripts SQL versionados) y procedimientos de rollback simples.
+- Criterio de éxito: intentos de crear usuarios duplicados fallan a nivel DB y se manejan apropiadamente en la API.
+
+Fase 3 — Validación, atomicidad y saneamiento (media, 0.5-1 día)
+- Objetivo: evitar datos inválidos y garantizar operaciones atómicas.
+- Tareas:
+  1. Añadir validación de payloads con Zod/Joi en `POST /api/users`, `PUT /api/users/:id`, `PUT /api/users/:id/permissions`.
+  2. Ejecutar creación de usuario + asignación de permisos dentro de una transacción (BEGIN/COMMIT/ROLLBACK).
+  3. Limitar longitudes y formatos (por ejemplo, username <= 64 chars, roleId format).
+- Criterio de éxito: creación de usuario es atómica; inputs inválidos reciben 4xx con mensajes claros.
+
+Fase 4 — Auditoría y trazabilidad (importante, 1 día)
+- Objetivo: registrar quién hizo qué cambios en permisos y usuarios.
+- Tareas:
+  1. Añadir tabla `audit_logs` o columnas `created_by`, `updated_by` en `users` y `user_permissions`.
+  2. Registrar eventos: creación/edición/eliminación de usuarios, cambios en `user_permissions` y `role_permissions`.
+  3. Añadir endpoint `/api/admin/audit` (solo para roles autorizados) para consultar logs.
+- Criterio de éxito: cada cambio sensible tiene un registro con actor, timestamp y diff.
+
+Fase 5 — UX / Contrato API / Normalización (media, 0.5 día)
+- Objetivo: normalizar las formas y mejorar la experiencia de gestión.
+- Tareas:
+  1. Normalizar la forma de `user` devuelta por la API: { id, username, displayName, email, roleId, permissions } y actualizar frontend donde sea necesario.
+  2. Documentar claramente qué endpoint devuelve permisos directos vs efectivos. Añadir `/api/users/:id/effective-permissions` si se desea claridad.
+  3. Evitar duplicidad de campos (`name` vs `username`) en la API.
+- Criterio de éxito: frontend usa un shape único y la documentación está actualizada.
+
+Fase 6 — Tests y CI (importante, 1-2 días)
+- Objetivo: prevenir regresiones y verificar modelo de permisos.
+- Tareas:
+  1. Añadir tests con Jest + supertest para endpoints claves: create user, copy role perms, replace user perms, requirePermission enforcement.
+  2. Integración: probar login, obtener token/cookie y ejecutar endpoints protegidos.
+  3. Añadir un job de CI (opcional) para correr tests.
+- Criterio de éxito: suite mínima de tests pasa en PRs.
+
+Fase 7 — Hardenings y extras (opcionales)
+- Opcionales útiles:
+  - Soft delete para usuarios y posibilidad de restauración.
+  - Rotación de claves JWT y revocación de sesiones.
+  - TTL/expiración en permisos temporales (si se requiere).
+
+Roadmap temporal sugerido
+- Semana 1: Fase 0 + Fase 1 (autenticación básica y middleware). Deploy local y pruebas manuales.
+- Semana 2: Fase 2 + Fase 3 (constraints y validación). Migraciones y correcciones.
+- Semana 3: Fase 4 + Fase 5 (auditoría y normalización). Documentación.
+- Semana 4: Fase 6 (tests y CI) y ajustes finales.
+
+Tareas inmediatas que puedo ejecutar ahora (elige una):
+- [A] Implementar login básico con JWT cookie y actualizar `middleware/auth.js` para validar cookie.
+- [B] Añadir UNIQUE constraint en `users.name` y crear migration SQL (rápido).
+- [C] Añadir validación Zod en `routes/users.js` para `POST`/`PUT` y envolver operaciones en transacción.
+
+Cada tarea incluye criterios de éxito y pruebas recomendadas.
+
+Notas finales
+- He priorizado la autenticación porque actualmente el sistema permite impersonación mediante header. Sin esa corrección, cualquier otro hardening es parcial.
+- Después de aplicar autenticación, es seguro seguir con constraints y auditoría.
+
+*** Fin de la ruta de seguimiento añadida por el asistente.

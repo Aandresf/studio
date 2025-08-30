@@ -573,6 +573,10 @@ body {
   margin-bottom: .5rem;
 }
 
+.mb-3 {
+  margin-bottom: .75rem;
+}
+
 .mb-4 {
   margin-bottom: 1rem;
 }
@@ -615,10 +619,6 @@ body {
 
 .mt-6 {
   margin-top: 1.5rem;
-}
-
-.mb-3 {
-  margin-bottom: .75rem;
 }
 
 .block {
@@ -1418,10 +1418,6 @@ body {
 .bg-yellow-600 {
   --tw-bg-opacity: 1;
   background-color: rgb(202 138 4 / var(--tw-bg-opacity, 1));
-}
-
-.bg-muted\/40 {
-  background-color: hsl(var(--muted) / .4);
 }
 
 .fill-current {

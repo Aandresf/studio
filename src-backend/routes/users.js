@@ -62,7 +62,7 @@ async function getPermissionsForRole(db, roleId) {
 router.get('/', async (req, res) => {
   try {
     const db = databaseManager.getActiveDb();
-    const users = await allSql(db, 'SELECT id, name, email, role_id FROM users');
+  const users = await allSql(db, 'SELECT id, name as username, name as displayName, email, role_id as roleId FROM users');
     const roles = await allSql(db, 'SELECT id, name, description FROM roles');
 
     // Expand permissions for each user and role
@@ -85,7 +85,7 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const db = databaseManager.getActiveDb();
-    const user = await getSql(db, 'SELECT id, name, email, role_id as roleId FROM users WHERE id = ?', [req.params.id]);
+  const user = await getSql(db, 'SELECT id, name as username, name as displayName, email, role_id as roleId FROM users WHERE id = ?', [req.params.id]);
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
     user.permissions = await getPermissionsForUser(db, user.id);
     res.json(user);
@@ -122,8 +122,8 @@ router.post('/', requirePermission('users:create'), async (req, res) => {
       await runSql(db, 'INSERT OR IGNORE INTO user_permissions (user_id, permission_id) VALUES (?, ?)', [userId, map[key]]);
     }
 
-    const user = await getSql(db, 'SELECT id, name, email, role_id as roleId, created_at as createdAt FROM users WHERE id = ?', [userId]);
-    user.permissions = await getPermissionsForUser(db, userId);
+  const user = await getSql(db, 'SELECT id, name as username, name as displayName, email, role_id as roleId, created_at as createdAt FROM users WHERE id = ?', [userId]);
+  user.permissions = await getPermissionsForUser(db, userId);
     res.status(201).json(user);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -155,8 +155,8 @@ router.put('/:id', requirePermission('users:edit'), async (req, res) => {
       }
     }
 
-    const updated = await getSql(db, 'SELECT id, name, email, role_id as roleId, updated_at as updatedAt FROM users WHERE id = ?', [req.params.id]);
-    updated.permissions = await getPermissionsForUser(db, req.params.id);
+  const updated = await getSql(db, 'SELECT id, name as username, name as displayName, email, role_id as roleId, updated_at as updatedAt FROM users WHERE id = ?', [req.params.id]);
+  updated.permissions = await getPermissionsForUser(db, req.params.id);
     res.json(updated);
   } catch (err) {
     res.status(500).json({ error: err.message });
