@@ -81,7 +81,7 @@ export function PurchaseHistoryDialog({ open, onOpenChange, onViewReceipt, onEdi
                       </div>
                       <div className="flex items-center gap-4 pr-4">
                         <Badge variant={purchase.status === 'Activo' ? 'default' : 'destructive'}>{purchase.status}</Badge>
-                        <span className="font-bold text-lg">${purchase.total_cost.toFixed(2)}</span>
+                        <span className="font-bold text-lg">${purchase.total.toFixed(2)}</span>
                       </div>
                     </div>
                   </AccordionTrigger>

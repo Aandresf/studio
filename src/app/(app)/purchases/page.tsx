@@ -140,7 +140,10 @@ export default function PurchasesPage() {
             const searchIn = [
                 product.name,
                 product.category || '',
-                product.brand?.name || '',
+            // brand name might be in product.brand_id mapping; use brand_name if available
+            // fall back to empty string
+            // ...existing brand handling...
+            (product as any).brand_name || '',
                 ...((product.variants ?? []).map(v => v.sku || '')),
                 ...((product.variants ?? []).flatMap(v => v.attribute_values?.map(av => av.value) || []))
             ].join(' ').toLowerCase();
@@ -156,7 +159,8 @@ export default function PurchasesPage() {
             const productAttributes = (product.variants ?? []).reduce((acc, variant) => {
                 if (variant.current_stock > 0 && variant.attribute_values) {
                     variant.attribute_values.forEach(av => {
-                        const attributeName = av.attribute_name;
+                        // AttributeValue has attribute_id and value
+                        const attributeName = `attr_${av.attribute_id}`;
                         if (!acc[attributeName]) {
                             acc[attributeName] = new Set<string>();
                         }
@@ -181,7 +185,7 @@ export default function PurchasesPage() {
             <div className="grid grid-cols-4 items-center w-full gap-2">
                 <div className="flex flex-col justify-self-start">
                     <span className="font-semibold">{product.name}</span>
-                    <span className="text-xs text-muted-foreground">{product.brand_name}</span>
+                    <span className="text-xs text-muted-foreground">{(product as any).brand_name || ''}</span>
                 </div>
                 <span className="text-xs text-muted-foreground justify-self-center">SKU: {product.base_sku || 'N/A'}</span>
                 <span className="justify-self-center">Stock: {totalStock}</span>
@@ -277,7 +281,10 @@ export default function PurchasesPage() {
             } else {
                 response = await createPurchase(purchasePayload);
                 toastSuccess("Compra Registrada", "La compra se ha guardado exitosamente.");
-                setSelectedTransactionId(response.transaction_id);
+                // some API responses return { message } instead of full object
+                if (response && (response as any).transaction_id) {
+                    setSelectedTransactionId((response as any).transaction_id);
+                }
             }
 
             setIsReceiptOpen(true);
@@ -358,7 +365,7 @@ export default function PurchasesPage() {
             quantity: m.quantity,
             unitCost: m.unit_cost || 0,
             tax_rate: 16.00, // TODO
-            sku: m.sku,
+            sku: (m as any).sku,
             // @ts-ignore
             availableStock: 0, // No es crucial para editar
         }));

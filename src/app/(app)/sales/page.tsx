@@ -131,12 +131,14 @@ export default function SalesPage() {
         const lowerCaseSearch = searchValue.toLowerCase();
 
         return options.filter(product => {
+            const variants = product.variants ?? [];
             const searchIn = [
                 product.name,
                 product.category || '',
-                product.brand?.name || '',
-                ...product.variants.map(v => v.sku || ''),
-                ...product.variants.flatMap(v => v.attribute_values?.map(av => av.value) || [])
+                // some responses include brand_name directly
+                (product as any).brand_name || '',
+                ...variants.map(v => v.sku || ''),
+                ...variants.flatMap(v => v.attribute_values?.map(av => av.value) || [])
             ].join(' ').toLowerCase();
 
             return searchIn.includes(lowerCaseSearch);
@@ -146,21 +148,24 @@ export default function SalesPage() {
     const renderProductOption = (product: Product) => {
             console.log(product);
     
-            const totalStock = product.variants.reduce((acc, v) => acc + v.current_stock, 0);
+            const variants = product.variants ?? [];
+            const totalStock = variants.reduce((acc, v) => acc + v.current_stock, 0);
             const attributes = () => {
-                const productAttributes = product.variants?.reduce((acc, variant) => {
+                const productAttributes: Record<string, Set<string>> = {};
+                variants.forEach(variant => {
                     if (variant.current_stock > 0 && variant.attribute_values) {
                         variant.attribute_values.forEach(av => {
-                            const attributeName = av.attribute_name;
-                            if (!acc[attributeName]) {
-                                acc[attributeName] = new Set();
+                            // AttributeValue has id, attribute_id and value
+                            // no attribute_name field — use attribute_id as key or value itself
+                            const attributeName = `attr_${av.attribute_id}`;
+                            if (!productAttributes[attributeName]) {
+                                productAttributes[attributeName] = new Set<string>();
                             }
-                            acc[attributeName].add(av.value)
+                            productAttributes[attributeName].add(av.value);
                         });
                     }
-                    return acc;
-                }, {});
-                const attributesForDisplay = {};
+                });
+                const attributesForDisplay: Record<string, string> = {};
                 for (const name in productAttributes) {
                     attributesForDisplay[name] = Array.from(productAttributes[name]).join(', ');
                 }
@@ -176,7 +181,7 @@ export default function SalesPage() {
                 <div className="grid grid-cols-4 items-center w-full gap-2">
                     <div className="flex flex-col justify-self-start">
                         <span className="font-semibold">{product.name}</span>
-                        <span className="text-xs text-muted-foreground">{product.brand_name}</span>
+                        <span className="text-xs text-muted-foreground">{(product as any).brand_name || ''}</span>
                     </div>
                     <span className="text-xs text-muted-foreground justify-self-center">SKU: {product.base_sku || 'N/A'}</span>
                     <span className="justify-self-center">Stock: {totalStock}</span>
@@ -204,7 +209,7 @@ export default function SalesPage() {
     };
 
     const handleVariantsSelected = (selectedVariants: (ProductVariant & { quantity: number })[]) => {
-        if (isReadOnly) return;
+    if (isReadOnly) return;
         const newCartItems: CartItem[] = selectedVariants.map(variant => ({
             id: `temp-${variant.id}-${Date.now()}`,
             variantId: variant.id,
@@ -268,7 +273,9 @@ export default function SalesPage() {
             } else {
                 response = await createSale(salePayload);
                 toastSuccess("Venta Registrada", "La venta se ha guardado exitosamente.");
-                setSelectedTransactionId(response.transaction_id);
+                if (response && (response as any).transaction_id) {
+                    setSelectedTransactionId((response as any).transaction_id);
+                }
             }
             
             setIsReceiptOpen(true);
@@ -343,7 +350,7 @@ export default function SalesPage() {
             quantity: m.quantity,
             price: m.unit_price || 0,
             tax_rate: 16.00, // TODO
-            sku: m.sku,
+            sku: (m as any).sku,
             // @ts-ignore
             availableStock: 0,
         }));
