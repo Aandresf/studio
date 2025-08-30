@@ -7,6 +7,7 @@ import { Home, ShoppingCart, Package, Box, BarChart3, Store } from 'lucide-react
 import { cn } from '@/lib/utils';
 import { getStores } from '@/lib/api';
 import { CurrentUserProvider, useCurrentUser } from '@/hooks/use-current-user';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { StoreSelectionModal } from '@/components/dialogs/StoreSelectionModal';
 import { LoadingScreen } from '@/components/ui/loading-screen';
 
@@ -176,6 +177,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <BackendStatusContext.Provider value={{ isBackendReady, triggerRefetch, refetchKey }}>
       <CurrentUserProvider>
+        <TooltipProvider>
         <div className="grid h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
           <aside className="hidden border-r bg-card md:block">
             <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
@@ -214,6 +216,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             />
           </div>
         </div>
+        </TooltipProvider>
       </CurrentUserProvider>
     </BackendStatusContext.Provider>
   );

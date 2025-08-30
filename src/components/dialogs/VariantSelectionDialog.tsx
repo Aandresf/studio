@@ -128,7 +128,7 @@ export function VariantSelectionDialog({ open, onOpenChange, product, onVariants
                       </TableCell>
                       <TableCell>{variant.sku}</TableCell>
                       <TableCell className="text-right">{variant.current_stock}</TableCell>
-                      <TableCell className="text-right">${isSale ? variant.sale_price.toFixed(2) : variant.cost_price.toFixed(2)}</TableCell>
+                      <TableCell className="text-right">${isSale ? Number(variant.sale_price ?? 0).toFixed(2) : Number(variant.cost_price ?? 0).toFixed(2)}</TableCell>
                       <TableCell>
                         <Input
                           type="number"

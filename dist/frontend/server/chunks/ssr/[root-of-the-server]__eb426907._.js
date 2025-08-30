@@ -114,10 +114,20 @@ class ApiError extends Error {
 // Generic fetch function
 async function fetchAPI(endpoint, options = {}) {
     const url = `${API_BASE_URL}${endpoint}`;
+    // Attach Content-Type and current user id (if available) to help the backend
     const headers = {
         'Content-Type': 'application/json',
         ...options.headers
     };
+    try {
+        // Try to read currently selected user id from localStorage (frontend single-user selection)
+        const stored = ("TURBOPACK compile-time falsy", 0) ? ("TURBOPACK unreachable", undefined) : null;
+        if ("TURBOPACK compile-time falsy", 0) {
+            "TURBOPACK unreachable";
+        }
+    } catch (e) {
+    // ignore
+    }
     const config = {
         ...options,
         headers

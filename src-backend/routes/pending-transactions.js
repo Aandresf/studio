@@ -43,7 +43,9 @@ router.get('/', (req, res) => {
 
 // POST /api/pending-transactions
 // body: { type: 'sale'|'purchase', payload: {...}, id?: string }
-router.post('/', (req, res) => {
+const { requirePermission } = require('../lib/authorize');
+
+router.post('/', requirePermission('pending:create'), (req, res) => {
   const { type, payload, id } = req.body;
   if (!type || !payload) return res.status(400).json({ error: 'type and payload required' });
   try {
@@ -60,7 +62,7 @@ router.post('/', (req, res) => {
 });
 
 // DELETE /api/pending-transactions/:id
-router.delete('/:id', (req, res) => {
+router.delete('/:id', requirePermission('pending:delete'), (req, res) => {
   const { id } = req.params;
   try {
     const store = readStore();

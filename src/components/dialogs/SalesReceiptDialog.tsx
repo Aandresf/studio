@@ -84,9 +84,9 @@ export function SalesReceiptDialog({ open, onOpenChange, transactionId }: SalesR
                       {/* @ts-ignore */}
                       <TableCell className="text-center">{item.quantity}</TableCell>
                       {/* @ts-ignore */}
-                      <TableCell className="text-right">${item.unitPrice.toFixed(2)}</TableCell>
+                      <TableCell className="text-right">${Number(item.unitPrice ?? 0).toFixed(2)}</TableCell>
                       {/* @ts-ignore */}
-                      <TableCell className="text-right">${(item.quantity * item.unitPrice).toFixed(2)}</TableCell>
+                      <TableCell className="text-right">${Number(item.quantity * (item.unitPrice ?? 0)).toFixed(2)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -94,10 +94,10 @@ export function SalesReceiptDialog({ open, onOpenChange, transactionId }: SalesR
             </div>
 
             <div className="mt-4 space-y-2">
-                <div className="flex justify-between"><span>Subtotal:</span><span>${subtotal.toFixed(2)}</span></div>
-                <div className="flex justify-between"><span>Impuestos:</span><span>${totalTaxes.toFixed(2)}</span></div>
+                <div className="flex justify-between"><span>Subtotal:</span><span>${Number(subtotal ?? 0).toFixed(2)}</span></div>
+                <div className="flex justify-between"><span>Impuestos:</span><span>${Number(totalTaxes ?? 0).toFixed(2)}</span></div>
                 <Separator />
-                <div className="flex justify-between font-bold text-base"><span>Total Venta:</span><span>${total.toFixed(2)}</span></div>
+                <div className="flex justify-between font-bold text-base"><span>Total Venta:</span><span>${Number(total ?? 0).toFixed(2)}</span></div>
             </div>
           </div>
         ) : (

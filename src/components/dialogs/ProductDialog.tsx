@@ -24,6 +24,7 @@ import {
 } from '@/lib/api';
 import { Product, Brand, Attribute, AttributeValue, ProductVariant, Department, Subdepartment } from '@/lib/types';
 import { QuickAddDialog } from './QuickAddDialog';
+import { useCurrentUser } from '@/hooks/use-current-user';
 
 function getCombinations<T>(arrays: T[][]): T[][] {
   if (!arrays || arrays.length === 0) return [];
@@ -206,6 +207,10 @@ export function ProductDialog({ open, onOpenChange, product, onProductSaved }: P
   };
 
   const [variantsToDelete, setVariantsToDelete] = useState<number[]>([]);
+  const currentUser = useCurrentUser();
+  const canCreateProducts = currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('products:create');
+  const canEditProducts = currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('products:edit');
+  const canSaveProduct = product?.id ? canEditProducts : canCreateProducts;
 
   const handleGenerateVariants = (callback?: () => void) => {
     const oldVariantsMap = new Map(
@@ -278,10 +283,11 @@ export function ProductDialog({ open, onOpenChange, product, onProductSaved }: P
     try {
       let savedProduct;
       if (payload.id) {
-        savedProduct = await updateProduct(payload.id, payload);
+        // El payload contiene variantes parciales; castear a any para evitar errores de tipo en esta llamada.
+        savedProduct = await updateProduct(payload.id, payload as any);
         toastSuccess("Éxito", "Producto actualizado correctamente.");
       } else {
-        savedProduct = await createProduct(payload);
+        savedProduct = await createProduct(payload as any);
         toastSuccess("Éxito", "Producto creado correctamente.");
       }
       onProductSaved(savedProduct as Product);
@@ -321,11 +327,11 @@ export function ProductDialog({ open, onOpenChange, product, onProductSaved }: P
 
   const renderFooter = () => {
     return (
-      <DialogFooter>
+        <DialogFooter>
         <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
         {currentTab !== 'data' && <Button variant="ghost" onClick={() => handleTabChange(currentTab === 'pricing' ? 'attributes' : 'data')}>Anterior</Button>}
         {currentTab !== 'pricing' && <Button onClick={() => handleTabChange(currentTab === 'data' ? 'attributes' : 'pricing')}>Siguiente</Button>}
-        {currentTab === 'pricing' && <Button onClick={handleSave}>Guardar Producto</Button>}
+        {currentTab === 'pricing' && <Button onClick={handleSave} disabled={!canSaveProduct}>Guardar Producto</Button>}
       </DialogFooter>
     );
   }

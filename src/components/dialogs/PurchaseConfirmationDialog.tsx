@@ -18,14 +18,14 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { PurchaseItemPayload, Product } from "@/lib/types";
+import { TransactionItemPayload } from "@/lib/types";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertTriangle } from "lucide-react";
 
 interface PurchaseConfirmationDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  purchaseItems: (PurchaseItemPayload & { productName: string })[];
+  purchaseItems: (TransactionItemPayload & { productName?: string; name?: string })[];
   onConfirm: () => void;
   isSaving: boolean;
 }
@@ -42,7 +42,7 @@ export function PurchaseConfirmationDialog({
   }
 
   const total = purchaseItems.reduce(
-    (acc, item) => acc + item.quantity * item.unitCost,
+  (acc, item) => acc + item.quantity * Number(item.unitCost ?? 0),
     0
   );
 
@@ -76,13 +76,12 @@ export function PurchaseConfirmationDialog({
             </TableHeader>
             <TableBody>
               {purchaseItems.map((item) => (
-                console.log(item),
                 <TableRow key={item.variantId}>
                   <TableCell>{item.quantity}</TableCell>
                   <TableCell className="text-right">{item.name}</TableCell>
-                  <TableCell className="text-right">${item.unitCost.toFixed(2)}</TableCell>
+                  <TableCell className="text-right">${Number(item.unitCost ?? 0).toFixed(2)}</TableCell>
                   <TableCell className="text-right">
-                    ${(item.quantity * item.unitCost).toFixed(2)}
+                    ${Number(item.quantity * (item.unitCost ?? 0)).toFixed(2)}
                   </TableCell>
                 </TableRow>
               ))}
@@ -91,7 +90,7 @@ export function PurchaseConfirmationDialog({
         </ScrollArea>
 
         <div className="text-right font-bold text-lg pr-6">
-            Total de la Compra: ${total.toFixed(2)}
+            Total de la Compra: ${Number(total ?? 0).toFixed(2)}
         </div>
 
         <DialogFooter>

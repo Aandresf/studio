@@ -76,17 +76,17 @@ export function PurchaseReceiptDialog({ open, onOpenChange, transactionId }: Pur
                   {purchaseDetails.items.map((item, index) => (
                     <TableRow key={index}>
                       <TableCell>
-                        {/* @ts-ignore */}
-                        <p className="font-medium">{item.productName}</p>
-                        {/* @ts-ignore */}
-                        <p className="text-xs text-muted-foreground">{item.variantName}</p>
+                        {/* @ts-ignore - productName may be optional in payload */}
+                        <p className="font-medium">{item.productName || item.name || 'Producto'}</p>
+                        {/* @ts-ignore - variantName may be optional */}
+                        <p className="text-xs text-muted-foreground">{item.variantName || ''}</p>
                       </TableCell>
                       {/* @ts-ignore */}
                       <TableCell className="text-center">{item.quantity}</TableCell>
                       {/* @ts-ignore */}
-                      <TableCell className="text-right">${item.unitCost.toFixed(2)}</TableCell>
+                      <TableCell className="text-right">${Number(item.unitCost ?? 0).toFixed(2)}</TableCell>
                       {/* @ts-ignore */}
-                      <TableCell className="text-right">${(item.quantity * item.unitCost).toFixed(2)}</TableCell>
+                      <TableCell className="text-right">${Number(item.quantity * (item.unitCost ?? 0)).toFixed(2)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -94,10 +94,10 @@ export function PurchaseReceiptDialog({ open, onOpenChange, transactionId }: Pur
             </div>
 
             <div className="mt-4 space-y-2">
-                <div className="flex justify-between"><span>Subtotal:</span><span>${subtotal.toFixed(2)}</span></div>
-                <div className="flex justify-between"><span>Impuestos:</span><span>${totalTaxes.toFixed(2)}</span></div>
+                <div className="flex justify-between"><span>Subtotal:</span><span>${Number(subtotal ?? 0).toFixed(2)}</span></div>
+                <div className="flex justify-between"><span>Impuestos:</span><span>${Number(totalTaxes ?? 0).toFixed(2)}</span></div>
                 <Separator />
-                <div className="flex justify-between font-bold text-base"><span>Total Compra:</span><span>${total.toFixed(2)}</span></div>
+                <div className="flex justify-between font-bold text-base"><span>Total Compra:</span><span>${Number(total ?? 0).toFixed(2)}</span></div>
             </div>
           </div>
         ) : (

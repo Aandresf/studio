@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTheme } from "@/components/theme-provider";
 import { Download, Upload, Trash2, Calendar as CalendarIcon, ChevronsUpDown } from "lucide-react";
 import { useBackendStatus } from '@/app/(app)/layout';
+import { useCurrentUser } from '@/hooks/use-current-user';
 import { getStores, getStoreDetails, updateStoreDetails, deleteStore, getLatestSnapshot, createInventorySnapshot } from '@/lib/api';
 import { toastSuccess, toastError } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -315,6 +316,10 @@ export default function SettingsPage() {
     }
   };
 
+        // permisos para edición de configuración
+        const currentUser = useCurrentUser();
+        const canEditSettings = currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('settings:edit') || false;
+
   const themes = [
     { value: 'light', label: 'Claro' },
     { value: 'dark', label: 'Gris Oscuro' },
@@ -349,17 +354,17 @@ export default function SettingsPage() {
                         <div className="space-y-4">
                             <div className="space-y-1">
                                 <Label htmlFor="name">Nombre</Label>
-                                <Input id="name" value={storeDetails.name || ''} onChange={handleDetailsChange} />
+                                <Input id="name" value={storeDetails.name || ''} onChange={handleDetailsChange} disabled={!canEditSettings} />
                             </div>
                             <div className="space-y-1">
                                 <Label htmlFor="rif">RIF</Label>
-                                <Input id="rif" placeholder="J-12345678-9" value={storeDetails.rif || ''} onChange={handleDetailsChange} />
+                                <Input id="rif" placeholder="J-12345678-9" value={storeDetails.rif || ''} onChange={handleDetailsChange} disabled={!canEditSettings} />
                             </div>
                             <div className="space-y-1">
                                 <Label htmlFor="address">Dirección</Label>
-                                <Textarea id="address" value={storeDetails.address || ''} onChange={handleDetailsChange} />
+                                <Textarea id="address" value={storeDetails.address || ''} onChange={handleDetailsChange} disabled={!canEditSettings} />
                             </div>
-                            <Button onClick={handleSaveChanges} disabled={isSaving}>
+                            <Button onClick={handleSaveChanges} disabled={isSaving || !canEditSettings}>
                                 {isSaving ? 'Guardando...' : 'Guardar Cambios'}
                             </Button>
                         </div>

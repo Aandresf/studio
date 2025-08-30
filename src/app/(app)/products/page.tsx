@@ -61,6 +61,7 @@ export default function ProductsPage() {
     const canCreateProducts = currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('products:create');
     const canEditProducts = currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('products:edit');
     const canDeleteProducts = currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('products:delete');
+    const isReadOnly = !canCreateProducts && !canEditProducts && !canDeleteProducts;
 
     const { isBackendReady, triggerRefetch, refetchKey } = useBackendStatus();
 
@@ -159,7 +160,7 @@ export default function ProductsPage() {
                         <h1 className="font-semibold text-lg md:text-2xl">Productos</h1>
                         <p className="text-sm text-muted-foreground">Gestiona tus productos aquí.</p>
                     </div>
-                    <Button size="sm" className="gap-1" onClick={handleAddNew} disabled={!canCreateProducts}>
+                    <Button size="sm" className="gap-1" onClick={handleAddNew} disabled={!canCreateProducts || isReadOnly}>
                         <PlusCircle className="h-3.5 w-3.5" />
                         <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
                             Añadir Producto

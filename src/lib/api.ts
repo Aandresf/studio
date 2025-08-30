@@ -16,10 +16,19 @@ class ApiError extends Error {
 // Generic fetch function
 async function fetchAPI(endpoint: string, options: RequestInit = {}) {
     const url = `${API_BASE_URL}${endpoint}`;
-    const headers = {
+    // Attach Content-Type and current user id (if available) to help the backend
+    const headers: Record<string, string> = {
         'Content-Type': 'application/json',
-        ...options.headers,
+        ...options.headers as Record<string, string>,
     };
+
+    try {
+        // Try to read currently selected user id from localStorage (frontend single-user selection)
+        const stored = typeof window !== 'undefined' ? window.localStorage.getItem('app_current_user_id') : null;
+        if (stored) headers['x-user-id'] = stored;
+    } catch (e) {
+        // ignore
+    }
     const config: RequestInit = {
         ...options,
         headers,

@@ -63,16 +63,23 @@ export interface Product {
 
 // --- Tipos para Dashboard y Reportes (se mantendrán y adaptarán) ---
 
+// Forma esperada por el frontend para el resumen del dashboard
 export interface DashboardSummary {
-    productCount: number;
-    totalInventoryValue: number;
-    salesCount30d: number;
+  totalRevenue: { value: number; change: number };
+  sales: { value: number; change: number };
+  totalProducts: { value: number; change: number };
+  newCustomers: { value: number; change: number };
 }
 
+// RecentSale (coincide con lo que devuelve la API y lo que consume el dashboard)
 export interface RecentSale {
-    productName: string; // Podría ser "Producto Base - Variante"
-    quantity: number;
-    date: string;
+  id: string; // transaction id
+  productName?: string; // opcional: Producto o detalle corto
+  customerName?: string;
+  customerEmail?: string;
+  status?: 'Completed' | 'Pending' | 'Cancelled' | string;
+  date: string;
+  amount: number;
 }
 
 export type MovementType = 'ENTRADA' | 'SALIDA' | 'RETIRO' | 'AUTO-CONSUMO' | 'AJUSTE';

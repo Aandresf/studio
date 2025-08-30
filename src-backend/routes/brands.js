@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { requirePermission } = require('../lib/authorize');
 const databaseManager = require('../database-manager');
 const util = require('util');
 
@@ -16,7 +17,7 @@ router.get('/', async (req, res) => {
 });
 
 // POST / - create brand
-router.post('/', (req, res) => {
+router.post('/', requirePermission('brands:create'), (req, res) => {
     const { name } = req.body;
     if (!name) {
         return res.status(400).json({ error: 'Brand name is required.' });
@@ -39,7 +40,7 @@ router.post('/', (req, res) => {
 });
 
 // PUT /:id - update brand
-router.put('/:id', (req, res) => {
+router.put('/:id', requirePermission('brands:edit'), (req, res) => {
     const { name } = req.body;
     const { id } = req.params;
     if (!name) {
@@ -66,7 +67,7 @@ router.put('/:id', (req, res) => {
 });
 
 // DELETE /:id - delete brand
-router.delete('/:id', (req, res) => {
+router.delete('/:id', requirePermission('brands:delete'), (req, res) => {
     const { id } = req.params;
     try {
         const db = databaseManager.getActiveDb();

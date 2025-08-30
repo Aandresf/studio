@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { PlusCircle, Edit, Trash2 } from 'lucide-react';
 import { Department, Subdepartment } from '@/lib/types';
+import { useCurrentUser } from '@/hooks/use-current-user';
 import { getDepartments, getSubdepartments, deleteDepartment, deleteSubdepartment } from '@/lib/api';
 import { toastError, toastSuccess } from '@/hooks/use-toast';
 import { DepartmentDialog } from './department-dialog';
@@ -42,6 +43,10 @@ export function DepartmentsManagementCard() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  const currentUser = useCurrentUser();
+  const canManageSettings = !!(currentUser?.permissions?.includes('*') || currentUser?.permissions?.some((p: string) => p.startsWith('settings:') || p.startsWith('departments:')));
+  const isReadOnly = !canManageSettings;
 
   const handleEditDepartment = (department: Department) => {
     setSelectedDepartment(department);
@@ -95,7 +100,7 @@ export function DepartmentsManagementCard() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex justify-end">
-            <Button size="sm" onClick={() => { setSelectedDepartment(null); setIsDepartmentDialogOpen(true); }}>
+            <Button size="sm" onClick={() => { if (!isReadOnly) { setSelectedDepartment(null); setIsDepartmentDialogOpen(true); } }} disabled={isReadOnly}>
               <PlusCircle className="mr-2 h-4 w-4" />
               Nuevo Departamento
             </Button>
@@ -119,17 +124,17 @@ export function DepartmentsManagementCard() {
                       </div>
                     </AccordionTrigger>
                     <div className="flex items-center gap-1 pr-4">
-                      <Button variant="ghost" size="icon" onClick={() => handleEditDepartment(dept)}>
+                      <Button variant="ghost" size="icon" onClick={() => { if (!isReadOnly) handleEditDepartment(dept); }} disabled={isReadOnly}>
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDeleteDepartment(dept.id)}>
+                      <Button variant="ghost" size="icon" onClick={() => { if (!isReadOnly) handleDeleteDepartment(dept.id); }} disabled={isReadOnly}>
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </div>
                   </div>
                   <AccordionContent className="pl-6 pr-2">
                     <div className="flex justify-end mb-2">
-                      <Button variant="outline" size="sm" onClick={() => handleAddNewSubdepartment(dept.id)}>
+                      <Button variant="outline" size="sm" onClick={() => { if (!isReadOnly) handleAddNewSubdepartment(dept.id); }} disabled={isReadOnly}>
                         <PlusCircle className="mr-2 h-4 w-4" />
                         Añadir Subdepartamento
                       </Button>
@@ -149,10 +154,10 @@ export function DepartmentsManagementCard() {
                               <TableCell>{sub.name}</TableCell>
                               <TableCell>{sub.abbreviation}</TableCell>
                               <TableCell className="text-right">
-                                <Button variant="ghost" size="icon" onClick={() => handleEditSubdepartment(sub)}>
+                                <Button variant="ghost" size="icon" onClick={() => { if (!isReadOnly) handleEditSubdepartment(sub); }} disabled={isReadOnly}>
                                   <Edit className="h-4 w-4" />
                                 </Button>
-                                <Button variant="ghost" size="icon" onClick={() => handleDeleteSubdepartment(sub.id)}>
+                                <Button variant="ghost" size="icon" onClick={() => { if (!isReadOnly) handleDeleteSubdepartment(sub.id); }} disabled={isReadOnly}>
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
                               </TableCell>

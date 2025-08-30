@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { requirePermission } = require('../lib/authorize');
 const databaseManager = require('../database-manager');
 const util = require('util');
 
@@ -16,7 +17,7 @@ router.get('/', async (req, res) => {
 });
 
 // POST / - create attribute
-router.post('/', (req, res) => {
+router.post('/', requirePermission('attributes:create'), (req, res) => {
     const { name } = req.body;
     if (!name) return res.status(400).json({ error: 'Attribute name is required.' });
     try {
@@ -31,7 +32,7 @@ router.post('/', (req, res) => {
 });
 
 // PUT /:id - update attribute
-router.put('/:id', (req, res) => {
+router.put('/:id', requirePermission('attributes:edit'), (req, res) => {
     const { id } = req.params;
     const { name } = req.body;
     if (!name) return res.status(400).json({ error: 'Attribute name is required.' });
@@ -48,7 +49,7 @@ router.put('/:id', (req, res) => {
 });
 
 // DELETE /:id - delete attribute
-router.delete('/:id', (req, res) => {
+router.delete('/:id', requirePermission('attributes:delete'), (req, res) => {
     const { id } = req.params;
     try {
         const db = databaseManager.getActiveDb();
@@ -77,7 +78,7 @@ router.get('/:attributeId/values', async (req, res) => {
 });
 
 // POST /:attributeId/values
-router.post('/:attributeId/values', (req, res) => {
+router.post('/:attributeId/values', requirePermission('attributes:create_value'), (req, res) => {
     const { attributeId } = req.params;
     const { value } = req.body;
     if (!value) return res.status(400).json({ error: 'Value is required.' });
@@ -98,7 +99,7 @@ router.post('/:attributeId/values', (req, res) => {
 });
 
 // PUT /:attributeId/values/:valueId
-router.put('/:attributeId/values/:valueId', (req, res) => {
+router.put('/:attributeId/values/:valueId', requirePermission('attributes:edit_value'), (req, res) => {
     const { attributeId, valueId } = req.params;
     const { value } = req.body;
     if (!value) return res.status(400).json({ error: 'Value is required.' });
@@ -120,7 +121,7 @@ router.put('/:attributeId/values/:valueId', (req, res) => {
 });
 
 // DELETE /:attributeId/values/:valueId
-router.delete('/:attributeId/values/:valueId', (req, res) => {
+router.delete('/:attributeId/values/:valueId', requirePermission('attributes:delete_value'), (req, res) => {
     const { attributeId, valueId } = req.params;
     try {
         const db = databaseManager.getActiveDb();

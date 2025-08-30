@@ -6,26 +6,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { DollarSign, Package, ShoppingCart, Users } from "lucide-react";
 import { getDashboardSummary, getRecentSales } from '@/lib/api';
+import { DashboardSummary, RecentSale } from '@/lib/types';
 import { useBackendStatus } from '@/app/(app)/layout';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SalesReceiptDialog } from '@/components/dialogs/SalesReceiptDialog'; // Import the dialog
 
-// Tipos de datos esperados de la API
-interface SummaryStats {
-    totalRevenue: { value: number; change: number };
-    sales: { value: number; change: number };
-    totalProducts: { value: number; change: number };
-    newCustomers: { value: number; change: number };
-}
-
-interface RecentSale {
-    id: string; // This will be the transactionId
-    customerName: string;
-    customerEmail: string;
-    status: 'Completed' | 'Pending' | 'Cancelled';
-    date: string;
-    amount: number;
-}
+// Usar tipos compartidos desde src/lib/types
 
 // Componentes Skeleton para el estado de carga
 function StatsCardSkeleton() {
@@ -73,7 +59,7 @@ function RecentSalesSkeleton() {
 
 export default function Dashboard() {
     const { isBackendReady, refetchKey } = useBackendStatus();
-    const [summary, setSummary] = useState<SummaryStats | null>(null);
+    const [summary, setSummary] = useState<DashboardSummary | null>(null);
     const [recentSales, setRecentSales] = useState<RecentSale[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -143,8 +129,8 @@ export default function Dashboard() {
                             <DollarSign className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">${summary?.totalRevenue.value.toFixed(2)}</div>
-                            <p className="text-xs text-muted-foreground">{summary?.totalRevenue.change.toFixed(1)}% desde el mes pasado</p>
+                            <div className="text-2xl font-bold">${Number(summary?.totalRevenue?.value ?? 0).toFixed(2)}</div>
+                            <p className="text-xs text-muted-foreground">{Number(summary?.totalRevenue?.change ?? 0).toFixed(1)}% desde el mes pasado</p>
                         </CardContent>
                     </Card>
                     <Card>
@@ -153,8 +139,8 @@ export default function Dashboard() {
                             <ShoppingCart className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">+{summary?.sales.value}</div>
-                            <p className="text-xs text-muted-foreground">{summary?.sales.change.toFixed(1)}% desde el mes pasado</p>
+                            <div className="text-2xl font-bold">+{Number(summary?.sales?.value ?? 0)}</div>
+                            <p className="text-xs text-muted-foreground">{Number(summary?.sales?.change ?? 0).toFixed(1)}% desde el mes pasado</p>
                         </CardContent>
                     </Card>
                     <Card>
@@ -163,8 +149,8 @@ export default function Dashboard() {
                             <Package className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">{summary?.totalProducts.value}</div>
-                            <p className="text-xs text-muted-foreground">{summary?.totalProducts.change > 0 ? '+' : ''}{summary?.totalProducts.change} desde la semana pasada</p>
+                            <div className="text-2xl font-bold">{Number(summary?.totalProducts?.value ?? 0)}</div>
+                            <p className="text-xs text-muted-foreground">{Number(summary?.totalProducts?.change ?? 0) > 0 ? '+' : ''}{Number(summary?.totalProducts?.change ?? 0)} desde la semana pasada</p>
                         </CardContent>
                     </Card>
                     <Card>
@@ -173,8 +159,8 @@ export default function Dashboard() {
                             <Users className="h-4 w-4 text-muted-foreground" />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">+{summary?.newCustomers.value}</div>
-                            <p className="text-xs text-muted-foreground">{summary?.newCustomers.change > 0 ? '+' : ''}{summary?.newCustomers.change} desde ayer</p>
+                            <div className="text-2xl font-bold">+{Number(summary?.newCustomers?.value ?? 0)}</div>
+                            <p className="text-xs text-muted-foreground">{Number(summary?.newCustomers?.change ?? 0) > 0 ? '+' : ''}{Number(summary?.newCustomers?.change ?? 0)} desde ayer</p>
                         </CardContent>
                     </Card>
                 </div>
@@ -202,7 +188,7 @@ export default function Dashboard() {
                                         </TableCell>
                                         <TableCell><Badge variant={sale.status === 'Pending' ? 'secondary' : 'default'}>{sale.status}</Badge></TableCell>
                                         <TableCell>{new Date(sale.date).toLocaleDateString()}</TableCell>
-                                        <TableCell className="text-right">${sale.amount.toFixed(2)}</TableCell>
+                                        <TableCell className="text-right">${Number(sale.amount ?? 0).toFixed(2)}</TableCell>
                                     </TableRow>
                                 ))}
                             </TableBody>

@@ -20,6 +20,9 @@ const PORT = 3001;
 app.use(cors());
 app.use(express.json());
 
+// Attach current user (from x-user-id header) to every request
+app.use(require('./middleware/auth'));
+
 // Health check endpoint used by the frontend to wait for the backend
 app.get('/api/health', (req, res) => {
   res.status(200).json({ ok: true });
@@ -77,6 +80,9 @@ app.use('/api/pending-transactions', require('./routes/pending-transactions'));
 
 
 app.use('/api/dashboard', require('./routes/dashboard'));
+
+// Debugging endpoints
+app.use('/api/debug', require('./routes/debug'));
 
 // SETTINGS - Simplified: using a JSON file for settings for now.
 const SETTINGS_FILE = path.join(__dirname, 'settings.json');

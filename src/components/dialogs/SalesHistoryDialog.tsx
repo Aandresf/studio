@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { getSalesHistory, annulSale } from '@/lib/api';
+import { useCurrentUser } from '@/hooks/use-current-user';
 import { GroupedSale } from '@/lib/types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -30,11 +31,17 @@ export function SalesHistoryDialog({
   onViewReceipt, 
   onEditSale, 
   refetchKey,
-  canEdit = false,
-  canAnnul = false 
+  canEdit,
+  canAnnul
 }: SalesHistoryDialogProps) {
   const [history, setHistory] = React.useState<GroupedSale[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
+  const currentUser = useCurrentUser();
+
+  // Resolve permissions: prefer props if provided (parent can override), otherwise derive from current user
+  const canEditLocal = typeof canEdit === 'boolean' ? canEdit : !!(currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('sales:edit'));
+  const canAnnulLocal = typeof canAnnul === 'boolean' ? canAnnul : !!(currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('sales:annul'));
+  const canViewLocal = !!(currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('sales:read'));
 
   const fetchHistory = React.useCallback(async () => {
     setIsLoading(true);
@@ -90,26 +97,28 @@ export function SalesHistoryDialog({
                       </div>
                       <div className="flex items-center gap-4 pr-4">
                         <Badge variant={sale.status === 'Activo' ? 'default' : 'destructive'}>{sale.status}</Badge>
-                        <span className="font-bold text-lg">${sale.total.toFixed(2)}</span>
+                        <span className="font-bold text-lg">${Number(sale.total ?? 0).toFixed(2)}</span>
                       </div>
                     </div>
                   </AccordionTrigger>
                   <AccordionContent>
                     <div className="flex justify-end gap-2 pt-2">
-                        <Button variant="outline" size="sm" onClick={() => onViewReceipt(sale)}>
+                        <Button variant="outline" size="sm" onClick={() => { if (canViewLocal) onViewReceipt(sale); }} disabled={!canViewLocal}>
                           <Eye className="mr-2 h-4 w-4" />Ver Recibo
                         </Button>
                         <Button 
                           variant="secondary" 
                           size="sm" 
-                          disabled={true}
+                          onClick={() => { if (canEditLocal && sale.status === 'Activo') onEditSale(sale); }}
+                          disabled={!canEditLocal || sale.status !== 'Activo'}
                         >
                           <Edit className="mr-2 h-4 w-4" />Editar
                         </Button>
                         <Button 
                           variant="destructive" 
                           size="sm" 
-                          disabled={true}
+                          onClick={() => { if (canAnnulLocal && sale.status === 'Activo') handleAnnul(sale.transaction_id); }}
+                          disabled={!canAnnulLocal || sale.status !== 'Activo'}
                         >
                           <Trash2 className="mr-2 h-4 w-4" />Anular
                         </Button>

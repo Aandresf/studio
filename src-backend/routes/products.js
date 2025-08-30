@@ -53,7 +53,9 @@ router.get('/', async (req, res) => {
 });
 
 // POST / - create product with transactional SKU and variants
-router.post('/', async (req, res) => {
+const { requirePermission } = require('../lib/authorize');
+
+router.post('/', requirePermission('products:create'), async (req, res) => {
     const { name, description, brand_id, department_id, subdepartment_id, status = 'Activo', variants } = req.body;
 
     if (!name || !variants || !Array.isArray(variants) || !department_id || !subdepartment_id) {
@@ -137,7 +139,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // PUT /:id - update product and variants
-router.put('/:id', async (req, res) => {
+router.put('/:id', requirePermission('products:edit'), async (req, res) => {
     const { id } = req.params;
     const { name, description, brand_id, status = 'Activo', variants, variantsToDelete } = req.body;
 
@@ -231,7 +233,7 @@ router.put('/:id', async (req, res) => {
 });
 
 // DELETE /:id
-router.delete('/:id', (req, res) => {
+router.delete('/:id', requirePermission('products:delete'), (req, res) => {
   try {
     const db = databaseManager.getActiveDb();
     db.run('DELETE FROM products WHERE id = ?', [req.params.id], function(err) {

@@ -396,7 +396,7 @@ export default function SalesPage() {
                                     placeholder={isLoadingProducts ? "Cargando..." : "Buscar producto..."}
                                     searchPlaceholder="Buscar por nombre, SKU, categoría, marca..."
                                     emptyMessage="No se encontraron productos."
-                                    disabled={isLoadingProducts}
+                                    disabled={isLoadingProducts || isReadOnly}
                                 />
                             </div>
                             <div className="border rounded-md">
@@ -407,9 +407,18 @@ export default function SalesPage() {
                                             <TableRow key={item.id}>
                                                 <TableCell><p className="font-medium">{item.productName}</p><p className="text-xs text-muted-foreground">{item.variantName} ({item.sku})</p></TableCell>
                                                 <TableCell>{item.quantity}</TableCell>
-                                                <TableCell>${item.price.toFixed(2)}</TableCell>
-                                                <TableCell>${(item.quantity * item.price).toFixed(2)}</TableCell>
-                                                <TableCell><Button variant="ghost" size="icon" onClick={() => removeCartItem(index)}><Trash2 className="h-4 w-4 text-destructive"/></Button></TableCell>
+                                                <TableCell>${Number(item.price ?? 0).toFixed(2)}</TableCell>
+                                                <TableCell>${Number(item.quantity * (item.price ?? 0)).toFixed(2)}</TableCell>
+                                                <TableCell>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => { if (!isReadOnly && editingTransactionId === null) removeCartItem(index); }}
+                                                        disabled={isReadOnly || editingTransactionId !== null}
+                                                    >
+                                                        <Trash2 className="h-4 w-4 text-destructive"/>
+                                                    </Button>
+                                                </TableCell>
                                             </TableRow>
                                         )) : (<TableRow><TableCell colSpan={5} className="text-center h-24">El carrito está vacío.</TableCell></TableRow>)}
                                     </TableBody>
@@ -429,30 +438,30 @@ export default function SalesPage() {
                     <Card>
                         <CardHeader><CardTitle>Resumen</CardTitle></CardHeader>
                         <CardContent className="grid gap-4">
-                            <div className="flex justify-between"><span>Subtotal</span><span>${subtotal.toFixed(2)}</span></div>
-                            <div className="flex justify-between"><span>Impuestos</span><span>${totalTaxes.toFixed(2)}</span></div>
+                            <div className="flex justify-between"><span>Subtotal</span><span>${Number(subtotal ?? 0).toFixed(2)}</span></div>
+                            <div className="flex justify-between"><span>Impuestos</span><span>${Number(totalTaxes ?? 0).toFixed(2)}</span></div>
                             <Separator />
-                            <div className="flex justify-between font-semibold text-lg"><span>Total</span><span>${total.toFixed(2)}</span></div>
+                            <div className="flex justify-between font-semibold text-lg"><span>Total</span><span>${Number(total ?? 0).toFixed(2)}</span></div>
                         </CardContent>
                     </Card>
-                    <div className="flex flex-col gap-2">
+                        <div className="flex flex-col gap-2">
                          <Button 
                             onClick={handleOpenConfirmation} 
-                            disabled={true} 
+                            disabled={isReadOnly || isSubmitDisabled} 
                             size="lg"
                          >
                             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             {isLoading ? "Procesando..." : (editingTransactionId ? "Guardar Cambios" : "Registrar Venta")}
                         </Button>
                         {editingTransactionId && (
-                            <Button variant="ghost" size="sm" onClick={resetForm} disabled={true}>
+                            <Button variant="ghost" size="sm" onClick={resetForm}>
                                 <XCircle className="mr-2 h-4 w-4" />Cancelar Edición
                             </Button>
                         )}
                         <Button 
                             variant="secondary" 
                             onClick={handleHoldSale} 
-                            disabled={true}
+                            disabled={isReadOnly || cart.length === 0}
                         >
                             Poner en Espera
                         </Button>
@@ -468,8 +477,8 @@ export default function SalesPage() {
                                             <p className="text-sm text-muted-foreground">{sale.cart.length} producto(s) - {format(new Date(sale.createdAt), "p", { locale: es })}</p>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            <Tooltip><TooltipTrigger asChild><Button variant="outline" size="icon" onClick={() => handleRestoreSale(sale)}><ListRestart className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent><p>Restaurar</p></TooltipContent></Tooltip>
-                                            <Tooltip><TooltipTrigger asChild><Button variant="destructive" size="icon" onClick={() => handleRemovePendingSale(sale.id)}><Trash className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent><p>Eliminar</p></TooltipContent></Tooltip>
+                                            <Tooltip><TooltipTrigger asChild><Button variant="outline" size="icon" onClick={() => { if (!isReadOnly) handleRestoreSale(sale); }} disabled={isReadOnly}><ListRestart className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent><p>Restaurar</p></TooltipContent></Tooltip>
+                                            <Tooltip><TooltipTrigger asChild><Button variant="destructive" size="icon" onClick={() => { if (!isReadOnly) handleRemovePendingSale(sale.id); }} disabled={isReadOnly}><Trash className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent><p>Eliminar</p></TooltipContent></Tooltip>
                                         </div>
                                     </div>
                                 ))}
@@ -486,8 +495,8 @@ export default function SalesPage() {
             onViewReceipt={handleViewReceiptFromHistory} 
             onEditSale={handleEditSale} 
             refetchKey={refetchKey}
-            canEdit={false}
-            canAnnul={false}
+            canEdit={currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('sales:edit')}
+            canAnnul={currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('sales:annul')}
         />
         <SalesReceiptDialog open={isReceiptOpen} onOpenChange={(open) => { if (!open) setSelectedTransactionId(null); setIsReceiptOpen(open); }} transactionId={selectedTransactionId} />
         <SalesConfirmationDialog open={isConfirmationOpen} onOpenChange={setIsConfirmationOpen} saleItems={consolidatedItems} onConfirm={handleFormSubmit} isSaving={isLoading} />

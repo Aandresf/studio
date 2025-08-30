@@ -3,25 +3,32 @@
 import * as React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { getUserPermissions } from '@/lib/api';
+import { getUserPermissions, getUsers } from '@/lib/api';
+import { PERMISSIONS_META, CATEGORIES_DISPLAY, PermissionMeta } from '@/lib/permissionsMeta';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useCurrentUser } from '@/hooks/use-current-user';
 
-const ALL_PERMISSIONS = [
-  'sales:create',
-  'sales:read',
-  'products:read',
-  'products:read_prices_sale',
-  'products:read_costs',
-  'products:edit',
-  'products:delete',
-  'reports:read',
-  'dashboard:read'
-];
+function groupByCategory(list: PermissionMeta[]) {
+  const map: Record<string, PermissionMeta[]> = {};
+  list.forEach(p => {
+    if (!map[p.category]) map[p.category] = [];
+    map[p.category].push(p);
+  });
+  return map;
+}
 
 export function PermissionsEditor({ user, onClose, onSave }: any) {
-  const [permsText, setPermsText] = React.useState('');
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [checked, setChecked] = React.useState<Record<string, boolean>>({});
+  const [inheritedFromRole, setInheritedFromRole] = React.useState<Record<string, boolean>>({});
+  const [roleName, setRoleName] = React.useState<string | null>(null);
+  const currentUser = useCurrentUser();
+
+  const grouped = groupByCategory(PERMISSIONS_META);
+  const categories = Object.keys(grouped);
+  const [currentTab, setCurrentTab] = React.useState<string>(categories[0] || 'general');
 
   React.useEffect(() => {
     if (!user || !user.id) return;
@@ -29,16 +36,25 @@ export function PermissionsEditor({ user, onClose, onSave }: any) {
     setError(null);
     (async () => {
       try {
-        const body = await getUserPermissions(user.id);
-        const list = (body?.permissions) || [];
-        setPermsText(list.join('\n'));
+        // obtener permisos efectivos del usuario y la definición del rol para marcar heredados
+        const [body, all] = await Promise.all([getUserPermissions(user.id), getUsers()]);
+        const list: string[] = (body?.permissions) || [];
+        const roles = (all?.roles) || [];
+        const role = roles.find((r: any) => r.id === user.roleId);
+        const rolePerms: string[] = role?.permissions || [];
+        setRoleName(role?.name || null);
+
         const map: Record<string, boolean> = {};
-        ALL_PERMISSIONS.forEach(p => { map[p] = list.includes('*') || list.includes(p); });
+        const inheritedMap: Record<string, boolean> = {};
+        PERMISSIONS_META.forEach(meta => {
+          map[meta.key] = list.includes('*') || list.includes(meta.key);
+          inheritedMap[meta.key] = rolePerms.includes(meta.key);
+        });
         setChecked(map);
+        setInheritedFromRole(inheritedMap);
       } catch (e: any) {
         console.error('Error cargando permisos:', e?.message || e);
         setError(e?.message || 'Error al cargar permisos');
-        setPermsText('');
         setChecked({});
       } finally {
         setLoading(false);
@@ -46,10 +62,27 @@ export function PermissionsEditor({ user, onClose, onSave }: any) {
     })();
   }, [user]);
 
-  const handleSave = () => {
-    const perms = Object.entries(checked).filter(([k, v]) => v).map(([k]) => k);
-    onSave(user.id, perms);
+  const handleToggle = (key: string, value: boolean) => {
+    setChecked(s => ({ ...s, [key]: value }));
   };
+
+  const handleSave = async () => {
+    setLoading(true);
+    try {
+      const perms = Object.entries(checked).filter(([k, v]) => v).map(([k]) => k);
+      await onSave(user.id, perms);
+      // si estamos editando al usuario actualmente seleccionado, refrescar sus permisos
+      if (currentUser?.userId === user.id && typeof currentUser?.refresh === 'function') {
+        currentUser.refresh();
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  
+
+  const hasInherited = Object.values(inheritedFromRole).some(Boolean);
 
   return (
     <Dialog open={true} onOpenChange={() => onClose()}>
@@ -57,22 +90,63 @@ export function PermissionsEditor({ user, onClose, onSave }: any) {
         <DialogHeader>
           <DialogTitle>Permisos de {user?.username || ''}</DialogTitle>
         </DialogHeader>
-        <div className="py-4">
-          <p className="text-sm text-muted-foreground mb-2">Selecciona los permisos directos para este usuario.</p>
+  <div className="py-4 overflow-hidden">
+          <p className="text-sm text-muted-foreground mb-2">Selecciona permisos por categoría. Pasa el cursor sobre el permiso para ver su descripción y los botones afectados.</p>
+          {hasInherited && (
+            <div className="text-sm text-muted-foreground mb-3">
+              Los roles funcionan como plantillas/categorías: los permisos provistos por el rol se copian al crear el usuario, pero puedes editar todos los permisos para este usuario.
+            </div>
+          )}
+          <TooltipProvider>
           {loading ? (
             <div>Cargando permisos...</div>
           ) : error ? (
             <div className="text-destructive">{error}</div>
           ) : (
-            <div className="grid grid-cols-2 gap-2">
-              {ALL_PERMISSIONS.map((p) => (
-                <label key={p} className="flex items-center gap-2">
-                  <input type="checkbox" checked={!!checked[p]} onChange={(e) => setChecked((s) => ({ ...s, [p]: e.target.checked }))} />
-                  <span className="text-sm">{p}</span>
-                </label>
+            <Tabs value={currentTab} onValueChange={(value) => setCurrentTab(value as string)} className="w-full">
+              <TabsList className="grid w-full grid-cols-3 mb-4">
+                {categories.map(cat => (
+                  <TabsTrigger key={cat} value={cat} className="text-sm bg-muted text-muted-foreground">{CATEGORIES_DISPLAY[cat as any] || cat}</TabsTrigger>
+                ))}
+              </TabsList>
+
+              {categories.map(cat => (
+                <TabsContent key={cat} value={cat} className="py-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {grouped[cat].map((perm) => {
+                      const inherited = !!inheritedFromRole[perm.key];
+                      return (
+                        <label key={perm.key} className="flex items-center gap-2">
+                          <input type="checkbox" checked={!!checked[perm.key]} onChange={(e) => handleToggle(perm.key, e.target.checked)} />
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="text-sm cursor-help underline-offset-2">{perm.label}</span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <div className="max-w-xs">
+                                <p className="font-semibold">{perm.label}</p>
+                                <p className="text-sm text-muted-foreground">{perm.description}</p>
+                                <p className="text-xs mt-2 font-medium">Botones / áreas afectadas:</p>
+                                <ul className="text-xs list-disc ml-4">
+                                  {perm.affected.map(a => <li key={a}>{a}</li>)}
+                                </ul>
+                                {inherited && (
+                                  <p className="text-xs mt-2 text-muted-foreground">Heredado del rol: <span className="font-medium">{roleName || user.roleId}</span>.</p>
+                                )}
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                          {/* mostramos sólo la etiqueta legible, ocultamos la clave técnica */}
+                          {/* badge eliminado: ya no mostramos 'Heredado' en la UI */}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </TabsContent>
               ))}
-            </div>
+            </Tabs>
           )}
+          </TooltipProvider>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onClose()}>Cerrar</Button>

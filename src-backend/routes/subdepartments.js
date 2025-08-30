@@ -25,8 +25,10 @@ router.get('/', async (req, res) => {
     }
 });
 
+const { requirePermission } = require('../lib/authorize');
+
 // POST / - create
-router.post('/', (req, res) => {
+router.post('/', requirePermission('departments:create'), (req, res) => {
     const { department_id, name, abbreviation } = req.body;
     if (!department_id || !name || !abbreviation) return res.status(400).json({ error: 'department_id, name and abbreviation are required.' });
     try {
@@ -44,7 +46,7 @@ router.post('/', (req, res) => {
 });
 
 // PUT /:id - update
-router.put('/:id', (req, res) => {
+router.put('/:id', requirePermission('departments:edit'), (req, res) => {
     const { id } = req.params;
     const { department_id, name, abbreviation } = req.body;
     if (!department_id || !name || !abbreviation) return res.status(400).json({ error: 'department_id, name and abbreviation are required.' });
@@ -61,7 +63,7 @@ router.put('/:id', (req, res) => {
 });
 
 // DELETE /:id - delete
-router.delete('/:id', (req, res) => {
+router.delete('/:id', requirePermission('departments:delete'), (req, res) => {
     const { id } = req.params;
     try {
         const db = databaseManager.getActiveDb();

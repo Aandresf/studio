@@ -123,8 +123,8 @@ export function ProductDetailDialog({
                           <TableCell className="font-medium">{variant.attribute_values?.map(v => v.value).join(' / ') || 'Estándar'}</TableCell>
                           <TableCell>{variant.sku || 'N/A'}</TableCell>
                           <TableCell className="text-right">{variant.current_stock}</TableCell>
-                          <TableCell className="text-right">{canReadCosts ? `$${variant.cost_price.toFixed(2)}` : '—'}</TableCell>
-                          <TableCell className="text-right">${variant.sale_price.toFixed(2)}</TableCell>
+                            <TableCell className="text-right">{canReadCosts ? `$${Number(variant.cost_price ?? 0).toFixed(2)}` : '—'}</TableCell>
+                            <TableCell className="text-right">${Number(variant.sale_price ?? 0).toFixed(2)}</TableCell>
                           <TableCell className="text-right">
                             <Button variant="ghost" size="icon" onClick={() => openMovementsForVariant(variant.id)}>
                               <History className="h-4 w-4" />

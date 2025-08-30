@@ -12,6 +12,7 @@ import { MoreHorizontal, PlusCircle, Trash2, Edit } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getBrands, createBrand, updateBrand, deleteBrand } from '@/lib/api';
 import { toastSuccess, toastError } from '@/hooks/use-toast';
+import { useCurrentUser } from '@/hooks/use-current-user';
 
 interface Brand {
     id: number;
@@ -37,6 +38,10 @@ export function BrandsManagementCard() {
             setIsLoading(false);
         }
     }, []);
+
+    const currentUser = useCurrentUser();
+    const canManage = !!(currentUser?.permissions?.includes('*') || currentUser?.permissions?.some((p: string) => p.startsWith('brands:') || p.startsWith('settings:')));
+    const isReadOnly = !canManage;
 
     useEffect(() => {
         fetchBrands();
@@ -94,7 +99,7 @@ export function BrandsManagementCard() {
                     <CardTitle>Gestión de Marcas</CardTitle>
                     <CardDescription>Añade, edita o elimina las marcas de tus productos.</CardDescription>
                 </div>
-                <Button size="sm" onClick={handleAddNew}>
+                <Button size="sm" onClick={() => { if (!isReadOnly) handleAddNew(); }} disabled={isReadOnly}>
                     <PlusCircle className="h-4 w-4 mr-2" />
                     Añadir Marca
                 </Button>
@@ -129,11 +134,11 @@ export function BrandsManagementCard() {
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem onClick={() => handleEdit(brand)}>
+                                                    <DropdownMenuItem onClick={() => { if (!isReadOnly) handleEdit(brand); }} disabled={isReadOnly}>
                                                         <Edit className="mr-2 h-4 w-4" />
                                                         <span>Editar</span>
                                                     </DropdownMenuItem>
-                                                    <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(brand.id)}>
+                                                    <DropdownMenuItem className="text-destructive" onClick={() => { if (!isReadOnly) handleDelete(brand.id); }} disabled={isReadOnly}>
                                                         <Trash2 className="mr-2 h-4 w-4" />
                                                         <span>Eliminar</span>
                                                     </DropdownMenuItem>

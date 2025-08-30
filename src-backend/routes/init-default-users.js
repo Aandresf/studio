@@ -19,8 +19,10 @@ function ensureDefaults() {
   const data = JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
   // If no users, create master and sample users
   if (!data.users || data.users.length === 0) {
+    // Create a normalized initial structure with a permissionsList and indices
+    data.permissionsList = ["*","sales:create","sales:read","products:read","products:read_prices_sale","products:read_costs","purchases:read","reports:read","dashboard:read"];
     data.users = [
-      { id: nanoid(8), username: 'master', displayName: 'Administrador', roleId: 'master', permissions: ['*'], createdAt: new Date().toISOString() },
+      { id: nanoid(8), username: 'master', displayName: 'Administrador', roleId: 'master', permissions: [0], createdAt: new Date().toISOString() },
       { id: nanoid(8), username: 'ventas_admin', displayName: 'Encargado de Ventas', roleId: 'sales_admin', permissions: [], createdAt: new Date().toISOString() },
       { id: nanoid(8), username: 'vendedor', displayName: 'Vendedor', roleId: 'sales_only', permissions: [], createdAt: new Date().toISOString() },
       { id: nanoid(8), username: 'lector', displayName: 'Usuario Lectura', roleId: 'read_only', permissions: [], createdAt: new Date().toISOString() }

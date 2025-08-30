@@ -5,6 +5,7 @@ const databaseManager = require('../database-manager');
 const { dataDir } = require('../config');
 
 const router = express.Router();
+const { requirePermission } = require('../lib/authorize');
 
 const SETTINGS_FILE = path.join(__dirname, '..', 'settings.json');
 
@@ -18,14 +19,14 @@ router.get('/settings/store', (req, res) => {
     });
 });
 
-router.put('/settings/store', (req, res) => {
+router.put('/settings/store', requirePermission('settings:edit'), (req, res) => {
     fs.writeFile(SETTINGS_FILE, JSON.stringify(req.body, null, 2), (err) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json({ message: 'Settings updated successfully' });
     });
 });
 
-router.post('/database/backup', (req, res) => {
+router.post('/database/backup', requirePermission('admin:backup'), (req, res) => {
     try {
         const storesConfig = databaseManager.getStoresConfig();
         const activeStore = storesConfig.stores.find(s => s.id === storesConfig.activeStoreId);
@@ -44,7 +45,7 @@ router.post('/database/backup', (req, res) => {
     }
 });
 
-router.post('/database/restore', (req, res) => {
+router.post('/database/restore', requirePermission('admin:restore'), (req, res) => {
     res.status(511).json({ message: 'Restore functionality not fully implemented.' });
 });
 

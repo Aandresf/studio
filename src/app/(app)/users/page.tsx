@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { getUsers, createUser, updateUser, deleteUser, getUserPermissions, updateUserPermissions } from '@/lib/api';
 import { Button } from '@/components/ui/button';
+import { useCurrentUser } from '@/hooks/use-current-user';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { UserForm } from '@/components/users/UserForm';
 import { PermissionsEditor } from '@/components/users/PermissionsEditor';
@@ -13,6 +14,10 @@ export default function UsersPage() {
   const [loading, setLoading] = React.useState(true);
   const [editingUser, setEditingUser] = React.useState<any | null>(null);
   const [showPermissionsFor, setShowPermissionsFor] = React.useState<any | null>(null);
+  const currentUser = useCurrentUser();
+  const canManageUsers = currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('users:edit');
+  const canCreateUsers = currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('users:create');
+  const canDeleteUsers = currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('users:delete');
 
   const fetch = async () => {
     setLoading(true);
@@ -47,8 +52,8 @@ export default function UsersPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Usuarios</h1>
-        <Button onClick={() => setEditingUser({})}>Crear Usuario</Button>
+  <h1 className="text-2xl font-bold">Usuarios</h1>
+  <Button onClick={() => setEditingUser({})} disabled={!canCreateUsers}>Crear Usuario</Button>
       </div>
 
       <div>
@@ -70,9 +75,9 @@ export default function UsersPage() {
                   <TableCell>{u.roleId || '-'}</TableCell>
                   <TableCell>
                     <div className="flex gap-2">
-                      <Button size="sm" onClick={() => setEditingUser(u)}>Editar</Button>
-                      <Button size="sm" variant="outline" onClick={() => setShowPermissionsFor(u)}>Permisos</Button>
-                      <Button size="sm" variant="destructive" onClick={() => onDelete(u.id)}>Eliminar</Button>
+                      <Button size="sm" onClick={() => setEditingUser(u)} disabled={!canManageUsers}>Editar</Button>
+                      <Button size="sm" variant="outline" onClick={() => setShowPermissionsFor(u)} disabled={!canManageUsers}>Permisos</Button>
+                      <Button size="sm" variant="destructive" onClick={() => onDelete(u.id)} disabled={!canDeleteUsers}>Eliminar</Button>
                     </div>
                   </TableCell>
                 </TableRow>

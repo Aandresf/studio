@@ -15,7 +15,9 @@ router.get('/', async (req, res) => {
 });
 
 // POST / - create department
-router.post('/', (req, res) => {
+const { requirePermission } = require('../lib/authorize');
+
+router.post('/', requirePermission('departments:create'), (req, res) => {
     const { name, abbreviation } = req.body;
     if (!name || !abbreviation) return res.status(400).json({ error: 'Name and abbreviation are required.' });
     try {
@@ -35,7 +37,7 @@ router.post('/', (req, res) => {
 });
 
 // PUT /:id - update department
-router.put('/:id', (req, res) => {
+router.put('/:id', requirePermission('departments:edit'), (req, res) => {
     const { id } = req.params;
     const { name, abbreviation } = req.body;
     if (!name || !abbreviation) return res.status(400).json({ error: 'Name and abbreviation are required.' });
@@ -57,7 +59,7 @@ router.put('/:id', (req, res) => {
 });
 
 // DELETE /:id - delete department
-router.delete('/:id', (req, res) => {
+router.delete('/:id', requirePermission('departments:delete'), (req, res) => {
     const { id } = req.params;
     try {
         const db = databaseManager.getActiveDb();
@@ -95,7 +97,7 @@ router.get('/subdepartments', async (req, res) => {
 });
 
 // POST /subdepartments - create
-router.post('/subdepartments', (req, res) => {
+router.post('/subdepartments', requirePermission('departments:create'), (req, res) => {
     const { department_id, name, abbreviation } = req.body;
     if (!department_id || !name || !abbreviation) return res.status(400).json({ error: 'department_id, name and abbreviation are required.' });
     try {
@@ -113,7 +115,7 @@ router.post('/subdepartments', (req, res) => {
 });
 
 // PUT /subdepartments/:id - update
-router.put('/subdepartments/:id', (req, res) => {
+router.put('/subdepartments/:id', requirePermission('departments:edit'), (req, res) => {
     const { id } = req.params;
     const { department_id, name, abbreviation } = req.body;
     if (!department_id || !name || !abbreviation) return res.status(400).json({ error: 'department_id, name and abbreviation are required.' });
@@ -130,7 +132,7 @@ router.put('/subdepartments/:id', (req, res) => {
 });
 
 // DELETE /subdepartments/:id - delete
-router.delete('/subdepartments/:id', (req, res) => {
+router.delete('/subdepartments/:id', requirePermission('departments:delete'), (req, res) => {
     const { id } = req.params;
     try {
         const db = databaseManager.getActiveDb();

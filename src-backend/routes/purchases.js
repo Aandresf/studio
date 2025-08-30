@@ -5,9 +5,10 @@ const databaseManager = require('../database-manager');
 const { getNextDocumentNumber } = require('../lib/documentCounter');
 
 const router = express.Router();
+const { requirePermission } = require('../lib/authorize');
 
 // PURCHASES (BATCH)
-router.post('/', async (req, res) => {
+router.post('/', requirePermission('purchases:create'), async (req, res) => {
     const { transaction_date, entity_name, entity_document, items } = req.body;
     let { document_number } = req.body;
 
@@ -70,7 +71,7 @@ router.post('/', async (req, res) => {
     }
 });
 
-router.put('/', async (req, res) => {
+router.put('/', requirePermission('purchases:edit'), async (req, res) => {
     const { transaction_id, purchaseData } = req.body;
     if (!transaction_id || !purchaseData || !purchaseData.items) {
         return res.status(400).json({ error: 'Faltan datos para la edición.' });
@@ -132,7 +133,7 @@ router.put('/', async (req, res) => {
     }
 });
 
-router.delete('/', async (req, res) => {
+router.delete('/', requirePermission('purchases:delete'), async (req, res) => {
     const { transaction_id } = req.body;
 
     if (!transaction_id) {
@@ -189,7 +190,7 @@ router.delete('/', async (req, res) => {
 });
 
 // Anular por transactionId (param)
-router.delete('/:transactionId', async (req, res) => {
+router.delete('/:transactionId', requirePermission('purchases:delete'), async (req, res) => {
     const { transactionId } = req.params;
     const db = databaseManager.getActiveDb();
     const run = util.promisify(db.run.bind(db));

@@ -5,6 +5,7 @@ const sqlite3 = require('sqlite3').verbose();
 const { nanoid } = require('nanoid');
 
 const router = express.Router();
+const { requirePermission } = require('../lib/authorize');
 
 const { dataDir, schemaPath } = require('../config');
 const databaseManager = require('../database-manager');
@@ -21,7 +22,7 @@ router.get('/', (req, res) => {
 });
 
 // DELETE /:id - mark store deleted (cannot delete last active store)
-router.delete('/:id', (req, res) => {
+router.delete('/:id', requirePermission('stores:delete'), (req, res) => {
     const { id } = req.params;
     try {
         const config = databaseManager.getStoresConfig();
@@ -50,7 +51,7 @@ router.delete('/:id', (req, res) => {
 });
 
 // POST /active - set active store
-router.post('/active', (req, res) => {
+router.post('/active', requirePermission('stores:set_active'), (req, res) => {
     const { storeId } = req.body;
     if (!storeId) {
         return res.status(400).json({ error: 'Se requiere el ID de la tienda (storeId).' });
@@ -64,7 +65,7 @@ router.post('/active', (req, res) => {
 });
 
 // POST / - create a new store
-router.post('/', async (req, res) => {
+router.post('/', requirePermission('stores:create'), async (req, res) => {
     const { name } = req.body;
     if (!name) {
         return res.status(400).json({ error: 'Se requiere un nombre para la nueva tienda.' });
@@ -116,7 +117,7 @@ router.get('/:id/details', (req, res) => {
 });
 
 // PUT /:id/details - write store settings
-router.put('/:id/details', (req, res) => {
+router.put('/:id/details', requirePermission('settings:edit'), (req, res) => {
     const { id } = req.params;
     const settingsPath = path.join(dataDir, `database_${id}_settings.json`);
     try {

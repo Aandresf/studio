@@ -124,6 +124,7 @@ export default function PurchasesPage() {
     const canCreatePurchases = hasPermission('purchases:create');
     const canEditPurchases = hasPermission('purchases:edit');
     const canAnnulPurchases = hasPermission('purchases:annul');
+    const canCreateProducts = currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('products:create');
     const isReadOnly = canReadPurchases && !canCreatePurchases && !canEditPurchases && !canAnnulPurchases;
 
     // Mostrar un placeholder mientras cargan los permisos/usuario (evita cambio en el orden de hooks)
@@ -431,8 +432,8 @@ export default function PurchasesPage() {
                                     </div>
                                     <Button
                                         variant="outline"
-                                        onClick={() => { if (!isReadOnly) setIsProductDialogOpen(true); }}
-                                        disabled={isReadOnly}
+                                        onClick={() => { if (!isReadOnly && canCreateProducts) setIsProductDialogOpen(true); }}
+                                        disabled={isReadOnly || !canCreateProducts}
                                     >
                                         <PlusCircle className="mr-2 h-4 w-4" /> Crear
                                     </Button>
@@ -460,8 +461,17 @@ export default function PurchasesPage() {
                                                             <div className="text-right w-24">—</div>
                                                         )}
                                                     </TableCell>
-                                                    <TableCell>${(item.quantity * item.unitCost).toFixed(2)}</TableCell>
-                                                    <TableCell><Button variant="ghost" size="icon" onClick={() => removeCartItem(index)}><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell>
+                                                    <TableCell>${Number(item.quantity * (item.unitCost ?? 0)).toFixed(2)}</TableCell>
+                                                    <TableCell>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            onClick={() => { if (!isReadOnly && editingTransactionId === null) removeCartItem(index); }}
+                                                            disabled={isReadOnly || editingTransactionId !== null}
+                                                        >
+                                                            <Trash2 className="h-4 w-4 text-destructive" />
+                                                        </Button>
+                                                    </TableCell>
                                                 </TableRow>
                                             )) : (<TableRow><TableCell colSpan={5} className="text-center h-24">Añade productos a la compra.</TableCell></TableRow>)}
                                         </TableBody>
@@ -481,10 +491,10 @@ export default function PurchasesPage() {
                         <Card>
                             <CardHeader><CardTitle>Resumen de Compra</CardTitle></CardHeader>
                             <CardContent className="grid gap-4">
-                                <div className="flex justify-between"><span>Subtotal</span><span>${subtotal.toFixed(2)}</span></div>
-                                <div className="flex justify-between"><span>Impuestos</span><span>${totalTaxes.toFixed(2)}</span></div>
+                                <div className="flex justify-between"><span>Subtotal</span><span>${Number(subtotal ?? 0).toFixed(2)}</span></div>
+                                <div className="flex justify-between"><span>Impuestos</span><span>${Number(totalTaxes ?? 0).toFixed(2)}</span></div>
                                 <Separator />
-                                <div className="flex justify-between font-semibold text-lg"><span>Total</span><span>${total.toFixed(2)}</span></div>
+                                <div className="flex justify-between font-semibold text-lg"><span>Total</span><span>${Number(total ?? 0).toFixed(2)}</span></div>
                             </CardContent>
                         </Card>
                         <div className="flex flex-col gap-2">
@@ -506,8 +516,32 @@ export default function PurchasesPage() {
                                                 <p className="text-sm text-muted-foreground">{purchase.cart.length} producto(s) - {format(new Date(purchase.createdAt), "p", { locale: es })}</p>
                                             </div>
                                             <div className="flex items-center gap-2">
-                                                <Tooltip><TooltipTrigger asChild><Button variant="outline" size="icon" onClick={() => handleRestorePurchase(purchase)}><ListRestart className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent><p>Restaurar</p></TooltipContent></Tooltip>
-                                                <Tooltip><TooltipTrigger asChild><Button variant="destructive" size="icon" onClick={() => handleRemovePendingPurchase(purchase.id)}><Trash className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent><p>Eliminar</p></TooltipContent></Tooltip>
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="icon"
+                                                            onClick={() => { if (!isReadOnly) handleRestorePurchase(purchase); }}
+                                                            disabled={isReadOnly}
+                                                        >
+                                                            <ListRestart className="h-4 w-4" />
+                                                        </Button>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent><p>Restaurar</p></TooltipContent>
+                                                </Tooltip>
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <Button
+                                                            variant="destructive"
+                                                            size="icon"
+                                                            onClick={() => { if (!isReadOnly) handleRemovePendingPurchase(purchase.id); }}
+                                                            disabled={isReadOnly}
+                                                        >
+                                                            <Trash className="h-4 w-4" />
+                                                        </Button>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent><p>Eliminar</p></TooltipContent>
+                                                </Tooltip>
                                             </div>
                                         </div>
                                     ))}

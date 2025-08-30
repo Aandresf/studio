@@ -12,6 +12,7 @@ import { MoreHorizontal, PlusCircle, Trash2, Edit, List } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getAttributes, createAttribute, updateAttribute, deleteAttribute, getAttributeValues, createAttributeValue, updateAttributeValue, deleteAttributeValue } from '@/lib/api';
 import { toastSuccess, toastError } from '@/hooks/use-toast';
+import { useCurrentUser } from '@/hooks/use-current-user';
 
 interface Attribute {
     id: number;
@@ -50,6 +51,10 @@ function AttributeValuesDialog({ attribute, isOpen, onClose }: { attribute: Attr
             fetchValues();
         }
     }, [isOpen, fetchValues]);
+
+    const currentUser = useCurrentUser();
+    const canManageAttributes = !!(currentUser?.permissions?.includes('*') || currentUser?.permissions?.some((p: string) => p.startsWith('attributes:') || p.startsWith('settings:')));
+    const isReadOnly = !canManageAttributes;
 
     const handleAddNewValue = () => {
         setEditingValue(null);
@@ -131,7 +136,7 @@ function AttributeValuesDialog({ attribute, isOpen, onClose }: { attribute: Attr
                     </div>
                 ) : (
                     <div className="py-4">
-                        <Button size="sm" onClick={handleAddNewValue} className="mb-4">
+                        <Button size="sm" onClick={() => { if (!isReadOnly) handleAddNewValue(); }} className="mb-4" disabled={isReadOnly}>
                             <PlusCircle className="h-4 w-4 mr-2" />
                             Añadir Valor
                         </Button>
@@ -158,16 +163,16 @@ function AttributeValuesDialog({ attribute, isOpen, onClose }: { attribute: Attr
                                                             </Button>
                                                         </DropdownMenuTrigger>
                                                         <DropdownMenuContent align="end">
-                                                            <DropdownMenuItem onClick={() => handleEditValue(value)}>
+                                                            <DropdownMenuItem onClick={() => { if (!isReadOnly) handleEditValue(value); }} disabled={isReadOnly}>
                                                                 <Edit className="mr-2 h-4 w-4" />
                                                                 <span>Editar</span>
                                                             </DropdownMenuItem>
-                                                            <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteValue(value.id)}>
+                                                            <DropdownMenuItem className="text-destructive" onClick={() => { if (!isReadOnly) handleDeleteValue(value.id); }} disabled={isReadOnly}>
                                                                 <Trash2 className="mr-2 h-4 w-4" />
                                                                 <span>Eliminar</span>
                                                             </DropdownMenuItem>
                                                         </DropdownMenuContent>
-                                                    </DropdownMenu>
+                                                     </DropdownMenu>
                                                 </TableCell>
                                             </TableRow>
                                         ))

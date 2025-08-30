@@ -4,7 +4,9 @@ const databaseManager = require('../database-manager');
 const util = require('util');
 
 // POST /movements - register inventory movement and update variant
-router.post('/movements', async (req, res) => {
+const { requirePermission } = require('../lib/authorize');
+
+router.post('/movements', requirePermission('inventory:write'), async (req, res) => {
     const { variant_id, type, quantity, unit_cost, description, date } = req.body;
     if (!variant_id || !type || !quantity) {
         return res.status(400).json({ error: 'Missing required fields: variant_id, type, quantity' });
@@ -78,7 +80,7 @@ router.get('/latest-snapshot', async (req, res) => {
 });
 
 // POST /create-snapshot
-router.post('/create-snapshot', async (req, res) => {
+router.post('/create-snapshot', requirePermission('reports:create_snapshot'), async (req, res) => {
     const { snapshot_date } = req.body;
     if (!snapshot_date) {
         return res.status(400).json({ error: 'Se requiere un snapshot_date.' });

@@ -5,7 +5,9 @@ const databaseManager = require('../database-manager');
 const router = express.Router();
 
 // Anular venta
-router.delete('/sales/:transactionId', async (req, res) => {
+const { requirePermission } = require('../lib/authorize');
+
+router.delete('/sales/:transactionId', requirePermission('sales:delete'), async (req, res) => {
     const { transactionId } = req.params;
     const db = databaseManager.getActiveDb();
     const run = util.promisify(db.run.bind(db));
@@ -30,7 +32,7 @@ router.delete('/sales/:transactionId', async (req, res) => {
 });
 
 // Anular compra
-router.delete('/purchases/:transactionId', async (req, res) => {
+router.delete('/purchases/:transactionId', requirePermission('purchases:delete'), async (req, res) => {
     const { transactionId } = req.params;
     const db = databaseManager.getActiveDb();
     const run = util.promisify(db.run.bind(db));

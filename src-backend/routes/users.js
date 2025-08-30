@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { nanoid } = require('nanoid');
 const router = express.Router();
+const { requirePermission } = require('../lib/authorize');
 
 const { dataDir } = require('../config');
 const USERS_FILE = path.join(dataDir, 'users.json');
@@ -18,11 +19,56 @@ function writeUsersData(data) {
   fs.writeFileSync(USERS_FILE, JSON.stringify(data, null, 2));
 }
 
+function expandPermissionsArray(arr, permissionsList) {
+  if (!Array.isArray(arr)) return [];
+  return arr.map(p => {
+    if (typeof p === 'number') return permissionsList?.[p] ?? null;
+    return p;
+  }).filter(Boolean);
+}
+
+function mapPermsToIndices(permsInput, data) {
+  // permsInput can be array of strings or numbers; ensure storage as indices
+  const list = data.permissionsList || [];
+  const indices = [];
+  (permsInput || []).forEach(p => {
+    if (typeof p === 'number') {
+      if (typeof list[p] !== 'undefined') indices.push(p);
+      return;
+    }
+    // p is string
+    let idx = list.indexOf(p);
+    if (idx === -1) {
+      // add new permission to list and use new index
+      idx = list.length;
+      list.push(p);
+    }
+    indices.push(idx);
+  });
+  // persist any new permissions added to list back into data
+  data.permissionsList = list;
+  return indices;
+}
+
+function expandUserForResponse(user, data) {
+  const out = { ...user };
+  out.permissions = expandPermissionsArray(user.permissions, data.permissionsList);
+  return out;
+}
+
+function expandRoleForResponse(role, data) {
+  const out = { ...role };
+  out.permissions = expandPermissionsArray(role.permissions, data.permissionsList);
+  return out;
+}
+
 // GET / - listar usuarios y roles
 router.get('/', (req, res) => {
   try {
-    const data = readUsersData();
-    res.json({ users: data.users, roles: data.roles });
+  const data = readUsersData();
+  const users = (data.users || []).map(u => expandUserForResponse(u, data));
+  const roles = (data.roles || []).map(r => expandRoleForResponse(r, data));
+  res.json({ users, roles, permissionsList: data.permissionsList || [] });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -34,14 +80,14 @@ router.get('/:id', (req, res) => {
     const data = readUsersData();
     const user = data.users.find(u => u.id === req.params.id);
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
-    res.json(user);
+  res.json(expandUserForResponse(user, data));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
 // POST / - crear usuario
-router.post('/', (req, res) => {
+router.post('/', requirePermission('users:create'), (req, res) => {
   try {
     const { username, displayName, roleId, permissions } = req.body;
     if (!username) return res.status(400).json({ error: 'username es requerido' });
@@ -49,24 +95,36 @@ router.post('/', (req, res) => {
     if (data.users.some(u => u.username === username)) {
       return res.status(400).json({ error: 'username ya existe' });
     }
+    // Si no se envían permisos explícitos, usar el rol como plantilla y copiar sus permisos
+    let newPermissionsIndices = [];
+    if (typeof permissions !== 'undefined' && Array.isArray(permissions)) {
+      newPermissionsIndices = mapPermsToIndices(permissions || [], data);
+    } else if (roleId) {
+      const role = (data.roles || []).find(r => r.id === roleId);
+      if (role && Array.isArray(role.permissions)) {
+        // copiar índices del rol como permisos directos
+        newPermissionsIndices = [...role.permissions];
+      }
+    }
+
     const newUser = {
       id: nanoid(8),
       username,
       displayName: displayName || username,
       roleId: roleId || null,
-      permissions: permissions || [],
+      permissions: newPermissionsIndices,
       createdAt: new Date().toISOString()
     };
     data.users.push(newUser);
     writeUsersData(data);
-    res.status(201).json(newUser);
+    res.status(201).json(expandUserForResponse(newUser, data));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
 // PUT /:id - actualizar usuario (incluye roleId y permisos)
-router.put('/:id', (req, res) => {
+router.put('/:id', requirePermission('users:edit'), (req, res) => {
   try {
     const { username, displayName, roleId, permissions } = req.body;
     const data = readUsersData();
@@ -80,18 +138,18 @@ router.put('/:id', (req, res) => {
     user.username = username || user.username;
     user.displayName = displayName || user.displayName;
     user.roleId = typeof roleId !== 'undefined' ? roleId : user.roleId;
-    user.permissions = typeof permissions !== 'undefined' ? permissions : user.permissions;
+  user.permissions = typeof permissions !== 'undefined' ? mapPermsToIndices(permissions, data) : user.permissions;
     user.updatedAt = new Date().toISOString();
     data.users[idx] = user;
     writeUsersData(data);
-    res.json(user);
+  res.json(expandUserForResponse(user, data));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
 // DELETE /:id - eliminar usuario (marcar o eliminar físicamente)
-router.delete('/:id', (req, res) => {
+router.delete('/:id', requirePermission('users:delete'), (req, res) => {
   try {
     const data = readUsersData();
     const idx = data.users.findIndex(u => u.id === req.params.id);
@@ -112,28 +170,24 @@ router.get('/:id/permissions', (req, res) => {
     const data = readUsersData();
     const user = data.users.find(u => u.id === req.params.id);
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
-    let perms = new Set();
-    if (user.roleId) {
-      const role = data.roles.find(r => r.id === user.roleId);
-      if (role && role.permissions) role.permissions.forEach(p => perms.add(p));
-    }
-    if (user.permissions) user.permissions.forEach(p => perms.add(p));
-    res.json({ permissions: Array.from(perms) });
+  // Devolver sólo permisos directos del usuario. Los roles se usan como plantilla en creación.
+  const direct = expandPermissionsArray(user.permissions, data.permissionsList);
+  res.json({ permissions: direct });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
 // PUT /:id/permissions - reemplazar permisos directos (no cambia role)
-router.put('/:id/permissions', (req, res) => {
+router.put('/:id/permissions', requirePermission('users:permissions'), (req, res) => {
   try {
     const { permissions } = req.body;
     const data = readUsersData();
     const idx = data.users.findIndex(u => u.id === req.params.id);
     if (idx === -1) return res.status(404).json({ error: 'Usuario no encontrado' });
-    data.users[idx].permissions = permissions || [];
-    writeUsersData(data);
-    res.json({ permissions: data.users[idx].permissions });
+  data.users[idx].permissions = mapPermsToIndices(permissions, data);
+  writeUsersData(data);
+  res.json({ permissions: expandPermissionsArray(data.users[idx].permissions, data.permissionsList) });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
