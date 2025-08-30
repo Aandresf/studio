@@ -87,14 +87,33 @@ export function PurchaseHistoryDialog({ open, onOpenChange, onViewReceipt, onEdi
                   </AccordionTrigger>
                   <AccordionContent>
                     <div className="flex justify-end gap-2 pt-2">
-                      {/* Solo mostrar botones de acción si el usuario no es de solo lectura */}
-                      {!isReadOnly && (
-                        <>
-                          <Button variant="outline" size="sm" onClick={() => onViewReceipt(purchase)}><Eye className="mr-2 h-4 w-4" />Ver Recibo</Button>
-                          <Button variant="secondary" size="sm" onClick={() => onEditPurchase(purchase)} disabled={purchase.status !== 'Activo'}><Edit className="mr-2 h-4 w-4" />Editar</Button>
-                          <Button variant="destructive" size="sm" onClick={() => handleAnnul(purchase.transaction_id)} disabled={purchase.status !== 'Activo'}><Trash2 className="mr-2 h-4 w-4" />Anular</Button>
-                        </>
-                      )}
+                      {/* Mostrar botones de acción siempre, pero deshabilitarlos para usuarios de solo lectura */}
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => { if (!isReadOnly) onViewReceipt(purchase); }}
+                          disabled={isReadOnly}
+                        >
+                          <Eye className="mr-2 h-4 w-4" />Ver Recibo
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => { if (!isReadOnly && purchase.status === 'Activo') onEditPurchase(purchase); }}
+                          disabled={isReadOnly || purchase.status !== 'Activo'}
+                        >
+                          <Edit className="mr-2 h-4 w-4" />Editar
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => { if (!isReadOnly && purchase.status === 'Activo') handleAnnul(purchase.transaction_id); }}
+                          disabled={isReadOnly || purchase.status !== 'Activo'}
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />Anular
+                        </Button>
+                      </>
                     </div>
                   </AccordionContent>
                 </AccordionItem>

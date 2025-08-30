@@ -410,7 +410,11 @@ export default function PurchasesPage() {
                                             disabled={isLoadingProducts || isReadOnly}
                                         />
                                     </div>
-                                    <Button variant="outline" onClick={() => setIsProductDialogOpen(true)}>
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => { if (!isReadOnly) setIsProductDialogOpen(true); }}
+                                        disabled={isReadOnly}
+                                    >
                                         <PlusCircle className="mr-2 h-4 w-4" /> Crear
                                     </Button>
                                 </div>
