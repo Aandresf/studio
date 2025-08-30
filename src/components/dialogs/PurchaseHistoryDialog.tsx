@@ -13,6 +13,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Eye, Edit, Trash2 } from 'lucide-react';
 import { toastSuccess } from '@/hooks/use-toast';
+import { useCurrentUser } from '@/hooks/use-current-user';
 
 interface PurchaseHistoryDialogProps {
   open: boolean;
@@ -24,6 +25,11 @@ interface PurchaseHistoryDialogProps {
 export function PurchaseHistoryDialog({ open, onOpenChange, onViewReceipt, onEditPurchase }: PurchaseHistoryDialogProps) {
   const [history, setHistory] = React.useState<GroupedPurchase[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
+  const currentUser = useCurrentUser();
+  const canCreatePurchases = currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('purchases:create');
+  const canEditPurchases = currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('purchases:edit');
+  const canAnnulPurchases = currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('purchases:annul');
+  const isReadOnly = !canCreatePurchases && !canEditPurchases && !canAnnulPurchases;
 
   const fetchHistory = React.useCallback(() => {
       setIsLoading(true);
@@ -81,9 +87,14 @@ export function PurchaseHistoryDialog({ open, onOpenChange, onViewReceipt, onEdi
                   </AccordionTrigger>
                   <AccordionContent>
                     <div className="flex justify-end gap-2 pt-2">
-                      <Button variant="outline" size="sm" onClick={() => onViewReceipt(purchase)}><Eye className="mr-2 h-4 w-4" />Ver Recibo</Button>
-                      <Button variant="secondary" size="sm" onClick={() => onEditPurchase(purchase)} disabled={purchase.status !== 'Activo'}><Edit className="mr-2 h-4 w-4" />Editar</Button>
-                      <Button variant="destructive" size="sm" onClick={() => handleAnnul(purchase.transaction_id)} disabled={purchase.status !== 'Activo'}><Trash2 className="mr-2 h-4 w-4" />Anular</Button>
+                      {/* Solo mostrar botones de acción si el usuario no es de solo lectura */}
+                      {!isReadOnly && (
+                        <>
+                          <Button variant="outline" size="sm" onClick={() => onViewReceipt(purchase)}><Eye className="mr-2 h-4 w-4" />Ver Recibo</Button>
+                          <Button variant="secondary" size="sm" onClick={() => onEditPurchase(purchase)} disabled={purchase.status !== 'Activo'}><Edit className="mr-2 h-4 w-4" />Editar</Button>
+                          <Button variant="destructive" size="sm" onClick={() => handleAnnul(purchase.transaction_id)} disabled={purchase.status !== 'Activo'}><Trash2 className="mr-2 h-4 w-4" />Anular</Button>
+                        </>
+                      )}
                     </div>
                   </AccordionContent>
                 </AccordionItem>

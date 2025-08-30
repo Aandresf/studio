@@ -57,8 +57,14 @@ export default function PurchasesPage() {
     const canReadCostsGlobal = currentUser?.permissions?.includes('products:read_costs') || currentUser?.permissions?.includes('*');
     const canEditCostsGlobal = currentUser?.permissions?.includes('products:edit') || currentUser?.permissions?.includes('*');
 
-    // If the user doesn't have purchases read/create permissions, block access to the page
-    if (!hasPermission('purchases:read') && !hasPermission('purchases:create')) {
+    const canReadPurchases = hasPermission('purchases:read');
+    const canCreatePurchases = hasPermission('purchases:create');
+    const canEditPurchases = hasPermission('purchases:edit');
+    const canAnnulPurchases = hasPermission('purchases:annul');
+    const isReadOnly = canReadPurchases && !canCreatePurchases && !canEditPurchases && !canAnnulPurchases;
+
+    // If the user doesn't have any purchases-related permission, block access to the page
+    if (!(canReadPurchases || canCreatePurchases || canEditPurchases || canAnnulPurchases)) {
         return (
             <div className="p-6">
                 <h2 className="text-lg font-semibold">Acceso restringido</h2>
@@ -185,6 +191,7 @@ export default function PurchasesPage() {
     };
 
     const handleProductSelect = (productId: string) => {
+        if (isReadOnly) return; // prevenir selección si solo lectura
         const product = productMap.get(Number(productId));
         if (product) {
             setSelectedProductForVariants(product);
@@ -388,10 +395,10 @@ export default function PurchasesPage() {
                                             filterFn={productFilterFn}
                                             renderOption={renderProductOption}
                                             displayValue={getProductDisplayValue}
-                                            placeholder={isLoadingProducts ? "Cargando..." : "Buscar producto..."}
+                                            placeholder={isLoadingProducts ? "Cargando..." : (isReadOnly ? "Solo lectura - búsqueda deshabilitada" : "Buscar producto...")}
                                             searchPlaceholder="Buscar por nombre, SKU, categoría, marca..."
                                             emptyMessage="No se encontraron productos."
-                                            disabled={isLoadingProducts}
+                                            disabled={isLoadingProducts || isReadOnly}
                                         />
                                     </div>
                                     <Button variant="outline" onClick={() => setIsProductDialogOpen(true)}>
@@ -449,7 +456,7 @@ export default function PurchasesPage() {
                             </CardContent>
                         </Card>
                         <div className="flex flex-col gap-2">
-                            <Button onClick={handleOpenConfirmation} disabled={isSubmitDisabled} size="lg">
+                            <Button onClick={handleOpenConfirmation} disabled={isSubmitDisabled || isReadOnly} size="lg">
                                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                 {isLoading ? "Procesando..." : (editingTransactionId ? "Guardar Cambios" : "Registrar Compra")}
                             </Button>
