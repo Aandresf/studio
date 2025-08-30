@@ -62,7 +62,7 @@ async function getPermissionsForRole(db, roleId) {
 router.get('/', async (req, res) => {
   try {
     const db = databaseManager.getActiveDb();
-  const users = await allSql(db, 'SELECT id, name as username, name as displayName, email, role_id as roleId FROM users');
+  const users = await allSql(db, 'SELECT id, username as username, display_name as displayName, email, role_id as roleId FROM users');
     const roles = await allSql(db, 'SELECT id, name, description FROM roles');
 
     // Expand permissions for each user and role
@@ -85,7 +85,7 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const db = databaseManager.getActiveDb();
-  const user = await getSql(db, 'SELECT id, name as username, name as displayName, email, role_id as roleId FROM users WHERE id = ?', [req.params.id]);
+  const user = await getSql(db, 'SELECT id, username as username, display_name as displayName, email, role_id as roleId FROM users WHERE id = ?', [req.params.id]);
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
     user.permissions = await getPermissionsForUser(db, user.id);
     res.json(user);
@@ -102,11 +102,11 @@ router.post('/', requirePermission('users:create'), async (req, res) => {
     const db = databaseManager.getActiveDb();
 
     // Check username uniqueness
-    const existing = await getSql(db, 'SELECT id FROM users WHERE name = ?', [username]);
+  const existing = await getSql(db, 'SELECT id FROM users WHERE username = ?', [username]);
     if (existing) return res.status(400).json({ error: 'username ya existe' });
 
     const userId = nanoid(8);
-    await runSql(db, 'INSERT INTO users (id, name, email, role_id, created_at) VALUES (?, ?, ?, ?, datetime("now"))', [userId, username, null, roleId || null]);
+  await runSql(db, 'INSERT INTO users (id, username, display_name, email, role_id, created_at) VALUES (?, ?, ?, ?, ?, datetime("now"))', [userId, username, displayName || username, null, roleId || null]);
 
     // Determine permissions to assign: if provided, use them; otherwise copy from role
     let keysToAssign = [];
@@ -122,7 +122,7 @@ router.post('/', requirePermission('users:create'), async (req, res) => {
       await runSql(db, 'INSERT OR IGNORE INTO user_permissions (user_id, permission_id) VALUES (?, ?)', [userId, map[key]]);
     }
 
-  const user = await getSql(db, 'SELECT id, name as username, name as displayName, email, role_id as roleId, created_at as createdAt FROM users WHERE id = ?', [userId]);
+  const user = await getSql(db, 'SELECT id, username as username, display_name as displayName, email, role_id as roleId, created_at as createdAt FROM users WHERE id = ?', [userId]);
   user.permissions = await getPermissionsForUser(db, userId);
     res.status(201).json(user);
   } catch (err) {
@@ -135,14 +135,14 @@ router.put('/:id', requirePermission('users:edit'), async (req, res) => {
   try {
     const { username, displayName, roleId, permissions } = req.body;
     const db = databaseManager.getActiveDb();
-    const user = await getSql(db, 'SELECT id, name, email, role_id as roleId FROM users WHERE id = ?', [req.params.id]);
+  const user = await getSql(db, 'SELECT id, username, display_name, email, role_id as roleId FROM users WHERE id = ?', [req.params.id]);
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
-    if (user.name === 'master' && req.body.deleted) {
+  if ((user.username === 'master' || user.username === 'Administrador' || user.username === 'admin') && req.body.deleted) {
       return res.status(400).json({ error: 'No se puede eliminar el usuario master' });
     }
 
     // Update basic fields
-    await runSql(db, 'UPDATE users SET name = ?, role_id = ?, updated_at = datetime("now") WHERE id = ?', [username || user.name, roleId || user.roleId, req.params.id]);
+  await runSql(db, 'UPDATE users SET username = ?, display_name = ?, role_id = ?, updated_at = datetime("now") WHERE id = ?', [username || user.username, displayName || user.display_name || username || user.username, roleId || user.roleId, req.params.id]);
 
     // If permissions provided, replace user_permissions
     if (typeof permissions !== 'undefined') {
@@ -155,7 +155,7 @@ router.put('/:id', requirePermission('users:edit'), async (req, res) => {
       }
     }
 
-  const updated = await getSql(db, 'SELECT id, name as username, name as displayName, email, role_id as roleId, updated_at as updatedAt FROM users WHERE id = ?', [req.params.id]);
+  const updated = await getSql(db, 'SELECT id, username as username, display_name as displayName, email, role_id as roleId, updated_at as updatedAt FROM users WHERE id = ?', [req.params.id]);
   updated.permissions = await getPermissionsForUser(db, req.params.id);
     res.json(updated);
   } catch (err) {
@@ -167,9 +167,9 @@ router.put('/:id', requirePermission('users:edit'), async (req, res) => {
 router.delete('/:id', requirePermission('users:delete'), async (req, res) => {
   try {
     const db = databaseManager.getActiveDb();
-    const user = await getSql(db, 'SELECT id, name FROM users WHERE id = ?', [req.params.id]);
+  const user = await getSql(db, 'SELECT id, username FROM users WHERE id = ?', [req.params.id]);
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
-    if (user.name === 'master') return res.status(400).json({ error: 'No se puede eliminar el usuario master' });
+  if (user.username === 'master' || user.username === 'Administrador' || user.username === 'admin') return res.status(400).json({ error: 'No se puede eliminar el usuario master' });
     await runSql(db, 'DELETE FROM users WHERE id = ?', [req.params.id]);
     res.json({ message: 'Usuario eliminado' });
   } catch (err) {

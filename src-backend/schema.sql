@@ -201,7 +201,10 @@ CREATE INDEX IF NOT EXISTS idx_subdepartments_name ON subdepartments (name);
 
 CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
+  -- legacy 'name' kept for compatibility; prefer using 'username' and 'display_name'
+  name TEXT,
+  username TEXT UNIQUE,
+  display_name TEXT,
   email TEXT,
   role_id TEXT,
   password_hash TEXT,
