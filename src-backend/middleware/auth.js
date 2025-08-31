@@ -1,4 +1,6 @@
 const databaseManager = require('../database-manager');
+const jwt = require('jsonwebtoken');
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
 
 function uniq(arr) {
   return Array.from(new Set(arr || []));
@@ -27,7 +29,26 @@ async function getPermissionsForRole(db, roleId) {
 // Middleware: reads x-user-id header and attaches req.currentUser = { id, username, displayName, roleId, permissions (effective), directPermissions }
 module.exports = async function attachCurrentUser(req, res, next) {
   try {
-    const userId = req.headers['x-user-id'] || req.headers['x_user_id'];
+    let userId = null;
+
+    // Prefer session cookie (JWT)
+    try {
+      const cookieHeader = req.headers.cookie || '';
+      const match = cookieHeader.split(';').map(s => s.trim()).find(s => s.startsWith('session='));
+      if (match) {
+        const token = match.split('=')[1];
+        const payload = jwt.verify(token, JWT_SECRET);
+        if (payload && payload.userId) userId = payload.userId;
+      }
+    } catch (cookieErr) {
+      // ignore invalid cookie
+    }
+
+    // Fallback to x-user-id (legacy behavior) for migration
+    if (!userId) {
+      userId = req.headers['x-user-id'] || req.headers['x_user_id'] || null;
+    }
+
     if (!userId) {
       req.currentUser = null;
       return next();

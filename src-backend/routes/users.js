@@ -97,7 +97,7 @@ router.get('/:id', async (req, res) => {
 // POST / - crear usuario
 router.post('/', requirePermission('users:create'), async (req, res) => {
   try {
-    const { username, displayName, roleId, permissions } = req.body;
+  const { username, displayName, roleId, permissions, password } = req.body;
     if (!username) return res.status(400).json({ error: 'username es requerido' });
     const db = databaseManager.getActiveDb();
 
@@ -107,7 +107,13 @@ router.post('/', requirePermission('users:create'), async (req, res) => {
 
     const userId = nanoid(8);
   // Also set legacy `name` column to keep schema compatibility (NOT NULL constraint)
-  await runSql(db, 'INSERT INTO users (id, name, username, display_name, email, role_id, created_at) VALUES (?, ?, ?, ?, ?, ?, datetime("now"))', [userId, username, username, displayName || username, null, roleId || null]);
+    // Hash password if provided
+    let passwordHash = null;
+    if (password) {
+      const bcrypt = require('bcryptjs');
+      passwordHash = await bcrypt.hash(password, 10);
+    }
+    await runSql(db, 'INSERT INTO users (id, name, username, display_name, email, role_id, password_hash, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, datetime("now"))', [userId, username, username, displayName || username, null, roleId || null, passwordHash]);
 
     // Determine permissions to assign: if provided, use them; otherwise copy from role
     let keysToAssign = [];
@@ -134,7 +140,7 @@ router.post('/', requirePermission('users:create'), async (req, res) => {
 // PUT /:id - actualizar usuario (incluye roleId y permisos)
 router.put('/:id', requirePermission('users:edit'), async (req, res) => {
   try {
-    const { username, displayName, roleId, permissions } = req.body;
+  const { username, displayName, roleId, permissions, password } = req.body;
     const db = databaseManager.getActiveDb();
   const user = await getSql(db, 'SELECT id, username, display_name, email, role_id as roleId FROM users WHERE id = ?', [req.params.id]);
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
@@ -144,7 +150,17 @@ router.put('/:id', requirePermission('users:edit'), async (req, res) => {
 
     // Update basic fields
   // Keep legacy `name` in sync for backward compatibility
-  await runSql(db, 'UPDATE users SET name = ?, username = ?, display_name = ?, role_id = ?, updated_at = datetime("now") WHERE id = ?', [username || user.username, username || user.username, displayName || user.display_name || username || user.username, roleId || user.roleId, req.params.id]);
+  // Hash new password if provided
+  let passwordHashSql = '';
+  const params = [username || user.username, username || user.username, displayName || user.display_name || username || user.username, roleId || user.roleId];
+  if (password) {
+    const bcrypt = require('bcryptjs');
+    const passwordHash = await bcrypt.hash(password, 10);
+    passwordHashSql = ', password_hash = ?';
+    params.push(passwordHash);
+  }
+  params.push(req.params.id);
+  await runSql(db, `UPDATE users SET name = ?, username = ?, display_name = ?, role_id = ? ${passwordHashSql}, updated_at = datetime("now") WHERE id = ?`, params);
 
     // If permissions provided, replace user_permissions
     if (typeof permissions !== 'undefined') {

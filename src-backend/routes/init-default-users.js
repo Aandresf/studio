@@ -61,8 +61,14 @@ async function ensureDefaults() {
 
     if (!master) {
       const id = nanoid(8);
+      const username = 'master';
+      // default password for local dev; recommend changing via env or UI
+      const defaultPassword = process.env.MASTER_PASSWORD || 'master';
+      const bcrypt = require('bcryptjs');
+      const passwordHash = await bcrypt.hash(defaultPassword, 10);
+
       await new Promise((resolve, reject) => {
-        db.run('INSERT INTO users (id, name, role_id, created_at) VALUES (?, ?, ?, datetime("now"))', [id, 'master', 'master'], function(err) {
+        db.run('INSERT INTO users (id, name, username, display_name, role_id, password_hash, created_at) VALUES (?, ?, ?, ?, ?, ?, datetime("now"))', [id, username, username, 'Master', 'master', passwordHash], function(err) {
           if (err) return reject(err);
           resolve(this);
         });

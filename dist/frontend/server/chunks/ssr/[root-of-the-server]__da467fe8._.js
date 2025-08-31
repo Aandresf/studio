@@ -59,6 +59,7 @@ __turbopack_context__.s({
     "getAttributeValues": (()=>getAttributeValues),
     "getAttributes": (()=>getAttributes),
     "getBrands": (()=>getBrands),
+    "getCurrentUser": (()=>getCurrentUser),
     "getDashboardSummary": (()=>getDashboardSummary),
     "getDepartments": (()=>getDepartments),
     "getHistoricalSummary": (()=>getHistoricalSummary),
@@ -82,6 +83,8 @@ __turbopack_context__.s({
     "getUserPermissions": (()=>getUserPermissions),
     "getUsers": (()=>getUsers),
     "getVariantMovements": (()=>getVariantMovements),
+    "login": (()=>login),
+    "logout": (()=>logout),
     "quitApplication": (()=>quitApplication),
     "removePendingTransaction": (()=>removePendingTransaction),
     "setActiveStore": (()=>setActiveStore),
@@ -119,15 +122,7 @@ async function fetchAPI(endpoint, options = {}) {
         'Content-Type': 'application/json',
         ...options.headers
     };
-    try {
-        // Try to read currently selected user id from localStorage (frontend single-user selection)
-        const stored = ("TURBOPACK compile-time falsy", 0) ? ("TURBOPACK unreachable", undefined) : null;
-        if ("TURBOPACK compile-time falsy", 0) {
-            "TURBOPACK unreachable";
-        }
-    } catch (e) {
-    // ignore
-    }
+    // Note: authentication now uses HttpOnly cookie session; do not attach x-user-id from client.
     const config = {
         ...options,
         headers
@@ -170,6 +165,17 @@ async function fetchAPI(endpoint, options = {}) {
         throw error; // Lo lanzamos para que la lógica de la aplicación pueda reaccionar.
     }
 }
+const login = (username, password)=>fetchAPI('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({
+            username,
+            password
+        })
+    });
+const logout = ()=>fetchAPI('/auth/logout', {
+        method: 'POST'
+    });
+const getCurrentUser = ()=>fetchAPI('/auth/me');
 const getProducts = ()=>fetchAPI('/products');
 const getProductMovements = (variantId)=>fetchAPI(`/variants/${variantId}/movements`);
 const createProduct = (productData)=>{
@@ -537,13 +543,8 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$api$2e$ts__$5b
 ;
 const CURRENT_USER_KEY = 'app_current_user_id';
 function useProvideCurrentUser() {
-    const [userId, setUserId] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(()=>{
-        try {
-            return localStorage.getItem(CURRENT_USER_KEY);
-        } catch  {
-            return null;
-        }
-    });
+    const [userId, setUserId] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(null);
+    const [currentUserInfo, setCurrentUserInfo] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(null);
     const [permissions, setPermissions] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])([]);
     const [users, setUsers] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])([]);
     const [roles, setRoles] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])([]);
@@ -580,22 +581,54 @@ function useProvideCurrentUser() {
     }, [
         loadUsers
     ]);
+    // Load current authenticated user from server (via cookie session)
     (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useEffect"])(()=>{
-        loadPermissions(userId);
-    }, [
-        userId,
-        loadPermissions
-    ]);
+        (async ()=>{
+            try {
+                const me = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$api$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["getCurrentUser"])();
+                if (me && me.id) {
+                    setUserId(me.id);
+                    setCurrentUserInfo(me);
+                    setPermissions(me.permissions || []);
+                } else {
+                    setUserId(null);
+                    setCurrentUserInfo(null);
+                    setPermissions([]);
+                }
+            } catch (e) {
+                setUserId(null);
+                setCurrentUserInfo(null);
+                setPermissions([]);
+            }
+        })();
+    }, []);
     const setCurrentUser = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useCallback"])((id)=>{
-        try {
-            if (id) localStorage.setItem(CURRENT_USER_KEY, id);
-            else localStorage.removeItem(CURRENT_USER_KEY);
-        } catch  {}
+        // Legacy: allow selecting user for admin flows; this does not change auth session
         setUserId(id);
+    }, []);
+    const login = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useCallback"])(async (username, password)=>{
+        const user = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$api$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["login"])(username, password);
+        // After successful login, refresh current user info
+        const me = await (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$api$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["getCurrentUser"])();
+        if (me && me.id) {
+            setUserId(me.id);
+            setCurrentUserInfo(me);
+            setPermissions(me.permissions || []);
+        }
+        return user;
+    }, []);
+    const logout = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useCallback"])(async ()=>{
+        await (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$api$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["logout"])();
+        setUserId(null);
+        setCurrentUserInfo(null);
+        setPermissions([]);
     }, []);
     return {
         userId,
+        currentUserInfo,
         setCurrentUser,
+        login,
+        logout,
         permissions,
         users,
         roles,
@@ -614,7 +647,7 @@ function CurrentUserProvider({ children }) {
         children: children
     }, void 0, false, {
         fileName: "[project]/src/hooks/use-current-user.tsx",
-        lineNumber: 67,
+        lineNumber: 108,
         columnNumber: 10
     }, this);
 }

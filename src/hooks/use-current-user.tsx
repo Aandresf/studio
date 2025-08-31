@@ -1,14 +1,13 @@
 "use client";
 
 import * as React from 'react';
-import { getUserPermissions, getUsers } from '@/lib/api';
+import { getUserPermissions, getUsers, getCurrentUser, login as apiLogin, logout as apiLogout } from '@/lib/api';
 
 const CURRENT_USER_KEY = 'app_current_user_id';
 
 export function useProvideCurrentUser() {
-  const [userId, setUserId] = React.useState<string | null>(() => {
-    try { return localStorage.getItem(CURRENT_USER_KEY); } catch { return null; }
-  });
+  const [userId, setUserId] = React.useState<string | null>(null);
+  const [currentUserInfo, setCurrentUserInfo] = React.useState<any | null>(null);
   const [permissions, setPermissions] = React.useState<string[]>([]);
   const [users, setUsers] = React.useState<any[]>([]);
   const [roles, setRoles] = React.useState<any[]>([]);
@@ -42,16 +41,58 @@ export function useProvideCurrentUser() {
 
   React.useEffect(() => { loadUsers(); }, [loadUsers]);
 
-  React.useEffect(() => { loadPermissions(userId); }, [userId, loadPermissions]);
+  // Load current authenticated user from server (via cookie session)
+  React.useEffect(() => {
+    (async () => {
+      try {
+        const me = await getCurrentUser();
+        if (me && me.id) {
+          setUserId(me.id);
+          setCurrentUserInfo(me);
+          setPermissions(me.permissions || []);
+        } else {
+          setUserId(null);
+          setCurrentUserInfo(null);
+          setPermissions([]);
+        }
+      } catch (e) {
+        setUserId(null);
+        setCurrentUserInfo(null);
+        setPermissions([]);
+      }
+    })();
+  }, []);
 
   const setCurrentUser = React.useCallback((id: string | null) => {
-    try { if (id) localStorage.setItem(CURRENT_USER_KEY, id); else localStorage.removeItem(CURRENT_USER_KEY); } catch {}
+    // Legacy: allow selecting user for admin flows; this does not change auth session
     setUserId(id);
+  }, []);
+
+  const login = React.useCallback(async (username: string, password: string) => {
+    const user = await apiLogin(username, password);
+    // After successful login, refresh current user info
+    const me = await getCurrentUser();
+    if (me && me.id) {
+      setUserId(me.id);
+      setCurrentUserInfo(me);
+      setPermissions(me.permissions || []);
+    }
+    return user;
+  }, []);
+
+  const logout = React.useCallback(async () => {
+    await apiLogout();
+    setUserId(null);
+    setCurrentUserInfo(null);
+    setPermissions([]);
   }, []);
 
   return {
     userId,
+    currentUserInfo,
     setCurrentUser,
+    login,
+    logout,
     permissions,
     users,
     roles,

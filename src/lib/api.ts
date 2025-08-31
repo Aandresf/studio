@@ -22,13 +22,7 @@ async function fetchAPI(endpoint: string, options: RequestInit = {}) {
         ...options.headers as Record<string, string>,
     };
 
-    try {
-        // Try to read currently selected user id from localStorage (frontend single-user selection)
-        const stored = typeof window !== 'undefined' ? window.localStorage.getItem('app_current_user_id') : null;
-        if (stored) headers['x-user-id'] = stored;
-    } catch (e) {
-        // ignore
-    }
+    // Note: authentication now uses HttpOnly cookie session; do not attach x-user-id from client.
     const config: RequestInit = {
         ...options,
         headers,
@@ -75,6 +69,16 @@ async function fetchAPI(endpoint: string, options: RequestInit = {}) {
         throw error; // Lo lanzamos para que la lógica de la aplicación pueda reaccionar.
     }
 }
+
+// Auth helpers
+export const login = (username: string, password: string) => fetchAPI('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ username, password }),
+});
+
+export const logout = () => fetchAPI('/auth/logout', { method: 'POST' });
+
+export const getCurrentUser = () => fetchAPI('/auth/me');
 
 
 // Product API calls
