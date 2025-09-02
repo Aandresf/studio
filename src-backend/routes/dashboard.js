@@ -3,9 +3,10 @@ const util = require('util');
 const { subDays, formatISO } = require('date-fns');
 const databaseManager = require('../database-manager');
 
+const { requirePermission } = require('../lib/authorize');
 const router = express.Router();
 
-router.get('/summary', async (req, res) => {
+router.get('/summary', requirePermission('dashboard:read'), async (req, res) => {
     try {
         const db = databaseManager.getActiveDb();
         const get = util.promisify(db.get.bind(db));
@@ -58,7 +59,7 @@ router.get('/summary', async (req, res) => {
     }
 });
 
-router.get('/recent-sales', async (req, res) => {
+router.get('/recent-sales', requirePermission('dashboard:read'), async (req, res) => {
     try {
         const db = databaseManager.getActiveDb();
         const dbAll = util.promisify(db.all.bind(db));

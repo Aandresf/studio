@@ -226,7 +226,7 @@ router.delete('/:transactionId', requirePermission('purchases:delete'), async (r
     }
 });
 
-router.get('/', async (req, res) => {
+router.get('/', requirePermission('purchases:read'), async (req, res) => {
     try {
         const db = databaseManager.getActiveDb();
         const dbAll = util.promisify(db.all.bind(db));
@@ -302,7 +302,7 @@ router.get('/', async (req, res) => {
     }
 });
 
-router.get('/details', async (req, res) => {
+router.get('/details', requirePermission('purchases:read'), async (req, res) => {
     const transactionId = req.query.id;
     if (!transactionId) {
         return res.status(400).json({ error: 'Transaction ID is required' });

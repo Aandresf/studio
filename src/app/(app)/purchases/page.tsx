@@ -6,6 +6,7 @@ import { es } from 'date-fns/locale';
 import { Calendar as CalendarIcon, PlusCircle, Trash2, History, Loader2, ListRestart, Trash, XCircle } from 'lucide-react';
 
 import { useBackendStatus } from '@/app/(app)/layout';
+import ProtectedRedirect from '@/components/ProtectedRedirect';
 import { getProducts, createPurchase, getPendingTransactions, addPendingTransaction, removePendingTransaction, updatePurchase } from '@/lib/api';
 import { Product, PurchasePayload, ProductVariant, TransactionItemPayload, GroupedPurchase } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -136,14 +137,9 @@ export default function PurchasesPage() {
         );
     }
 
-    // Si el usuario no tiene ningún permiso relacionado con compras, mostrar acceso restringido
+    // Si el usuario no tiene permiso, redirigimos al dashboard
     if (!(canReadPurchases || canCreatePurchases || canEditPurchases || canAnnulPurchases)) {
-        return (
-            <div className="p-6">
-                <h2 className="text-lg font-semibold">Acceso restringido</h2>
-                <p className="text-sm text-muted-foreground">No tienes permisos para ver o gestionar compras. Contacta con un administrador.</p>
-            </div>
-        );
+        return <ProtectedRedirect condition={false} />;
     }
 
     const productFilterFn = (options: Product[], searchValue: string): Product[] => {

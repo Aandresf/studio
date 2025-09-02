@@ -57,20 +57,7 @@ function UserSelectorInner() {
   try {
     const current = useCurrentUser();
     if (!current) return null;
-    const { users, userId, setCurrentUser, permissions, loading } = current;
-    return (
-      <div className="flex items-center gap-2">
-        <select className="rounded border px-2 py-1 text-sm" value={userId || ''} onChange={(e) => setCurrentUser(e.target.value || null)}>
-          <option value="">(Sin usuario)</option>
-          {users.map((u: any) => (
-            <option key={u.id} value={u.id}>
-              {u.displayName || u.username}
-            </option>
-          ))}
-        </select>
-        <div className="text-xs text-muted-foreground">{loading ? 'Cargando...' : `${permissions.length} permisos`}</div>
-      </div>
-    );
+    return null; // Legacy selector removed for security; use UserMenu to view session info
   } catch (e) {
     return null;
   }

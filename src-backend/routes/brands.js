@@ -1,11 +1,11 @@
 const express = require('express');
-const router = express.Router();
 const { requirePermission, requireAnyPermission } = require('../lib/authorize');
+const router = express.Router();
 const databaseManager = require('../database-manager');
 const util = require('util');
 
 // GET / - list brands
-router.get('/', async (req, res) => {
+router.get('/', requirePermission('brands:read'), async (req, res) => {
     try {
         const db = databaseManager.getActiveDb();
         const dbAll = util.promisify(db.all.bind(db));

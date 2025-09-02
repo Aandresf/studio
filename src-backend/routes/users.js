@@ -59,7 +59,7 @@ async function getPermissionsForRole(db, roleId) {
 }
 
 // GET / - listar usuarios y roles
-router.get('/', async (req, res) => {
+router.get('/', requirePermission('users:read'), async (req, res) => {
   try {
     const db = databaseManager.getActiveDb();
   const users = await allSql(db, 'SELECT id, username as username, display_name as displayName, email, role_id as roleId FROM users');
@@ -82,7 +82,7 @@ router.get('/', async (req, res) => {
 });
 
 // GET /:id - obtener usuario
-router.get('/:id', async (req, res) => {
+router.get('/:id', requirePermission('users:read'), async (req, res) => {
   try {
     const db = databaseManager.getActiveDb();
   const user = await getSql(db, 'SELECT id, username as username, display_name as displayName, email, role_id as roleId FROM users WHERE id = ?', [req.params.id]);
@@ -196,7 +196,7 @@ router.delete('/:id', requirePermission('users:delete'), async (req, res) => {
 });
 
 // GET /:id/permissions - obtener permisos efectivos (role + directos)
-router.get('/:id/permissions', async (req, res) => {
+router.get('/:id/permissions', requirePermission('users:permissions'), async (req, res) => {
   try {
     const db = databaseManager.getActiveDb();
     const user = await getSql(db, 'SELECT id FROM users WHERE id = ?', [req.params.id]);

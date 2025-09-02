@@ -3,15 +3,14 @@
 import * as React from 'react';
 import { getUserPermissions, getUsers, getCurrentUser, login as apiLogin, logout as apiLogout } from '@/lib/api';
 
-const CURRENT_USER_KEY = 'app_current_user_id';
-
 export function useProvideCurrentUser() {
   const [userId, setUserId] = React.useState<string | null>(null);
   const [currentUserInfo, setCurrentUserInfo] = React.useState<any | null>(null);
   const [permissions, setPermissions] = React.useState<string[]>([]);
   const [users, setUsers] = React.useState<any[]>([]);
   const [roles, setRoles] = React.useState<any[]>([]);
-  const [loading, setLoading] = React.useState(false);
+  // loading indicates whether current user and permissions are being loaded
+  const [loading, setLoading] = React.useState(true);
 
   const loadUsers = React.useCallback(async () => {
     try {
@@ -19,9 +18,18 @@ export function useProvideCurrentUser() {
       setUsers(data?.users || []);
       setRoles(data?.roles || []);
     } catch (e) {
-      console.error('Error cargando lista de usuarios', e);
-      setUsers([]);
-      setRoles([]);
+      // If the error is a permissions error (403) it's expected for non-admins
+      // and we avoid noisy logs; otherwise log for debugging.
+      const status = (e as any)?.status || (e as any)?.statusCode || null;
+      if (status === 403) {
+        // expected: current user doesn't have users:read
+        setUsers([]);
+        setRoles([]);
+      } else {
+        console.error('Error cargando lista de usuarios', e);
+        setUsers([]);
+        setRoles([]);
+      }
     }
   }, []);
 
@@ -32,8 +40,14 @@ export function useProvideCurrentUser() {
       const body = await getUserPermissions(id);
       setPermissions(body?.permissions || []);
     } catch (e) {
-      console.error('Error cargando permisos del usuario', e);
-      setPermissions([]);
+      const status = (e as any)?.status || (e as any)?.statusCode || null;
+      if (status === 403) {
+        // silently treat as no permissions (user can't read permissions)
+        setPermissions([]);
+      } else {
+        console.error('Error cargando permisos del usuario', e);
+        setPermissions([]);
+      }
     } finally {
       setLoading(false);
     }
@@ -44,6 +58,7 @@ export function useProvideCurrentUser() {
   // Load current authenticated user from server (via cookie session)
   React.useEffect(() => {
     (async () => {
+      setLoading(true);
       try {
         const me = await getCurrentUser();
         if (me && me.id) {
@@ -59,38 +74,43 @@ export function useProvideCurrentUser() {
         setUserId(null);
         setCurrentUserInfo(null);
         setPermissions([]);
+      } finally {
+        setLoading(false);
       }
     })();
   }, []);
 
-  const setCurrentUser = React.useCallback((id: string | null) => {
-    // Legacy: allow selecting user for admin flows; this does not change auth session
-    setUserId(id);
-  }, []);
+  // Legacy user selection removed: the authenticated user comes from the server session.
 
   const login = React.useCallback(async (username: string, password: string) => {
     const user = await apiLogin(username, password);
     // After successful login, refresh current user info
-    const me = await getCurrentUser();
-    if (me && me.id) {
-      setUserId(me.id);
-      setCurrentUserInfo(me);
-      setPermissions(me.permissions || []);
+    try {
+      setLoading(true);
+      const me = await getCurrentUser();
+      if (me && me.id) {
+        setUserId(me.id);
+        setCurrentUserInfo(me);
+        setPermissions(me.permissions || []);
+      }
+    } finally {
+      setLoading(false);
     }
     return user;
   }, []);
 
   const logout = React.useCallback(async () => {
-    await apiLogout();
-    setUserId(null);
-    setCurrentUserInfo(null);
-    setPermissions([]);
+  await apiLogout();
+  setUserId(null);
+  setCurrentUserInfo(null);
+  setPermissions([]);
+  // refresh users list
+  try { await loadUsers(); } catch {};
   }, []);
 
   return {
     userId,
     currentUserInfo,
-    setCurrentUser,
     login,
     logout,
     permissions,

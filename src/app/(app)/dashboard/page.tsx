@@ -8,6 +8,8 @@ import { DollarSign, Package, ShoppingCart, Users } from "lucide-react";
 import { getDashboardSummary, getRecentSales } from '@/lib/api';
 import { DashboardSummary, RecentSale } from '@/lib/types';
 import { useBackendStatus } from '@/app/(app)/layout';
+import { useCurrentUser } from '@/hooks/use-current-user';
+import { useRouter } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SalesReceiptDialog } from '@/components/dialogs/SalesReceiptDialog'; // Import the dialog
 
@@ -59,6 +61,15 @@ function RecentSalesSkeleton() {
 
 export default function Dashboard() {
     const { isBackendReady, refetchKey } = useBackendStatus();
+    const current = useCurrentUser();
+    const router = useRouter();
+
+    useEffect(() => {
+        // If we finished loading user and there's no authenticated user, redirect to login
+        if (!current?.loading && !current?.userId) {
+            router.push('/login');
+        }
+    }, [current?.loading, current?.userId, router]);
     const [summary, setSummary] = useState<DashboardSummary | null>(null);
     const [recentSales, setRecentSales] = useState<RecentSale[]>([]);
     const [loading, setLoading] = useState(true);

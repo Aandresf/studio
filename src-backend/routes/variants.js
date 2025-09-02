@@ -1,10 +1,11 @@
 const express = require('express');
+const { requirePermission } = require('../lib/authorize');
 const router = express.Router();
 const databaseManager = require('../database-manager');
 const util = require('util');
 
 // GET / - list all variants (careful on large datasets)
-router.get('/', async (req, res) => {
+router.get('/', requirePermission('products:read'), async (req, res) => {
     try {
         const db = databaseManager.getActiveDb();
         const dbAll = util.promisify(db.all.bind(db));

@@ -7,6 +7,7 @@ import { Calendar as CalendarIcon, PlusCircle, Trash2, History, Loader2, ListRes
 
 import { useBackendStatus } from '@/app/(app)/layout';
 import { useCurrentUser } from '@/hooks/use-current-user';
+import ProtectedRedirect from '@/components/ProtectedRedirect';
 import { getProducts, createSale, getPendingTransactions, addPendingTransaction, removePendingTransaction, updateSale } from '@/lib/api';
 import { Product, SalePayload, ProductVariant, TransactionItemPayload, GroupedSale } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -113,12 +114,7 @@ export default function SalesPage() {
 
     // 3. Finalmente la lógica de renderizado condicional
     if (!hasAnySalesPermission) {
-        return (
-            <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-                <h1 className="text-2xl font-semibold">Acceso Restringido</h1>
-                <p className="text-muted-foreground">No tienes permisos para acceder al módulo de ventas.</p>
-            </div>
-        );
+        return <ProtectedRedirect condition={false} />;
     }
 
     const getProductDisplayValue = (productId: string) => {

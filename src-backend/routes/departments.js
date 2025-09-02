@@ -1,10 +1,11 @@
 const express = require('express');
+const { requirePermission } = require('../lib/authorize');
 const router = express.Router();
 const databaseManager = require('../database-manager');
 const util = require('util');
 
 // GET / - list departments
-router.get('/', async (req, res) => {
+router.get('/', requirePermission('departments:read'), async (req, res) => {
     try {
         const db = databaseManager.getActiveDb();
         const rows = await util.promisify(db.all.bind(db))("SELECT * FROM departments ORDER BY name ASC", []);
@@ -15,7 +16,7 @@ router.get('/', async (req, res) => {
 });
 
 // POST / - create department
-const { requirePermission, requireAnyPermission } = require('../lib/authorize');
+const { requireAnyPermission } = require('../lib/authorize');
 
 router.post('/', requireAnyPermission('departments:create', 'catalog:manage'), (req, res) => {
     const { name, abbreviation } = req.body;
@@ -75,7 +76,7 @@ router.delete('/:id', requireAnyPermission('departments:delete', 'catalog:manage
 
 // SUBDEPARTMENTS
 // GET /subdepartments - optional query ?departmentId=...
-router.get('/subdepartments', async (req, res) => {
+router.get('/subdepartments', requirePermission('departments:read'), async (req, res) => {
     const { departmentId } = req.query;
     let query = `
     SELECT s.*, d.name as department_name 

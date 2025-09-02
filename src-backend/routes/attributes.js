@@ -1,11 +1,11 @@
 const express = require('express');
-const router = express.Router();
 const { requirePermission, requireAnyPermission } = require('../lib/authorize');
+const router = express.Router();
 const databaseManager = require('../database-manager');
 const util = require('util');
 
 // GET / - list attributes
-router.get('/', async (req, res) => {
+router.get('/', requirePermission('attributes:read'), async (req, res) => {
     try {
         const db = databaseManager.getActiveDb();
         const dbAll = util.promisify(db.all.bind(db));
@@ -65,7 +65,7 @@ router.delete('/:id', requireAnyPermission('attributes:delete', 'catalog:manage'
 
 // Nested: attribute values
 // GET /:attributeId/values
-router.get('/:attributeId/values', async (req, res) => {
+router.get('/:attributeId/values', requirePermission('attributes:read'), async (req, res) => {
     const { attributeId } = req.params;
     try {
         const db = databaseManager.getActiveDb();

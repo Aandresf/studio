@@ -6,6 +6,7 @@ import { PlusCircle, Search } from 'lucide-react';
 
 import { useBackendStatus } from '@/app/(app)/layout';
 import { useCurrentUser } from '@/hooks/use-current-user';
+import ProtectedRedirect from '@/components/ProtectedRedirect';
 import { getProducts, deleteProduct, getStoreDetails, getStores } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -62,6 +63,7 @@ export default function ProductsPage() {
     const canEditProducts = currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('products:edit');
     const canDeleteProducts = currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('products:delete');
     const isReadOnly = !canCreateProducts && !canEditProducts && !canDeleteProducts;
+    const canReadProducts = currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('products:read');
 
     const { isBackendReady, triggerRefetch, refetchKey } = useBackendStatus();
 
@@ -151,6 +153,8 @@ export default function ProductsPage() {
     const skuMatch = (((product as any).sku as string | undefined)?.toLowerCase().includes(query)) ?? false;
         return nameMatch || skuMatch;
     });
+
+    if (!canReadProducts) return <ProtectedRedirect condition={false} />;
 
     return (
         <>

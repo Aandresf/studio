@@ -18,7 +18,7 @@ function groupByCategory(list: PermissionMeta[]) {
   return map;
 }
 
-export function PermissionsEditor({ user, onClose, onSave }: any) {
+export function PermissionsEditor({ user, onClose, onSave }: { user: any; onClose: () => void; onSave: (userId: number, perms: string[]) => Promise<void> }) {
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [checked, setChecked] = React.useState<Record<string, boolean>>({});
@@ -106,7 +106,7 @@ export function PermissionsEditor({ user, onClose, onSave }: any) {
             <Tabs value={currentTab} onValueChange={(value) => setCurrentTab(value as string)} className="w-full">
               <TabsList className="grid w-full grid-cols-3 mb-4">
                 {categories.map(cat => (
-                  <TabsTrigger key={cat} value={cat} className="text-sm bg-muted text-muted-foreground">{CATEGORIES_DISPLAY[cat as any] || cat}</TabsTrigger>
+                  <TabsTrigger key={cat} value={cat} className="text-sm bg-muted text-muted-foreground">{CATEGORIES_DISPLAY[cat as any as keyof typeof CATEGORIES_DISPLAY] || cat}</TabsTrigger>
                 ))}
               </TabsList>
 

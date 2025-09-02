@@ -6,7 +6,16 @@ async function ensureDefaults() {
     const db = databaseManager.getActiveDb();
 
     // Ensure basic permissions exist
-    const defaultPerms = ['*','sales:create','sales:read','sales:edit','sales:annul','products:read','products:create','products:edit','products:delete','products:read_prices_sale','products:read_costs','products:read_costs_disabled','purchases:read','purchases:create','purchases:edit','purchases:annul','reports:read','dashboard:read','settings:edit'];
+  const defaultPerms = [
+    '*',
+    'sales:create','sales:read','sales:edit','sales:annul',
+    'products:read','products:create','products:edit','products:delete','products:read_prices_sale','products:read_costs','products:read_costs_disabled',
+    'purchases:read','purchases:create','purchases:edit','purchases:annul',
+    'reports:read','reports:create_snapshot',
+    'dashboard:read','settings:edit',
+    'users:read','users:create','users:edit','users:delete','users:permissions',
+    'brands:read','attributes:read','departments:read','variants:read','inventory:read','pending:read'
+  ];
     for (const key of defaultPerms) {
       await new Promise((resolve, reject) => {
         db.run('INSERT OR IGNORE INTO permissions (key) VALUES (?)', [key], function(err) {
@@ -51,13 +60,30 @@ async function ensureDefaults() {
       }
     }
 
-    // Ensure master user exists
-    const master = await new Promise((resolve, reject) => {
-      db.get('SELECT id FROM users WHERE name = ?', ['master'], (err, row) => {
-        if (err) return reject(err);
-        resolve(row || null);
+    // Ensure master user exists. Some older DBs may not have the `name` column,
+    // so try selecting by `name`, and fallback to `username` if that fails.
+    let master = null;
+    try {
+      master = await new Promise((resolve, reject) => {
+        db.get('SELECT id FROM users WHERE name = ?', ['master'], (err, row) => {
+          if (err) return reject(err);
+          resolve(row || null);
+        });
       });
-    });
+    } catch (e) {
+      // Fallback: try by username if `name` column doesn't exist
+      try {
+        master = await new Promise((resolve, reject) => {
+          db.get('SELECT id FROM users WHERE username = ?', ['master'], (err, row) => {
+            if (err) return reject(err);
+            resolve(row || null);
+          });
+        });
+      } catch (e2) {
+        // ignore and treat as no master
+        master = null;
+      }
+    }
 
     if (!master) {
       const id = nanoid(8);
@@ -67,12 +93,29 @@ async function ensureDefaults() {
       const bcrypt = require('bcryptjs');
       const passwordHash = await bcrypt.hash(defaultPassword, 10);
 
-      await new Promise((resolve, reject) => {
-        db.run('INSERT INTO users (id, name, username, display_name, role_id, password_hash, created_at) VALUES (?, ?, ?, ?, ?, ?, datetime("now"))', [id, username, username, 'Master', 'master', passwordHash], function(err) {
+      // Inspect users table columns to determine correct INSERT statement
+      const cols = await new Promise((resolve, reject) => {
+        db.all("PRAGMA table_info('users')", [], (err, rows) => {
           if (err) return reject(err);
-          resolve(this);
+          resolve(rows.map(r => r.name));
         });
       });
+
+      if (cols.includes('name')) {
+        await new Promise((resolve, reject) => {
+          db.run('INSERT INTO users (id, name, username, display_name, role_id, password_hash, created_at) VALUES (?, ?, ?, ?, ?, ?, datetime("now"))', [id, username, username, 'Master', 'master', passwordHash], function(err) {
+            if (err) return reject(err);
+            resolve(this);
+          });
+        });
+      } else {
+        await new Promise((resolve, reject) => {
+          db.run('INSERT INTO users (id, username, display_name, role_id, password_hash, created_at) VALUES (?, ?, ?, ?, ?, datetime("now"))', [id, username, 'Master', 'master', passwordHash], function(err) {
+            if (err) return reject(err);
+            resolve(this);
+          });
+        });
+      }
 
       // Give master the '*' permission
       const star = await new Promise((resolve, reject) => {

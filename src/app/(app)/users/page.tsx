@@ -7,6 +7,7 @@ import { useCurrentUser } from '@/hooks/use-current-user';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { UserForm } from '@/components/users/UserForm';
 import { PermissionsEditor } from '@/components/users/PermissionsEditor';
+import ProtectedRedirect from '@/components/ProtectedRedirect';
 
 export default function UsersPage() {
   const [users, setUsers] = React.useState<any[]>([]);
@@ -18,6 +19,7 @@ export default function UsersPage() {
   const canManageUsers = currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('users:edit');
   const canCreateUsers = currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('users:create');
   const canDeleteUsers = currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('users:delete');
+  const canReadUsers = currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('users:read');
 
   const fetch = async () => {
     setLoading(true);
@@ -48,6 +50,8 @@ export default function UsersPage() {
     await deleteUser(id);
     fetch();
   };
+
+  if (!canReadUsers) return <ProtectedRedirect condition={false} />;
 
   return (
     <div className="space-y-4">
@@ -92,7 +96,7 @@ export default function UsersPage() {
           user={editingUser}
           roles={roles}
           onClose={() => setEditingUser(null)}
-          onSave={async (id, payload) => {
+          onSave={async (id: any, payload: any) => {
             if (id) await onUpdate(id, payload); else await onCreate(payload);
             setEditingUser(null);
           }}
@@ -103,7 +107,7 @@ export default function UsersPage() {
         <PermissionsEditor
           user={showPermissionsFor}
           onClose={() => setShowPermissionsFor(null)}
-          onSave={async (userId, perms) => {
+          onSave={async (userId: any, perms: any) => {
             await updateUserPermissions(userId, perms);
             setShowPermissionsFor(null);
             fetch();

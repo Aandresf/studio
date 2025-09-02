@@ -19,6 +19,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { ReportMetadata, ReportType, FullReport } from '@/lib/types';
 import { useBackendStatus } from '@/app/(app)/layout';
 import { getReports, createReport, getReportById, exportInventoryToExcel, getHistoricalSummary } from '@/lib/api';
+import { useCurrentUser } from '@/hooks/use-current-user';
+import ProtectedRedirect from '@/components/ProtectedRedirect';
 
 type OutputFormat = 'excel' | 'pdf';
 
@@ -124,6 +126,10 @@ function HistoricalInventoryCard() {
 
 export default function ReportsPage() {
     const { isBackendReady, refetchKey } = useBackendStatus();
+    const current = useCurrentUser();
+    const canReadReports = current?.permissions?.includes('*') || current?.permissions?.includes('reports:read');
+
+    if (!canReadReports) return <ProtectedRedirect condition={false} />;
     const [reports, setReports] = useState<ReportMetadata[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);

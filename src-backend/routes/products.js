@@ -1,10 +1,11 @@
 const express = require('express');
+const { requirePermission } = require('../lib/authorize');
 const router = express.Router();
 const databaseManager = require('../database-manager');
 const util = require('util');
 
 // GET / - list products with variants and attribute values
-router.get('/', async (req, res) => {
+router.get('/', requirePermission('products:read'), async (req, res) => {
   try {
     const db = databaseManager.getActiveDb();
     const dbAll = util.promisify(db.all.bind(db));
@@ -53,8 +54,6 @@ router.get('/', async (req, res) => {
 });
 
 // POST / - create product with transactional SKU and variants
-const { requirePermission } = require('../lib/authorize');
-
 router.post('/', requirePermission('products:create'), async (req, res) => {
     const { name, description, brand_id, department_id, subdepartment_id, status = 'Activo', variants } = req.body;
 
@@ -118,7 +117,7 @@ router.post('/', requirePermission('products:create'), async (req, res) => {
 });
 
 // GET /:id - product details
-router.get('/:id', async (req, res) => {
+router.get('/:id', requirePermission('products:read'), async (req, res) => {
   try {
     const db = databaseManager.getActiveDb();
     const dbGet = util.promisify(db.get.bind(db));
@@ -247,7 +246,7 @@ router.delete('/:id', requirePermission('products:delete'), (req, res) => {
 });
 
 // GET /:id/movements - movements for product
-router.get('/:id/movements', async (req, res) => {
+router.get('/:id/movements', requirePermission('products:read'), async (req, res) => {
   const { id } = req.params;
   try {
     const db = databaseManager.getActiveDb();

@@ -6,9 +6,10 @@ const { generateInventoryExcel } = require('../excel-generator.js');
 const databaseManager = require('../database-manager');
 const { dataDir } = require('../config');
 
+const { requirePermission } = require('../lib/authorize');
 const router = express.Router();
 
-router.post('/inventory-excel', async (req, res) => {
+router.post('/inventory-excel', requirePermission('reports:read'), async (req, res) => {
     const { startDate, endDate } = req.body;
     
     try {
@@ -135,7 +136,7 @@ router.post('/inventory-excel', async (req, res) => {
     }
 });
 
-router.post('/historical-summary', async (req, res) => {
+router.post('/historical-summary', requirePermission('reports:read'), async (req, res) => {
     const { date } = req.body;
     if (!date) {
         return res.status(400).json({ error: 'Se requiere una fecha.' });
@@ -209,7 +210,7 @@ router.post('/historical-summary', async (req, res) => {
     }
 });
 
-router.post('/:type', async (req, res) => {
+router.post('/:type', requirePermission('reports:read'), async (req, res) => {
     const { type } = req.params;
     const { startDate, endDate } = req.body;
     if (!startDate || !endDate) {
@@ -253,7 +254,8 @@ router.post('/:type', async (req, res) => {
     }
 });
 
-router.get('/', async (req, res) => {
+// Listing of generated inventory reports (protected)
+router.get('/', requirePermission('reports:read'), async (req, res) => {
     try {
         const db = databaseManager.getActiveDb();
         const dbAll = util.promisify(db.all.bind(db));

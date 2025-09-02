@@ -11,6 +11,7 @@ import { useTheme } from "@/components/theme-provider";
 import { Download, Upload, Trash2, Calendar as CalendarIcon, ChevronsUpDown } from "lucide-react";
 import { useBackendStatus } from '@/app/(app)/layout';
 import { useCurrentUser } from '@/hooks/use-current-user';
+import ProtectedRedirect from '@/components/ProtectedRedirect';
 import { getStores, getStoreDetails, updateStoreDetails, deleteStore, getLatestSnapshot, createInventorySnapshot } from '@/lib/api';
 import { toastSuccess, toastError } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -41,6 +42,7 @@ interface StoreDetails {
     allowNegativeStockSales?: boolean;
     allowSellBelowCost?: boolean;
     showOutOfStockProducts?: boolean;
+    showInactiveProducts?: boolean;
   }
 }
 
@@ -191,8 +193,8 @@ function DangerZone({ activeStoreId, stores, onStoreDeleted }: { activeStoreId: 
     const [confirmationText, setConfirmationText] = useState('');
     const [isDeleting, setIsDeleting] = useState(false);
     const activeStore = stores.find(s => s.id === activeStoreId);
-    const currentUser = useCurrentUser();
-    const canDeleteStore = currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('stores:delete');
+    const currentUserForDanger = useCurrentUser();
+    const canDeleteStore = currentUserForDanger?.permissions?.includes('*') || currentUserForDanger?.permissions?.includes('stores:delete');
 
     const handleDelete = async () => {
         if (confirmationText !== activeStore?.name) {
@@ -258,6 +260,10 @@ function DangerZone({ activeStoreId, stores, onStoreDeleted }: { activeStoreId: 
 
 export default function SettingsPage() {
   const { setTheme } = useTheme();
+    const currentUserCheck = useCurrentUser();
+    const canEditSettingsCheck = currentUserCheck?.permissions?.includes('*') || currentUserCheck?.permissions?.includes('settings:edit');
+
+    if (!canEditSettingsCheck) return <ProtectedRedirect condition={false} />;
   const { isBackendReady, refetchKey, triggerRefetch } = useBackendStatus();
 
   const [stores, setStores] = useState<Store[]>([]);
@@ -335,9 +341,9 @@ export default function SettingsPage() {
     }
   };
 
-    // permisos para edición de configuración
-    const currentUser = useCurrentUser();
-    const canEditSettings = currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('settings:edit') || false;
+    // permisos para edición de configuración (reutilizamos currentUserCheck)
+    const currentUser = currentUserCheck;
+    const canEditSettings = canEditSettingsCheck || false;
     // permiso específico para los ajustes avanzados (ej. permitir vender bajo costo, stock negativo)
     const canManageAdvanced = !!(currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('settings:advanced'));
 
@@ -484,7 +490,7 @@ export default function SettingsPage() {
                         <Switch
                             id="showInactiveProducts"
                             checked={storeDetails.advanced?.showInactiveProducts || false}
-                            onCheckedChange={(checked) => handleAdvancedChange('showInactiveProducts', checked)}
+                            onCheckedChange={(checked) => handleAdvancedChange('showInactiveProducts' as any, checked)}
                             disabled={!canManageAdvanced}
                         />
                     </div>

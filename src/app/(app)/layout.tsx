@@ -104,36 +104,31 @@ function UserMenu() {
   try {
     const current = useCurrentUser();
     if (!current) return null;
-    const { users, userId, setCurrentUser, permissions, loading } = current;
-    const currentUserData = users.find((u: any) => u.id === userId);
-    
+    const { currentUserInfo, loading, logout } = current;
+
     return (
       <div className="relative group">
         <button className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-muted">
           <div className="flex flex-col items-end">
             <span className="text-sm font-medium">
-              {currentUserData ? (currentUserData.displayName || currentUserData.username) : 'Seleccionar Usuario'}
+              {currentUserInfo ? (currentUserInfo.displayName || currentUserInfo.username) : 'Invitado'}
             </span>
             <span className="text-xs text-muted-foreground">
-              {loading ? 'Cargando...' : `${permissions.length} permisos`}
+              {loading ? 'Cargando...' : ''}
             </span>
           </div>
         </button>
         <div className="absolute right-0 mt-1 w-56 bg-card border rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-200 invisible group-hover:visible hover:visible hover:opacity-100 z-50">
           <div className="p-2">
-            <select 
-              className="w-full rounded border px-2 py-1.5 text-sm mb-2"
-              value={userId || ''} 
-              onChange={(e) => setCurrentUser(e.target.value || null)}
-            >
-              <option value="">(Sin usuario)</option>
-              {users.map((u: any) => (
-                <option key={u.id} value={u.id}>
-                  {u.displayName || u.username}
-                </option>
-              ))}
-            </select>
-            {/* Configuración movida al pie del menú lateral */}
+            <div className="mb-2">
+              {currentUserInfo ? (
+                <button className="w-full text-left px-3 py-1.5 text-sm rounded hover:bg-muted" onClick={() => logout()}>
+                  Cerrar sesión
+                </button>
+              ) : (
+                <Link href="/login" className="block w-full text-left px-3 py-1.5 text-sm rounded hover:bg-muted">Iniciar sesión</Link>
+              )}
+            </div>
           </div>
         </div>
       </div>

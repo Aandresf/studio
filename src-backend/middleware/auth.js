@@ -44,11 +44,9 @@ module.exports = async function attachCurrentUser(req, res, next) {
       // ignore invalid cookie
     }
 
-    // Fallback to x-user-id (legacy behavior) for migration
-    if (!userId) {
-      userId = req.headers['x-user-id'] || req.headers['x_user_id'] || null;
-    }
-
+    // If no session cookie / valid JWT, do not use legacy headers anymore.
+    // Previous behavior accepted a legacy `x-user-id` header for migration;
+    // that fallback has been removed to enforce authenticated requests.
     if (!userId) {
       req.currentUser = null;
       return next();

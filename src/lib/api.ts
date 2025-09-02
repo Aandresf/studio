@@ -25,7 +25,9 @@ async function fetchAPI(endpoint: string, options: RequestInit = {}) {
     // Note: authentication now uses HttpOnly cookie session; do not attach x-user-id from client.
     const config: RequestInit = {
         ...options,
-        headers,
+    headers,
+    // Ensure cookies (HttpOnly session) are sent with requests to the backend
+    credentials: 'include',
     };
 
     try {
