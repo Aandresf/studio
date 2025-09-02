@@ -17,24 +17,23 @@ export default function CatalogPage() {
   const [activeModal, setActiveModal] = useState<null | { type: 'brands' | 'attributes'; subdepartmentId?: number | string }>(null);
   const [storeDetails, setStoreDetails] = useState<any>({});
 
-  const fetchData = useCallback(async () => {
+  const fetchStoreDetails = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [subs, storesResult] = await Promise.all([getSubdepartments(), getStores()]);
-      setSubdepartments(subs || []);
+      const storesResult = await getStores();
       const activeStoreId = storesResult.activeStoreId;
       if (activeStoreId) {
         const details = await getStoreDetails(activeStoreId);
         setStoreDetails(details || {});
       }
     } catch (err) {
-      toastError('Error', 'No se pudo cargar el catálogo.');
+      toastError('Error', 'No se pudo cargar la configuración de la tienda.');
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => { fetchStoreDetails(); }, [fetchStoreDetails]);
 
   return (
     <div className="space-y-6">
@@ -43,45 +42,11 @@ export default function CatalogPage() {
         <p className="text-sm text-muted-foreground">Gestiona departamentos, subdepartamentos, marcas y atributos por subdepartamento.</p>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Subdepartamentos</CardTitle>
-            <CardDescription>Selecciona un subdepartamento para administrar sus marcas y atributos.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <p className="text-sm text-muted-foreground">Cargando subdepartamentos...</p>
-            ) : subdepartments.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No hay subdepartamentos registrados.</p>
-            ) : (
-              <div className="space-y-2">
-                {subdepartments.map(sd => (
-                  <div key={sd.id} className="border rounded-md p-3 flex items-center justify-between">
-                    <div>
-                      <div className="font-medium">{sd.name}</div>
-                      <div className="text-sm text-muted-foreground">{sd.abbreviation}</div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button size="sm" onClick={() => { setActiveModal({ type: 'brands', subdepartmentId: sd.id }); setIsModalOpen(true); }}>
-                        Gestionar Marcas
-                      </Button>
-                      <Button size="sm" onClick={() => { setActiveModal({ type: 'attributes', subdepartmentId: sd.id }); setIsModalOpen(true); }}>
-                        Gestionar Atributos
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
+      <div>
         <DepartmentsManagementCard
           onOpenBrands={(subId) => { setActiveModal({ type: 'brands', subdepartmentId: subId }); setIsModalOpen(true); }}
           onOpenAttributes={(subId) => { setActiveModal({ type: 'attributes', subdepartmentId: subId }); setIsModalOpen(true); }}
         />
-
       </div>
 
       <div>
