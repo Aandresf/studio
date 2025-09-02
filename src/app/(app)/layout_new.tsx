@@ -28,6 +28,7 @@ const navItems = [
   { href: '/sales', icon: ShoppingCart, label: 'Ventas' },
   { href: '/purchases', icon: Package, label: 'Compras' },
   { href: '/products', icon: Box, label: 'Productos' },
+  { href: '/catalog', icon: Box, label: 'Catálogo' },
   { href: '/users', icon: Home, label: 'Usuarios' },
   { href: '/reports', icon: BarChart3, label: 'Informes' },
 ];

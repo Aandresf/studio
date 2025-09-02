@@ -14,7 +14,7 @@ import { SubdepartmentDialog } from './subdepartment-dialog';
 import { Skeleton } from '../ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
-export function DepartmentsManagementCard() {
+export function DepartmentsManagementCard({ onOpenBrands, onOpenAttributes }: { onOpenBrands?: (subdepartmentId: number | string) => void, onOpenAttributes?: (subdepartmentId: number | string) => void }) {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [subdepartments, setSubdepartments] = useState<Subdepartment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -142,24 +142,23 @@ export function DepartmentsManagementCard() {
                     </div>
                     <div className="rounded-md border">
                       <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Nombre del Subdepartamento</TableHead>
-                            <TableHead>Abreviatura</TableHead>
-                            <TableHead className="text-right">Acciones</TableHead>
-                          </TableRow>
-                        </TableHeader>
                         <TableBody>
                           {subdepartments.filter(sub => sub.department_id === dept.id).map(sub => (
                             <TableRow key={sub.id}>
                               <TableCell>{sub.name}</TableCell>
                               <TableCell>{sub.abbreviation}</TableCell>
-                              <TableCell className="text-right">
+                              <TableCell className="text-right flex items-center justify-end gap-2">
+                                <Button variant="ghost" size="sm" onClick={() => { if (!isReadOnly && onOpenBrands) onOpenBrands(sub.id); }} disabled={isReadOnly}>
+                                  Marcas
+                                </Button>
+                                <Button variant="ghost" size="sm" onClick={() => { if (!isReadOnly && onOpenAttributes) onOpenAttributes(sub.id); }} disabled={isReadOnly}>
+                                  Atributos
+                                </Button>
                                 <Button variant="ghost" size="icon" onClick={() => { if (!isReadOnly) handleEditSubdepartment(sub); }} disabled={isReadOnly}>
                                   <Edit className="h-4 w-4" />
                                 </Button>
                                 <Button variant="ghost" size="icon" onClick={() => { if (!isReadOnly) handleDeleteSubdepartment(sub.id); }} disabled={isReadOnly}>
-                                  <Trash2 className="h-4 w-4" />
+                                  <Trash2 className="h-4 w-4 text-destructive" />
                                 </Button>
                               </TableCell>
                             </TableRow>

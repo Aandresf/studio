@@ -29,6 +29,7 @@ const navItems = [
   { href: '/sales', icon: ShoppingCart, label: 'Ventas', permission: 'sales:read' },
   { href: '/purchases', icon: Package, label: 'Compras', permission: 'purchases:read' },
   { href: '/products', icon: Box, label: 'Productos', permission: 'products:read' },
+  { href: '/catalog', icon: Box, label: 'Catálogo', permission: 'products:read' },
   { href: '/users', icon: Home, label: 'Usuarios', permission: 'users:read' },
   { href: '/reports', icon: BarChart3, label: 'Informes', permission: 'reports:read' },
 ];
