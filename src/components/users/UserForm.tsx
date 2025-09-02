@@ -6,15 +6,21 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-export function UserForm({ user, roles, onClose, onSave }: any) {
+import { toastError } from '@/hooks/use-toast';
+
+export function UserForm({ user, roles, onClose, onSave, isAdmin }: any) {
   const [username, setUsername] = React.useState(user?.username || '');
   const [displayName, setDisplayName] = React.useState(user?.displayName || '');
   const [roleId, setRoleId] = React.useState(user?.roleId || '');
+  const [password, setPassword] = React.useState('');
+  const [confirmPassword, setConfirmPassword] = React.useState('');
 
   React.useEffect(() => {
     setUsername(user?.username || '');
     setDisplayName(user?.displayName || '');
     setRoleId(user?.roleId || '');
+  setPassword('');
+  setConfirmPassword('');
   }, [user]);
 
   return (
@@ -29,6 +35,18 @@ export function UserForm({ user, roles, onClose, onSave }: any) {
             <label className="block text-sm">Username</label>
             <Input value={username} onChange={(e) => setUsername(e.target.value)} />
           </div>
+          {isAdmin && (
+            <>
+              <div>
+                <label className="block text-sm">Contraseña {user?.id ? '(dejar vacío para mantener)' : ''}</label>
+                <Input value={password} onChange={(e) => setPassword(e.target.value)} type="password" />
+              </div>
+              <div>
+                <label className="block text-sm">Confirmar Contraseña</label>
+                <Input value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} type="password" />
+              </div>
+            </>
+          )}
           <div>
             <label className="block text-sm">Nombre</label>
             <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
@@ -48,7 +66,15 @@ export function UserForm({ user, roles, onClose, onSave }: any) {
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onClose()}>Cancelar</Button>
-          <Button onClick={() => onSave(user?.id, { username, displayName, roleId })}>Guardar</Button>
+          <Button onClick={() => {
+            if (password || confirmPassword) {
+              if (password !== confirmPassword) { toastError('Error', 'Las contraseñas no coinciden'); return; }
+              if (password.length > 0 && password.length < 6) { toastError('Error', 'La contraseña debe tener al menos 6 caracteres'); return; }
+            }
+            const payload: any = { username, displayName, roleId };
+            if (password) payload.password = password;
+            onSave(user?.id, payload);
+          }}>Guardar</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

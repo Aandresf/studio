@@ -95,6 +95,7 @@ export default function UsersPage() {
         <UserForm
           user={editingUser}
           roles={roles}
+          isAdmin={canManageUsers}
           onClose={() => setEditingUser(null)}
           onSave={async (id: any, payload: any) => {
             if (id) await onUpdate(id, payload); else await onCreate(payload);

@@ -152,6 +152,7 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$d
 var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/components/ui/button.tsx [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/components/ui/input.tsx [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$select$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/components/ui/select.tsx [app-client] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$use$2d$toast$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/hooks/use-toast.tsx [app-client] (ecmascript)");
 ;
 var _s = __turbopack_context__.k.signature();
 "use client";
@@ -160,16 +161,21 @@ var _s = __turbopack_context__.k.signature();
 ;
 ;
 ;
-function UserForm({ user, roles, onClose, onSave }) {
+;
+function UserForm({ user, roles, onClose, onSave, isAdmin }) {
     _s();
     const [username, setUsername] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(user?.username || '');
     const [displayName, setDisplayName] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(user?.displayName || '');
     const [roleId, setRoleId] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(user?.roleId || '');
+    const [password, setPassword] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])('');
+    const [confirmPassword, setConfirmPassword] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])('');
     (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useEffect"])({
         "UserForm.useEffect": ()=>{
             setUsername(user?.username || '');
             setDisplayName(user?.displayName || '');
             setRoleId(user?.roleId || '');
+            setPassword('');
+            setConfirmPassword('');
         }
     }["UserForm.useEffect"], [
         user
@@ -184,12 +190,12 @@ function UserForm({ user, roles, onClose, onSave }) {
                         children: user?.id ? 'Editar Usuario' : 'Crear Usuario'
                     }, void 0, false, {
                         fileName: "[project]/src/components/users/UserForm.tsx",
-                        lineNumber: 24,
+                        lineNumber: 30,
                         columnNumber: 11
                     }, this)
                 }, void 0, false, {
                     fileName: "[project]/src/components/users/UserForm.tsx",
-                    lineNumber: 23,
+                    lineNumber: 29,
                     columnNumber: 9
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -202,7 +208,7 @@ function UserForm({ user, roles, onClose, onSave }) {
                                     children: "Username"
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/users/UserForm.tsx",
-                                    lineNumber: 29,
+                                    lineNumber: 35,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Input"], {
@@ -210,15 +216,72 @@ function UserForm({ user, roles, onClose, onSave }) {
                                     onChange: (e)=>setUsername(e.target.value)
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/users/UserForm.tsx",
-                                    lineNumber: 30,
+                                    lineNumber: 36,
                                     columnNumber: 13
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/users/UserForm.tsx",
-                            lineNumber: 28,
+                            lineNumber: 34,
                             columnNumber: 11
                         }, this),
+                        isAdmin && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Fragment"], {
+                            children: [
+                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                    children: [
+                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
+                                            className: "block text-sm",
+                                            children: [
+                                                "Contraseña ",
+                                                user?.id ? '(dejar vacío para mantener)' : ''
+                                            ]
+                                        }, void 0, true, {
+                                            fileName: "[project]/src/components/users/UserForm.tsx",
+                                            lineNumber: 41,
+                                            columnNumber: 17
+                                        }, this),
+                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Input"], {
+                                            value: password,
+                                            onChange: (e)=>setPassword(e.target.value),
+                                            type: "password"
+                                        }, void 0, false, {
+                                            fileName: "[project]/src/components/users/UserForm.tsx",
+                                            lineNumber: 42,
+                                            columnNumber: 17
+                                        }, this)
+                                    ]
+                                }, void 0, true, {
+                                    fileName: "[project]/src/components/users/UserForm.tsx",
+                                    lineNumber: 40,
+                                    columnNumber: 15
+                                }, this),
+                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                    children: [
+                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
+                                            className: "block text-sm",
+                                            children: "Confirmar Contraseña"
+                                        }, void 0, false, {
+                                            fileName: "[project]/src/components/users/UserForm.tsx",
+                                            lineNumber: 45,
+                                            columnNumber: 17
+                                        }, this),
+                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Input"], {
+                                            value: confirmPassword,
+                                            onChange: (e)=>setConfirmPassword(e.target.value),
+                                            type: "password"
+                                        }, void 0, false, {
+                                            fileName: "[project]/src/components/users/UserForm.tsx",
+                                            lineNumber: 46,
+                                            columnNumber: 17
+                                        }, this)
+                                    ]
+                                }, void 0, true, {
+                                    fileName: "[project]/src/components/users/UserForm.tsx",
+                                    lineNumber: 44,
+                                    columnNumber: 15
+                                }, this)
+                            ]
+                        }, void 0, true),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                             children: [
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
@@ -226,7 +289,7 @@ function UserForm({ user, roles, onClose, onSave }) {
                                     children: "Nombre"
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/users/UserForm.tsx",
-                                    lineNumber: 33,
+                                    lineNumber: 51,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Input"], {
@@ -234,13 +297,13 @@ function UserForm({ user, roles, onClose, onSave }) {
                                     onChange: (e)=>setDisplayName(e.target.value)
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/users/UserForm.tsx",
-                                    lineNumber: 34,
+                                    lineNumber: 52,
                                     columnNumber: 13
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/users/UserForm.tsx",
-                            lineNumber: 32,
+                            lineNumber: 50,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -250,7 +313,7 @@ function UserForm({ user, roles, onClose, onSave }) {
                                     children: "Rol"
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/users/UserForm.tsx",
-                                    lineNumber: 37,
+                                    lineNumber: 55,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$select$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Select"], {
@@ -261,12 +324,12 @@ function UserForm({ user, roles, onClose, onSave }) {
                                                 placeholder: "Selecciona rol"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/users/UserForm.tsx",
-                                                lineNumber: 40,
+                                                lineNumber: 58,
                                                 columnNumber: 17
                                             }, this)
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/users/UserForm.tsx",
-                                            lineNumber: 39,
+                                            lineNumber: 57,
                                             columnNumber: 15
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$select$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["SelectContent"], {
@@ -275,30 +338,30 @@ function UserForm({ user, roles, onClose, onSave }) {
                                                     children: r.name
                                                 }, r.id, false, {
                                                     fileName: "[project]/src/components/users/UserForm.tsx",
-                                                    lineNumber: 43,
+                                                    lineNumber: 61,
                                                     columnNumber: 40
                                                 }, this))
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/users/UserForm.tsx",
-                                            lineNumber: 42,
+                                            lineNumber: 60,
                                             columnNumber: 15
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/users/UserForm.tsx",
-                                    lineNumber: 38,
+                                    lineNumber: 56,
                                     columnNumber: 13
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/users/UserForm.tsx",
-                            lineNumber: 36,
+                            lineNumber: 54,
                             columnNumber: 11
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/users/UserForm.tsx",
-                    lineNumber: 27,
+                    lineNumber: 33,
                     columnNumber: 9
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["DialogFooter"], {
@@ -309,40 +372,54 @@ function UserForm({ user, roles, onClose, onSave }) {
                             children: "Cancelar"
                         }, void 0, false, {
                             fileName: "[project]/src/components/users/UserForm.tsx",
-                            lineNumber: 50,
+                            lineNumber: 68,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Button"], {
-                            onClick: ()=>onSave(user?.id, {
+                            onClick: ()=>{
+                                if (password || confirmPassword) {
+                                    if (password !== confirmPassword) {
+                                        (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$use$2d$toast$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["toastError"])('Error', 'Las contraseñas no coinciden');
+                                        return;
+                                    }
+                                    if (password.length > 0 && password.length < 6) {
+                                        (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$use$2d$toast$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["toastError"])('Error', 'La contraseña debe tener al menos 6 caracteres');
+                                        return;
+                                    }
+                                }
+                                const payload = {
                                     username,
                                     displayName,
                                     roleId
-                                }),
+                                };
+                                if (password) payload.password = password;
+                                onSave(user?.id, payload);
+                            },
                             children: "Guardar"
                         }, void 0, false, {
                             fileName: "[project]/src/components/users/UserForm.tsx",
-                            lineNumber: 51,
+                            lineNumber: 69,
                             columnNumber: 11
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/users/UserForm.tsx",
-                    lineNumber: 49,
+                    lineNumber: 67,
                     columnNumber: 9
                 }, this)
             ]
         }, void 0, true, {
             fileName: "[project]/src/components/users/UserForm.tsx",
-            lineNumber: 22,
+            lineNumber: 28,
             columnNumber: 7
         }, this)
     }, void 0, false, {
         fileName: "[project]/src/components/users/UserForm.tsx",
-        lineNumber: 21,
+        lineNumber: 27,
         columnNumber: 5
     }, this);
 }
-_s(UserForm, "vZyxAOix/8HL7DwWmnHwtttmXRU=");
+_s(UserForm, "Da6/SkpnIrMapkkH9WnIzAb1Hgg=");
 _c = UserForm;
 var _c;
 __turbopack_context__.k.register(_c, "UserForm");
@@ -1286,16 +1363,21 @@ __turbopack_context__.s({
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/next/dist/compiled/react/index.js [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$navigation$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/next/navigation.js [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$use$2d$toast$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/hooks/use-toast.tsx [app-client] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$use$2d$current$2d$user$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/hooks/use-current-user.tsx [app-client] (ecmascript)");
 var _s = __turbopack_context__.k.signature();
 "use client";
 ;
 ;
 ;
-function ProtectedRedirect({ condition, fallbackPath = '/dashboard' }) {
+;
+function ProtectedRedirect({ condition, fallbackPath = '/dashboard', skipLoadingCheck = false }) {
     _s();
     const router = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$navigation$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useRouter"])();
+    const current = (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$use$2d$current$2d$user$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useCurrentUser"])();
     __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].useEffect({
         "ProtectedRedirect.useEffect": ()=>{
+            // don't redirect while we are still loading the current user
+            if (!skipLoadingCheck && current?.loading) return;
             if (!condition) {
                 try {
                     (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$use$2d$toast$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["toastInfo"])('Acceso denegado', 'No tienes permisos para acceder a esa página. Redirigiendo al panel.');
@@ -1306,13 +1388,16 @@ function ProtectedRedirect({ condition, fallbackPath = '/dashboard' }) {
     }["ProtectedRedirect.useEffect"], [
         condition,
         fallbackPath,
-        router
+        router,
+        current?.loading,
+        skipLoadingCheck
     ]);
     return null;
 }
-_s(ProtectedRedirect, "vQduR7x+OPXj6PSmJyFnf+hU7bg=", false, function() {
+_s(ProtectedRedirect, "xcu325m/97KRPX6u2Up6a0+UGPs=", false, function() {
     return [
-        __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$navigation$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useRouter"]
+        __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$navigation$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useRouter"],
+        __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$use$2d$current$2d$user$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useCurrentUser"]
     ];
 });
 _c = ProtectedRedirect;
@@ -1574,6 +1659,7 @@ function UsersPage() {
             editingUser && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$users$2f$UserForm$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["UserForm"], {
                 user: editingUser,
                 roles: roles,
+                isAdmin: canManageUsers,
                 onClose: ()=>setEditingUser(null),
                 onSave: async (id, payload)=>{
                     if (id) await onUpdate(id, payload);
@@ -1595,7 +1681,7 @@ function UsersPage() {
                 }
             }, void 0, false, {
                 fileName: "[project]/src/app/(app)/users/page.tsx",
-                lineNumber: 107,
+                lineNumber: 108,
                 columnNumber: 9
             }, this)
         ]

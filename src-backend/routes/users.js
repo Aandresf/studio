@@ -113,7 +113,7 @@ router.post('/', requirePermission('users:create'), async (req, res) => {
       const bcrypt = require('bcryptjs');
       passwordHash = await bcrypt.hash(password, 10);
     }
-    await runSql(db, 'INSERT INTO users (id, name, username, display_name, email, role_id, password_hash, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, datetime("now"))', [userId, username, username, displayName || username, null, roleId || null, passwordHash]);
+    await runSql(db, 'INSERT INTO users (id, username, display_name, email, role_id, password_hash, created_at) VALUES (?, ?, ?, ?, ?, ?, datetime("now"))', [userId, username, displayName || username, null, roleId || null, passwordHash]);
 
     // Determine permissions to assign: if provided, use them; otherwise copy from role
     let keysToAssign = [];
@@ -152,7 +152,7 @@ router.put('/:id', requirePermission('users:edit'), async (req, res) => {
   // Keep legacy `name` in sync for backward compatibility
   // Hash new password if provided
   let passwordHashSql = '';
-  const params = [username || user.username, username || user.username, displayName || user.display_name || username || user.username, roleId || user.roleId];
+  const params = [ username || user.username, displayName || user.display_name || username || user.username, roleId || user.roleId];
   if (password) {
     const bcrypt = require('bcryptjs');
     const passwordHash = await bcrypt.hash(password, 10);
@@ -160,7 +160,7 @@ router.put('/:id', requirePermission('users:edit'), async (req, res) => {
     params.push(passwordHash);
   }
   params.push(req.params.id);
-  await runSql(db, `UPDATE users SET name = ?, username = ?, display_name = ?, role_id = ? ${passwordHashSql}, updated_at = datetime("now") WHERE id = ?`, params);
+  await runSql(db, `UPDATE users SET username = ?, display_name = ?, role_id = ? ${passwordHashSql}, updated_at = datetime("now") WHERE id = ?`, params);
 
     // If permissions provided, replace user_permissions
     if (typeof permissions !== 'undefined') {

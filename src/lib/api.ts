@@ -420,8 +420,8 @@ export const removePendingTransaction = (id: string): Promise<{ message: string 
 // Users & Roles API
 export const getUsers = (): Promise<{ users: any[]; roles: any[] }> => fetchAPI('/users');
 export const getUser = (id: string): Promise<any> => fetchAPI(`/users/${id}`);
-export const createUser = (payload: { username: string; displayName?: string; roleId?: string; permissions?: string[] }) => fetchAPI('/users', { method: 'POST', body: JSON.stringify(payload) });
-export const updateUser = (id: string, payload: { username?: string; displayName?: string; roleId?: string; permissions?: string[] }) => fetchAPI(`/users/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
+export const createUser = (payload: { username: string; displayName?: string; roleId?: string; permissions?: string[]; password?: string }) => fetchAPI('/users', { method: 'POST', body: JSON.stringify(payload) });
+export const updateUser = (id: string, payload: { username?: string; displayName?: string; roleId?: string; permissions?: string[]; password?: string }) => fetchAPI(`/users/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
 export const deleteUser = (id: string) => fetchAPI(`/users/${id}`, { method: 'DELETE' });
 export const getUserPermissions = (id: string) => fetchAPI(`/users/${id}/permissions`);
 export const updateUserPermissions = (id: string, permissions: string[]) => fetchAPI(`/users/${id}/permissions`, { method: 'PUT', body: JSON.stringify({ permissions }) });
