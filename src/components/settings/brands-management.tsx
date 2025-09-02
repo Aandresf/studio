@@ -17,9 +17,10 @@ import { useCurrentUser } from '@/hooks/use-current-user';
 interface Brand {
     id: number;
     name: string;
+    subdepartmentId?: number | null;
 }
 
-export function BrandsManagementCard() {
+export function BrandsManagementCard({ subdepartmentId, includeGlobal = false }: { subdepartmentId?: number | string | null, includeGlobal?: boolean }) {
     const [brands, setBrands] = useState<Brand[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -30,7 +31,10 @@ export function BrandsManagementCard() {
     const fetchBrands = useCallback(async () => {
         setIsLoading(true);
         try {
-            const data = await getBrands();
+            const params: any = {};
+            if (subdepartmentId) params.subdepartmentId = subdepartmentId;
+            if (includeGlobal) params.includeGlobal = true;
+            const data = await getBrands(Object.keys(params).length ? params : undefined);
             setBrands(data);
         } catch (error) {
             // toastError is handled in the API layer
@@ -78,10 +82,10 @@ export function BrandsManagementCard() {
         setIsSaving(true);
         try {
             if (editingBrand) {
-                await updateBrand(editingBrand.id, brandName);
+                await updateBrand(editingBrand.id, brandName, subdepartmentId || editingBrand.subdepartmentId || null);
                 toastSuccess("Éxito", "Marca actualizada correctamente.");
             } else {
-                await createBrand(brandName);
+                await createBrand(brandName, subdepartmentId || null);
                 toastSuccess("Éxito", "Marca creada correctamente.");
             }
             fetchBrands();

@@ -70,15 +70,24 @@ export function ProductDialog({ open, onOpenChange, product, onProductSaved }: P
   const [activeAttributeId, setActiveAttributeId] = useState<number | null>(null);
   const [currentTab, setCurrentTab] = useState<TabValue>('data');
 
-  const fetchBrands = async () => setBrands(await getBrands());
+  const fetchBrands = async (subdepartmentId?: number | null) => {
+    const params = subdepartmentId ? { subdepartmentId } : undefined;
+    setBrands(await getBrands(params));
+  };
   const fetchDepartments = useCallback(async () => { setDepartments(await getDepartments()); }, []);
-  const fetchAttributes = useCallback(async () => { setAttributes(await getAttributes()); }, []);
+  const fetchAttributes = useCallback(async (subdepartmentId?: number | null, includeGlobal = false) => { 
+    const params: any = {};
+    if (subdepartmentId) params.subdepartmentId = subdepartmentId;
+    if (includeGlobal) params.includeGlobal = true;
+    setAttributes(await getAttributes(Object.keys(params).length ? params : undefined));
+  }, []);
 
   useEffect(() => {
     const initializeState = async () => {
       if (open) {
-        // Carga siempre los datos maestros
-        await Promise.all([fetchBrands(), fetchDepartments(), fetchAttributes()]);
+  // Carga siempre los datos maestros
+  const subId = productBase.subdepartment_id || null;
+  await Promise.all([fetchBrands(subId), fetchDepartments(), fetchAttributes(subId, false)]);
 
         if (product && product.id) { // Asegurarse que es un producto para editar
           setProductBase(product);
@@ -96,9 +105,9 @@ export function ProductDialog({ open, onOpenChange, product, onProductSaved }: P
 
             const newSelectedAttributes: Record<number, SelectedAttributesData> = {};
             for (const attrId of Array.from(attributeIds)) {
-              const attribute = attributes.find(a => a.id === attrId) || await (async () => {
+                const attribute = attributes.find(a => a.id === attrId) || await (async () => {
                 // Fallback por si attributes no se ha actualizado aún
-                const allAttrs = await getAttributes();
+                const allAttrs = await getAttributes(productBase.subdepartment_id ? { subdepartmentId: productBase.subdepartment_id } : undefined);
                 return allAttrs.find(a => a.id === attrId);
               })();
 
@@ -167,7 +176,7 @@ export function ProductDialog({ open, onOpenChange, product, onProductSaved }: P
     try {
       switch (quickAddType) {
         case 'brand':
-          newItem = await createBrand(values.name);
+          newItem = await createBrand(values.name, productBase.subdepartment_id || null);
           setBrands(prevBrands => [...prevBrands, newItem].sort((a, b) => a.name.localeCompare(b.name)));
           setProductBase(p => ({ ...p, brand_id: newItem.id }));
           break;
@@ -185,8 +194,8 @@ export function ProductDialog({ open, onOpenChange, product, onProductSaved }: P
           
           break;
         case 'attribute':
-          newItem = await createAttribute(values.name);
-          await fetchAttributes();
+          newItem = await createAttribute(values.name, productBase.subdepartment_id || null);
+          await fetchAttributes(productBase.subdepartment_id || null, false);
           break;
         case 'attributeValue':
           newItem = await createAttributeValue(activeAttributeId!, values.value);

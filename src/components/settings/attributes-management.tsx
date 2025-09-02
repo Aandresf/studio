@@ -17,6 +17,7 @@ import { useCurrentUser } from '@/hooks/use-current-user';
 interface Attribute {
     id: number;
     name: string;
+    subdepartmentId?: number | null;
 }
 
 interface AttributeValue {
@@ -197,7 +198,7 @@ function AttributeValuesDialog({ attribute, isOpen, onClose }: { attribute: Attr
 }
 
 
-export function AttributesManagementCard() {
+export function AttributesManagementCard({ subdepartmentId, includeGlobal = false }: { subdepartmentId?: number | string | null, includeGlobal?: boolean }) {
     const [attributes, setAttributes] = useState<Attribute[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -211,7 +212,10 @@ export function AttributesManagementCard() {
     const fetchAttributes = useCallback(async () => {
         setIsLoading(true);
         try {
-            const data = await getAttributes();
+            const params: any = {};
+            if (subdepartmentId) params.subdepartmentId = subdepartmentId;
+            if (includeGlobal) params.includeGlobal = true;
+            const data = await getAttributes(params);
             setAttributes(data);
         } catch (error) {
             // toastError is handled in the API layer
@@ -263,10 +267,10 @@ export function AttributesManagementCard() {
         setIsSaving(true);
         try {
             if (editingAttribute) {
-                await updateAttribute(editingAttribute.id, attributeName);
+                await updateAttribute(editingAttribute.id, attributeName, subdepartmentId || editingAttribute.subdepartmentId || null);
                 toastSuccess("Éxito", "Atributo actualizado correctamente.");
             } else {
-                await createAttribute(attributeName);
+                await createAttribute(attributeName, subdepartmentId || null);
                 toastSuccess("Éxito", "Atributo creado correctamente.");
             }
             fetchAttributes();

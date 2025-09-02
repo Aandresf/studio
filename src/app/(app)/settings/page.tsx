@@ -273,6 +273,7 @@ export default function SettingsPage() {
   const [isLoadingStores, setIsLoadingStores] = useState(true);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+        const [subdepartmentsList, setSubdepartmentsList] = useState<any[]>([]);
 
   const fetchStores = useCallback(async () => {
     if (!isBackendReady) return;
@@ -305,6 +306,18 @@ export default function SettingsPage() {
   useEffect(() => {
     fetchStores();
   }, [isBackendReady, fetchStores, refetchKey]);
+
+    useEffect(() => {
+        const loadSubs = async () => {
+            try {
+                const subs = await (await import('@/lib/api')).getSubdepartments();
+                setSubdepartmentsList(subs || []);
+            } catch (err) {
+                // handled by API layer
+            }
+        };
+        loadSubs();
+    }, []);
 
   useEffect(() => {
     if (activeStoreId) {
@@ -405,11 +418,59 @@ export default function SettingsPage() {
         </TabsContent>
         <TabsContent value="catalog">
             <div className="grid md:grid-cols-2 gap-6">
-                <BrandsManagementCard />
-                <AttributesManagementCard />
-            </div>
-            <div className="mt-6">
-                <DepartmentsManagementCard />
+                <div>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Catálogo por Subdepartamento</CardTitle>
+                            <CardDescription>Gestiona atributos y marcas por subdepartamento para reducir el ruido al crear productos.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <Label className="text-base">Mostrar también atributos/marcas globales</Label>
+                                        <p className="text-sm text-muted-foreground">Si está activado, además de los específicos del subdepartamento se mostrarán los globales.</p>
+                                    </div>
+                                    <Switch
+                                        checked={!!storeDetails.advanced?.enableGlobalAttributes}
+                                        onCheckedChange={async (checked) => {
+                                            handleAdvancedChange('enableGlobalAttributes' as any, checked);
+                                            // Guardar inmediatamente esta opción en la configuración de la tienda
+                                            if (activeStoreId && canEditSettings) {
+                                                await handleSaveChanges();
+                                            }
+                                        }}
+                                        disabled={!canEditSettings}
+                                    />
+                                </div>
+                                {/* Lista de subdepartamentos */}
+                                <div className="space-y-2">
+                                    {subdepartmentsList.length === 0 ? (
+                                        <p className="text-sm text-muted-foreground">No hay subdepartamentos registrados.</p>
+                                    ) : (
+                                        subdepartmentsList.map(sd => (
+                                            <div key={sd.id} className="border rounded-md p-3">
+                                                <div className="flex items-center justify-between">
+                                                    <div>
+                                                        <div className="font-medium">{sd.name}</div>
+                                                        <div className="text-sm text-muted-foreground">{sd.abbreviation}</div>
+                                                    </div>
+                                                </div>
+                                                <div className="mt-3 grid md:grid-cols-2 gap-4">
+                                                    <BrandsManagementCard subdepartmentId={sd.id} includeGlobal={!!storeDetails.advanced?.enableGlobalAttributes} />
+                                                    <AttributesManagementCard subdepartmentId={sd.id} includeGlobal={!!storeDetails.advanced?.enableGlobalAttributes} />
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+                <div>
+                    <DepartmentsManagementCard />
+                </div>
             </div>
         </TabsContent>
         <TabsContent value="appearance">

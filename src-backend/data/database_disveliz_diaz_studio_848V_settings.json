@@ -1,6 +1,7 @@
 {
   "advanced": {
-    "allowSellBelowCost": false
+    "allowSellBelowCost": false,
+    "enableGlobalAttributes": true
   },
   "name": "Vilma Store F.P",
   "address": "Las Carpas, Guasdualito, Apure."

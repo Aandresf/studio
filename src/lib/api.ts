@@ -108,12 +108,18 @@ export const deleteProduct = (id: number): Promise<null> => {
 };
 
 // Brand API calls
-export const getBrands = (): Promise<{ id: number; name: string }[]> => fetchAPI('/brands');
+export const getBrands = (params?: { subdepartmentId?: number | string; includeGlobal?: boolean }): Promise<{ id: number; name: string }[]> => {
+    const q = params ? new URLSearchParams() : null;
+    if (params?.subdepartmentId) q?.set('subdepartmentId', String(params.subdepartmentId));
+    if (params?.includeGlobal) q?.set('includeGlobal', 'true');
+    const endpoint = q && q.toString() ? `/brands?${q.toString()}` : '/brands';
+    return fetchAPI(endpoint);
+};
 
-export const createBrand = (name: string): Promise<{ id: number; name: string }> => {
+export const createBrand = (name: string, subdepartmentId?: number | null): Promise<{ id: number; name: string }> => {
     return fetchAPI('/brands', {
         method: 'POST',
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({ name, subdepartmentId: subdepartmentId || null }),
     });
 };
 
@@ -131,19 +137,25 @@ export const deleteBrand = (id: number): Promise<null> => {
 };
 
 // Attribute API calls
-export const getAttributes = (): Promise<{ id: number; name: string }[]> => fetchAPI('/attributes');
+export const getAttributes = (params?: { subdepartmentId?: number | string; includeGlobal?: boolean }): Promise<{ id: number; name: string; subdepartmentId?: number | null }[]> => {
+    const q = params ? new URLSearchParams() : null;
+    if (params?.subdepartmentId) q?.set('subdepartmentId', String(params.subdepartmentId));
+    if (params?.includeGlobal) q?.set('includeGlobal', 'true');
+    const endpoint = q && q.toString() ? `/attributes?${q.toString()}` : '/attributes';
+    return fetchAPI(endpoint);
+};
 
-export const createAttribute = (name: string): Promise<{ id: number; name: string }> => {
+export const createAttribute = (name: string, subdepartmentId?: number | null): Promise<{ id: number; name: string }> => {
     return fetchAPI('/attributes', {
         method: 'POST',
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({ name, subdepartmentId: subdepartmentId || null }),
     });
 };
 
-export const updateAttribute = (id: number, name: string): Promise<{ message: string }> => {
+export const updateAttribute = (id: number, name: string, subdepartmentId?: number | null): Promise<{ message: string }> => {
     return fetchAPI(`/attributes/${id}`, {
         method: 'PUT',
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({ name, subdepartmentId: subdepartmentId || null }),
     });
 };
 

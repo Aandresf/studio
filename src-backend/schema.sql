@@ -6,10 +6,13 @@ PRAGMA foreign_keys = ON;
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS brands (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  subdepartment_id INTEGER,
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now')),
-  updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now'))
+  updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now')),
+  FOREIGN KEY (subdepartment_id) REFERENCES subdepartments (id) ON DELETE CASCADE
 );
+CREATE UNIQUE INDEX IF NOT EXISTS idx_brands_subdept_name ON brands (subdepartment_id, name);
 
 -- -----------------------------------------------------
 -- Tabla `departments` (Departamentos)
@@ -73,10 +76,13 @@ CREATE TABLE IF NOT EXISTS products (
 -- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS attributes (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  subdepartment_id INTEGER,
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now')),
-  updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now'))
+  updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now')),
+  FOREIGN KEY (subdepartment_id) REFERENCES subdepartments (id) ON DELETE CASCADE
 );
+CREATE UNIQUE INDEX IF NOT EXISTS idx_attributes_subdept_name ON attributes (subdepartment_id, name);
 
 -- -----------------------------------------------------
 -- Tabla `attribute_values` (Valores de Atributos)

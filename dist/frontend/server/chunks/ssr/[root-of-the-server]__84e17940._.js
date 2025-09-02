@@ -708,12 +708,19 @@ const deleteProduct = (id)=>{
         method: 'DELETE'
     });
 };
-const getBrands = ()=>fetchAPI('/brands');
-const createBrand = (name)=>{
+const getBrands = (params)=>{
+    const q = params ? new URLSearchParams() : null;
+    if (params?.subdepartmentId) q?.set('subdepartmentId', String(params.subdepartmentId));
+    if (params?.includeGlobal) q?.set('includeGlobal', 'true');
+    const endpoint = q && q.toString() ? `/brands?${q.toString()}` : '/brands';
+    return fetchAPI(endpoint);
+};
+const createBrand = (name, subdepartmentId)=>{
     return fetchAPI('/brands', {
         method: 'POST',
         body: JSON.stringify({
-            name
+            name,
+            subdepartmentId: subdepartmentId || null
         })
     });
 };
@@ -730,20 +737,28 @@ const deleteBrand = (id)=>{
         method: 'DELETE'
     });
 };
-const getAttributes = ()=>fetchAPI('/attributes');
-const createAttribute = (name)=>{
+const getAttributes = (params)=>{
+    const q = params ? new URLSearchParams() : null;
+    if (params?.subdepartmentId) q?.set('subdepartmentId', String(params.subdepartmentId));
+    if (params?.includeGlobal) q?.set('includeGlobal', 'true');
+    const endpoint = q && q.toString() ? `/attributes?${q.toString()}` : '/attributes';
+    return fetchAPI(endpoint);
+};
+const createAttribute = (name, subdepartmentId)=>{
     return fetchAPI('/attributes', {
         method: 'POST',
         body: JSON.stringify({
-            name
+            name,
+            subdepartmentId: subdepartmentId || null
         })
     });
 };
-const updateAttribute = (id, name)=>{
+const updateAttribute = (id, name, subdepartmentId)=>{
     return fetchAPI(`/attributes/${id}`, {
         method: 'PUT',
         body: JSON.stringify({
-            name
+            name,
+            subdepartmentId: subdepartmentId || null
         })
     });
 };
