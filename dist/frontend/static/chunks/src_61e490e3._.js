@@ -611,6 +611,33 @@ const PERMISSIONS_META = [
             'Coste Unitario'
         ]
     },
+    // permisos requeridos: crear producto necesita leer catálogo (marcas, departamentos, atributos, variantes)
+    {
+        key: 'products:manual_sku',
+        label: 'Editar SKU manualmente',
+        description: 'Permite editar manualmente el SKU base del producto desde el formulario de producto.',
+        category: 'productos',
+        affected: [
+            'Editar SKU',
+            'Formulario Producto'
+        ],
+        requires: [
+            'brands:read',
+            'departments:read',
+            'attributes:read',
+            'variants:read'
+        ]
+    },
+    {
+        key: 'products:manual_sku',
+        label: 'Editar SKU manualmente',
+        description: 'Permite editar manualmente el SKU base del producto desde el formulario de producto.',
+        category: 'productos',
+        affected: [
+            'Editar SKU',
+            'Formulario Producto'
+        ]
+    },
     // Reportes y dashboard (general)
     {
         key: 'reports:read',
@@ -1060,10 +1087,31 @@ function PermissionsEditor({ user, onClose, onSave }) {
         user
     ]);
     const handleToggle = (key, value)=>{
-        setChecked((s)=>({
+        // Si activamos un permiso, también activamos sus requisitos (si existen)
+        const meta = __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$permissionsMeta$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["PERMISSIONS_META"].find((m)=>m.key === key);
+        setChecked((s)=>{
+            const next = {
                 ...s,
                 [key]: value
-            }));
+            };
+            if (value && meta?.requires && meta.requires.length) {
+                for (const req of meta.requires)next[req] = true;
+            }
+            // Si desactivamos, intentamos desactivar sólo si ningún otro permiso activo lo requiere
+            if (!value) {
+                const requiredByOther = __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$permissionsMeta$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["PERMISSIONS_META"].some((m)=>{
+                    if (!next[m.key]) return false; // permiso no activo
+                    if (!m.requires) return false;
+                    return m.requires.includes(key) && m.key !== key;
+                });
+                if (requiredByOther) {
+                    // no permitir desactivar si todavía es requerido
+                    return s; // no cambiar
+                }
+            // seguro desactivar
+            }
+            return next;
+        });
     };
     const handleSave = async ()=>{
         setLoading(true);
@@ -1092,12 +1140,12 @@ function PermissionsEditor({ user, onClose, onSave }) {
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-                        lineNumber: 91,
+                        lineNumber: 112,
                         columnNumber: 11
                     }, this)
                 }, void 0, false, {
                     fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-                    lineNumber: 90,
+                    lineNumber: 111,
                     columnNumber: 9
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1108,7 +1156,7 @@ function PermissionsEditor({ user, onClose, onSave }) {
                             children: "Selecciona permisos por categoría. Pasa el cursor sobre el permiso para ver su descripción y los botones afectados."
                         }, void 0, false, {
                             fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-                            lineNumber: 94,
+                            lineNumber: 115,
                             columnNumber: 11
                         }, this),
                         hasInherited && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1116,7 +1164,7 @@ function PermissionsEditor({ user, onClose, onSave }) {
                             children: "Los roles funcionan como plantillas/categorías: los permisos provistos por el rol se copian al crear el usuario, pero puedes editar todos los permisos para este usuario."
                         }, void 0, false, {
                             fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-                            lineNumber: 96,
+                            lineNumber: 117,
                             columnNumber: 13
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$tooltip$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TooltipProvider"], {
@@ -1124,14 +1172,14 @@ function PermissionsEditor({ user, onClose, onSave }) {
                                 children: "Cargando permisos..."
                             }, void 0, false, {
                                 fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-                                lineNumber: 102,
+                                lineNumber: 123,
                                 columnNumber: 13
                             }, this) : error ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                 className: "text-destructive",
                                 children: error
                             }, void 0, false, {
                                 fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-                                lineNumber: 104,
+                                lineNumber: 125,
                                 columnNumber: 13
                             }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$tabs$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Tabs"], {
                                 value: currentTab,
@@ -1146,12 +1194,12 @@ function PermissionsEditor({ user, onClose, onSave }) {
                                                 children: __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$permissionsMeta$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["CATEGORIES_DISPLAY"][cat] || cat
                                             }, cat, false, {
                                                 fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-                                                lineNumber: 109,
+                                                lineNumber: 130,
                                                 columnNumber: 19
                                             }, this))
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-                                        lineNumber: 107,
+                                        lineNumber: 128,
                                         columnNumber: 15
                                     }, this),
                                     categories.map((cat)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$tabs$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TabsContent"], {
@@ -1170,7 +1218,7 @@ function PermissionsEditor({ user, onClose, onSave }) {
                                                                 onChange: (e)=>handleToggle(perm.key, e.target.checked)
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-                                                                lineNumber: 120,
+                                                                lineNumber: 141,
                                                                 columnNumber: 27
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$tooltip$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Tooltip"], {
@@ -1182,12 +1230,12 @@ function PermissionsEditor({ user, onClose, onSave }) {
                                                                             children: perm.label
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-                                                                            lineNumber: 123,
+                                                                            lineNumber: 144,
                                                                             columnNumber: 31
                                                                         }, this)
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-                                                                        lineNumber: 122,
+                                                                        lineNumber: 143,
                                                                         columnNumber: 29
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$tooltip$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TooltipContent"], {
@@ -1199,7 +1247,7 @@ function PermissionsEditor({ user, onClose, onSave }) {
                                                                                     children: perm.label
                                                                                 }, void 0, false, {
                                                                                     fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-                                                                                    lineNumber: 127,
+                                                                                    lineNumber: 148,
                                                                                     columnNumber: 33
                                                                                 }, this),
                                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1207,7 +1255,7 @@ function PermissionsEditor({ user, onClose, onSave }) {
                                                                                     children: perm.description
                                                                                 }, void 0, false, {
                                                                                     fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-                                                                                    lineNumber: 128,
+                                                                                    lineNumber: 149,
                                                                                     columnNumber: 33
                                                                                 }, this),
                                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1215,7 +1263,7 @@ function PermissionsEditor({ user, onClose, onSave }) {
                                                                                     children: "Botones / áreas afectadas:"
                                                                                 }, void 0, false, {
                                                                                     fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-                                                                                    lineNumber: 129,
+                                                                                    lineNumber: 150,
                                                                                     columnNumber: 33
                                                                                 }, this),
                                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("ul", {
@@ -1224,12 +1272,12 @@ function PermissionsEditor({ user, onClose, onSave }) {
                                                                                             children: a
                                                                                         }, a, false, {
                                                                                             fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-                                                                                            lineNumber: 131,
+                                                                                            lineNumber: 152,
                                                                                             columnNumber: 59
                                                                                         }, this))
                                                                                 }, void 0, false, {
                                                                                     fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-                                                                                    lineNumber: 130,
+                                                                                    lineNumber: 151,
                                                                                     columnNumber: 33
                                                                                 }, this),
                                                                                 inherited && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1241,65 +1289,65 @@ function PermissionsEditor({ user, onClose, onSave }) {
                                                                                             children: roleName || user.roleId
                                                                                         }, void 0, false, {
                                                                                             fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-                                                                                            lineNumber: 134,
+                                                                                            lineNumber: 155,
                                                                                             columnNumber: 103
                                                                                         }, this),
                                                                                         "."
                                                                                     ]
                                                                                 }, void 0, true, {
                                                                                     fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-                                                                                    lineNumber: 134,
+                                                                                    lineNumber: 155,
                                                                                     columnNumber: 35
                                                                                 }, this)
                                                                             ]
                                                                         }, void 0, true, {
                                                                             fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-                                                                            lineNumber: 126,
+                                                                            lineNumber: 147,
                                                                             columnNumber: 31
                                                                         }, this)
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-                                                                        lineNumber: 125,
+                                                                        lineNumber: 146,
                                                                         columnNumber: 29
                                                                     }, this)
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-                                                                lineNumber: 121,
+                                                                lineNumber: 142,
                                                                 columnNumber: 27
                                                             }, this)
                                                         ]
                                                     }, perm.key, true, {
                                                         fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-                                                        lineNumber: 119,
+                                                        lineNumber: 140,
                                                         columnNumber: 25
                                                     }, this);
                                                 })
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-                                                lineNumber: 115,
+                                                lineNumber: 136,
                                                 columnNumber: 19
                                             }, this)
                                         }, cat, false, {
                                             fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-                                            lineNumber: 114,
+                                            lineNumber: 135,
                                             columnNumber: 17
                                         }, this))
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-                                lineNumber: 106,
+                                lineNumber: 127,
                                 columnNumber: 13
                             }, this)
                         }, void 0, false, {
                             fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-                            lineNumber: 100,
+                            lineNumber: 121,
                             columnNumber: 11
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-                    lineNumber: 93,
+                    lineNumber: 114,
                     columnNumber: 3
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["DialogFooter"], {
@@ -1310,7 +1358,7 @@ function PermissionsEditor({ user, onClose, onSave }) {
                             children: "Cerrar"
                         }, void 0, false, {
                             fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-                            lineNumber: 152,
+                            lineNumber: 173,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Button"], {
@@ -1319,24 +1367,24 @@ function PermissionsEditor({ user, onClose, onSave }) {
                             children: "Guardar permisos"
                         }, void 0, false, {
                             fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-                            lineNumber: 153,
+                            lineNumber: 174,
                             columnNumber: 11
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-                    lineNumber: 151,
+                    lineNumber: 172,
                     columnNumber: 9
                 }, this)
             ]
         }, void 0, true, {
             fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-            lineNumber: 89,
+            lineNumber: 110,
             columnNumber: 7
         }, this)
     }, void 0, false, {
         fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-        lineNumber: 88,
+        lineNumber: 109,
         columnNumber: 5
     }, this);
 }

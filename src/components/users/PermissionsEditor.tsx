@@ -63,7 +63,28 @@ export function PermissionsEditor({ user, onClose, onSave }: { user: any; onClos
   }, [user]);
 
   const handleToggle = (key: string, value: boolean) => {
-    setChecked(s => ({ ...s, [key]: value }));
+    // Si activamos un permiso, también activamos sus requisitos (si existen)
+    const meta = PERMISSIONS_META.find(m => m.key === key);
+    setChecked(s => {
+      const next = { ...s, [key]: value };
+      if (value && meta?.requires && meta.requires.length) {
+        for (const req of meta.requires) next[req] = true;
+      }
+      // Si desactivamos, intentamos desactivar sólo si ningún otro permiso activo lo requiere
+      if (!value) {
+        const requiredByOther = PERMISSIONS_META.some(m => {
+          if (!next[m.key]) return false; // permiso no activo
+          if (!m.requires) return false;
+          return m.requires.includes(key) && m.key !== key;
+        });
+        if (requiredByOther) {
+          // no permitir desactivar si todavía es requerido
+          return s; // no cambiar
+        }
+        // seguro desactivar
+      }
+      return next;
+    });
   };
 
   const handleSave = async () => {

@@ -48,6 +48,29 @@ async function ensurePermissionIds(db, keys) {
   return map;
 }
 
+// Mapa local de dependencias de permisos. Mantener en sync con src/lib/permissionsMeta.ts
+const PERMISSION_REQUIRES = {
+  'products:create': ['brands:read','departments:read','attributes:read','variants:read'],
+  // si se añaden más reglas, listarlas aquí
+};
+
+function expandWithRequirements(keys) {
+  const set = new Set(keys || []);
+  const stack = Array.from(set);
+  while (stack.length) {
+    const k = stack.pop();
+    const reqs = PERMISSION_REQUIRES[k];
+    if (!reqs) continue;
+    for (const r of reqs) {
+      if (!set.has(r)) {
+        set.add(r);
+        stack.push(r);
+      }
+    }
+  }
+  return Array.from(set);
+}
+
 async function getPermissionsForUser(db, userId) {
   const rows = await allSql(db, `SELECT p.key FROM permissions p JOIN user_permissions up ON p.id = up.permission_id WHERE up.user_id = ?`, [userId]);
   return rows.map(r => r.key);
@@ -197,8 +220,10 @@ router.put('/:id', requirePermission('users:edit'), async (req, res) => {
 
     // If permissions provided, replace user_permissions
     if (typeof permissions !== 'undefined') {
+      // Normalize: expand provided permissions with required permissions
+      const normalized = expandWithRequirements(permissions);
       // Ensure permission records
-      const map = await ensurePermissionIds(db, permissions);
+      const map = await ensurePermissionIds(db, normalized);
       // Delete current user_permissions
       await runSql(db, 'DELETE FROM user_permissions WHERE user_id = ?', [req.params.id]);
       for (const key of Object.keys(map)) {

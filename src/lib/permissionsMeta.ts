@@ -6,6 +6,7 @@ export interface PermissionMeta {
   description: string;
   category: PermissionCategory;
   affected: string[]; // short list of buttons or UI areas affected
+  requires?: string[]; // permisos necesarios para que este permiso funcione correctamente
 }
 
 export const PERMISSIONS_META: PermissionMeta[] = [
@@ -33,6 +34,9 @@ export const PERMISSIONS_META: PermissionMeta[] = [
   { key: 'products:read_prices_sale', label: 'Ver precios de venta', description: 'Permite ver los precios de venta en la interfaz.', category: 'productos', affected: ['Precio de Venta'] },
   { key: 'products:read_costs', label: 'Ver costes', description: 'Permite ver los costes de producto en vistas autorizadas.', category: 'productos', affected: ['Coste Unitario', 'Detalle Producto'] },
   { key: 'products:read_costs_disabled', label: 'Ver costes (desactivado)', description: 'Versión restringida para costes (no editable).', category: 'productos', affected: ['Coste Unitario'] },
+  // permisos requeridos: crear producto necesita leer catálogo (marcas, departamentos, atributos, variantes)
+  { key: 'products:manual_sku', label: 'Editar SKU manualmente', description: 'Permite editar manualmente el SKU base del producto desde el formulario de producto.', category: 'productos', affected: ['Editar SKU', 'Formulario Producto'], requires: ['brands:read','departments:read','attributes:read','variants:read'] },
+  { key: 'products:manual_sku', label: 'Editar SKU manualmente', description: 'Permite editar manualmente el SKU base del producto desde el formulario de producto.', category: 'productos', affected: ['Editar SKU', 'Formulario Producto'] },
 
   // Reportes y dashboard (general)
   { key: 'reports:read', label: 'Ver reportes', description: 'Permite acceder a los reportes del sistema.', category: 'general', affected: ['Panel de Reportes'] },

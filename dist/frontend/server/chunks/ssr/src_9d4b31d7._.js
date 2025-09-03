@@ -381,6 +381,16 @@ const PERMISSIONS_META = [
             'Coste Unitario'
         ]
     },
+    {
+        key: 'products:manual_sku',
+        label: 'Editar SKU manualmente',
+        description: 'Permite editar manualmente el SKU base del producto desde el formulario de producto.',
+        category: 'productos',
+        affected: [
+            'Editar SKU',
+            'Formulario Producto'
+        ]
+    },
     // Reportes y dashboard (general)
     {
         key: 'reports:read',
