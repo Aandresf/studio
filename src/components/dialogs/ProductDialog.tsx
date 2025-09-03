@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, RefreshCw, Edit } from 'lucide-react';
 import { toastSuccess, toastError, toastInfo } from '@/hooks/use-toast';
 import { 
     getBrands, createBrand, 
@@ -86,7 +86,7 @@ export function ProductDialog({ open, onOpenChange, product, onProductSaved }: P
     const initializeState = async () => {
       if (open) {
   // Carga siempre los datos maestros
-  const subId = productBase.subdepartment_id || null;
+  const subId = (product && (product as any).subdepartment_id) ?? productBase.subdepartment_id ?? null;
   await Promise.all([fetchBrands(subId), fetchDepartments(), fetchAttributes(subId, false)]);
 
         if (product && product.id) { // Asegurarse que es un producto para editar
@@ -144,12 +144,35 @@ export function ProductDialog({ open, onOpenChange, product, onProductSaved }: P
   }, [open, product]);
 
   useEffect(() => {
+    // When department changes we load its subdepartments and clear dependent lists
     if (productBase.department_id) {
       getSubdepartments(productBase.department_id).then(setSubdepartments);
     } else {
       setSubdepartments([]);
+      // Clear dependent selections when no department
+      setBrands([]);
+      setAttributes([]);
+      setProductBase(p => ({ ...p, subdepartment_id: undefined }));
+      setSelectedAttributes({});
+      setSelectedValues({});
     }
   }, [productBase.department_id]);
+
+  // When subdepartment changes we fetch brands and attributes for that scope
+  useEffect(() => {
+    const subId = productBase.subdepartment_id ?? null;
+    if (subId) {
+      // include global attributes as well so user can pick global + scoped
+      fetchBrands(subId);
+      fetchAttributes(subId, true);
+    } else {
+      // if no subdepartment selected, clear brand list and attributes
+      setBrands([]);
+      setAttributes([]);
+      setSelectedAttributes({});
+      setSelectedValues({});
+    }
+  }, [productBase.subdepartment_id]);
 
   const handleSubdepartmentChange = async (subId: string) => {
     const subdepartmentId = Number(subId);
@@ -217,9 +240,11 @@ export function ProductDialog({ open, onOpenChange, product, onProductSaved }: P
 
   const [variantsToDelete, setVariantsToDelete] = useState<number[]>([]);
   const currentUser = useCurrentUser();
+  const [manualSkuEditEnabled, setManualSkuEditEnabled] = useState(false);
   const canCreateProducts = currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('products:create');
   const canEditProducts = currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('products:edit');
   const canSaveProduct = product?.id ? canEditProducts : canCreateProducts;
+  const canManualSkuEdit = currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('products:manual_sku');
 
   const handleGenerateVariants = (callback?: () => void) => {
     const oldVariantsMap = new Map(
@@ -279,6 +304,13 @@ export function ProductDialog({ open, onOpenChange, product, onProductSaved }: P
   };
 
   const handleTabChange = (newTab: TabValue) => {
+    // Prevent entering attributes tab if department/subdepartment not selected
+    const attributesDisabled = !productBase.department_id || !productBase.subdepartment_id;
+    if (newTab === 'attributes' && attributesDisabled) {
+      toastInfo('Selecciona departamento y subdepartamento', 'Debes elegir primero departamento y subdepartamento para gestionar atributos.');
+      return;
+    }
+
     if (currentTab === 'attributes' && newTab === 'pricing') {
       handleGenerateVariants(() => setCurrentTab('pricing'));
     } else {
@@ -359,7 +391,7 @@ export function ProductDialog({ open, onOpenChange, product, onProductSaved }: P
           <Tabs value={currentTab} onValueChange={(value) => handleTabChange(value as TabValue)} className="w-full">
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="data">1. Datos Principales</TabsTrigger>
-              <TabsTrigger value="attributes">2. Atributos y Variantes</TabsTrigger>
+              <TabsTrigger value="attributes" disabled={!productBase.department_id || !productBase.subdepartment_id}>2. Atributos y Variantes</TabsTrigger>
               <TabsTrigger value="pricing">3. Costos y Precios</TabsTrigger>
             </TabsList>
 
@@ -389,18 +421,58 @@ export function ProductDialog({ open, onOpenChange, product, onProductSaved }: P
                     </div>
                 </div>
                 <div><Label>Nombre del Producto</Label><Input value={productBase.name ?? ''} onChange={e => setProductBase(p => ({ ...p, name: e.target.value }))} /></div>
-                <div><Label>SKU Base</Label><Input value={productBase.base_sku ?? ''} readOnly disabled /></div>
-                <div><Label>Descripción</Label><Textarea value={productBase.description ?? ''} onChange={e => setProductBase(p => ({ ...p, description: e.target.value }))} /></div>
                 <div>
-                    <Label>Marca</Label>
-                    <div className="flex items-center gap-2">
-                    <Select value={String(productBase.brand_id ?? '')} onValueChange={val => setProductBase(p => ({ ...p, brand_id: Number(val) }))}>
-                        <SelectTrigger><SelectValue placeholder="Selecciona..." /></SelectTrigger>
-                        <SelectContent>{brands.map(b => <SelectItem key={b.id} value={String(b.id)}>{b.name}</SelectItem>)}</SelectContent>
-                    </Select>
-                    <Button variant="outline" size="icon" onClick={() => handleQuickAdd('brand')}><PlusCircle className="h-4 w-4 text-green-600"/></Button>
-                    </div>
+                  <Label>SKU Base</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={productBase.base_sku ?? ''}
+                      readOnly={!manualSkuEditEnabled}
+                      onChange={e => setProductBase(p => ({ ...p, base_sku: e.target.value }))}
+                    />
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      title="Regenerar SKU"
+                      onClick={async () => {
+                        if (!productBase.department_id || !productBase.subdepartment_id) {
+                          toastInfo('Selecciona departamento y subdepartamento', 'Debes elegir primero departamento y subdepartamento para generar un SKU.');
+                          return;
+                        }
+                        try {
+                          const { nextSku } = await getNextSku(productBase.department_id, productBase.subdepartment_id);
+                          setProductBase(p => ({ ...p, base_sku: nextSku }));
+                          toastSuccess('SKU regenerado', 'Se ha generado un nuevo SKU.');
+                        } catch (err) {
+                          toastError('Error', 'No se pudo generar el SKU.');
+                        }
+                      }}
+                    ><RefreshCw className="h-4 w-4 text-blue-600"/></Button>
+                    {/* Toggle manual edit - visible only if user has permission */}
+                    <Button
+                      variant={manualSkuEditEnabled ? 'secondary' : 'outline'}
+                      size="icon"
+                      title={manualSkuEditEnabled ? 'Deshabilitar edición manual' : 'Habilitar edición manual'}
+                      onClick={() => {
+                        if (!canManualSkuEdit) {
+                          toastInfo('Permiso requerido', 'No tienes permisos para editar manualmente el SKU.');
+                          return;
+                        }
+                        setManualSkuEditEnabled(v => !v);
+                      }}
+                    ><Edit className="h-4 w-4 text-green-600"/></Button>
+                  </div>
                 </div>
+                <div><Label>Descripción</Label><Textarea value={productBase.description ?? ''} onChange={e => setProductBase(p => ({ ...p, description: e.target.value }))} /></div>
+        <div>
+          <Label>Marca</Label>
+          <div className="flex items-center gap-2">
+          <Select value={String(productBase.brand_id ?? '')} onValueChange={val => setProductBase(p => ({ ...p, brand_id: Number(val) }))} disabled={!productBase.subdepartment_id}>
+            <SelectTrigger><SelectValue placeholder={productBase.subdepartment_id ? 'Selecciona...' : 'Selecciona subdepartamento primero'} /></SelectTrigger>
+            <SelectContent>{brands.map(b => <SelectItem key={b.id} value={String(b.id)}>{b.name}</SelectItem>)}</SelectContent>
+          </Select>
+          <Button variant="outline" size="icon" onClick={() => handleQuickAdd('brand')} disabled={!productBase.subdepartment_id}><PlusCircle className="h-4 w-4 text-green-600"/></Button>
+          </div>
+        </div>
               </div>
             </TabsContent>
 
@@ -410,7 +482,7 @@ export function ProductDialog({ open, onOpenChange, product, onProductSaved }: P
                 <div>
                   <div className="flex items-center justify-between">
                     <Label>Atributos Aplicables</Label>
-                    <Button variant="ghost" size="sm" onClick={() => handleQuickAdd('attribute')}><PlusCircle className="mr-2 h-4 w-4"/>Añadir Atributo</Button>
+                    <Button variant="ghost" size="sm" onClick={() => handleQuickAdd('attribute')} disabled={!productBase.department_id || !productBase.subdepartment_id}><PlusCircle className="mr-2 h-4 w-4"/>Añadir Atributo</Button>
                   </div>
                   <div className="flex flex-wrap gap-2 mt-2">{attributes.map(attr => (<Button key={attr.id} variant={selectedAttributes[attr.id] ? 'secondary' : 'outline'} onClick={() => handleAttributeSelection(attr)}>{selectedAttributes[attr.id] ? '✓ ' : ''}{attr.name}</Button>))}</div>
                 </div>
@@ -420,7 +492,7 @@ export function ProductDialog({ open, onOpenChange, product, onProductSaved }: P
                       <div key={attrId}>
                         <div className="flex items-center justify-between">
                           <Label className="font-semibold">{attrData.name}</Label>
-                          <Button variant="ghost" size="sm" onClick={() => handleQuickAdd('attributeValue', Number(attrId))}><PlusCircle className="mr-2 h-4 w-4"/>Añadir Valor</Button>
+                          <Button variant="ghost" size="sm" onClick={() => handleQuickAdd('attributeValue', Number(attrId))} disabled={!productBase.subdepartment_id}><PlusCircle className="mr-2 h-4 w-4"/>Añadir Valor</Button>
                         </div>
                         <div className="grid grid-cols-3 gap-2 mt-1">{attrData.values.map(value => (<div key={value.id} className="flex items-center space-x-2"><Checkbox id={`v-${value.id}`} checked={!!selectedValues[`${attrId}-${value.id}`]} onCheckedChange={c => handleValueSelection(attrId, value.id, !!c)} /><Label htmlFor={`v-${value.id}`} className="font-normal">{value.value}</Label></div>))}</div>
                       </div>

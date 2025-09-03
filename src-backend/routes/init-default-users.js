@@ -14,7 +14,9 @@ async function ensureDefaults() {
     'reports:read','reports:create_snapshot',
     'dashboard:read','settings:edit',
     'users:read','users:create','users:edit','users:delete','users:permissions',
-    'brands:read','attributes:read','departments:read','variants:read','inventory:read','pending:read'
+  'brands:read','attributes:read','departments:read','variants:read','inventory:read','pending:read',
+  // Allow enabling manual SKU editing for specific roles
+  'products:manual_sku'
   ];
     for (const key of defaultPerms) {
       await new Promise((resolve, reject) => {
