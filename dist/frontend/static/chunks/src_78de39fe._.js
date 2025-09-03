@@ -34,7 +34,7 @@ _c1 = TabsList;
 TabsList.displayName = __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$radix$2d$ui$2f$react$2d$tabs$2f$dist$2f$index$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["List"].displayName;
 const TabsTrigger = /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["forwardRef"])(_c2 = ({ className, ...props }, ref)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$radix$2d$ui$2f$react$2d$tabs$2f$dist$2f$index$2e$mjs__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Trigger"], {
         ref: ref,
-        className: (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$utils$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["cn"])("inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm", className),
+        className: (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$utils$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["cn"])("inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border-b-2 data-[state=active]:border-purple-600", className),
         ...props
     }, void 0, false, {
         fileName: "[project]/src/components/ui/tabs.tsx",
@@ -251,7 +251,7 @@ if (typeof globalThis.$RefreshHelpers$ === 'object' && globalThis.$RefreshHelper
 
 var { g: global, __dirname } = __turbopack_context__;
 {
-__turbopack_context__.v(JSON.parse("{\"permissions\":[{\"key\":\"*\"},{\"key\":\"sales:create\"},{\"key\":\"sales:read\"},{\"key\":\"sales:edit\"},{\"key\":\"sales:annul\"},{\"key\":\"sales:delete\"},{\"key\":\"purchases:read\"},{\"key\":\"purchases:create\"},{\"key\":\"purchases:edit\"},{\"key\":\"purchases:annul\"},{\"key\":\"purchases:delete\"},{\"key\":\"products:read\"},{\"key\":\"products:create\",\"requires\":[\"brands:read\",\"departments:read\",\"attributes:read\",\"variants:read\",\"brands:create\",\"departments:create\",\"attributes:create\",\"variants:create\"]},{\"key\":\"products:edit\"},{\"key\":\"products:delete\"},{\"key\":\"products:read_prices_sale\"},{\"key\":\"products:read_costs\"},{\"key\":\"products:read_costs_disabled\"},{\"key\":\"products:manual_sku\"},{\"key\":\"reports:read\"},{\"key\":\"dashboard:read\"},{\"key\":\"reports:create_snapshot\"},{\"key\":\"settings:edit\"},{\"key\":\"settings:advanced\"},{\"key\":\"catalog:manage\"},{\"key\":\"stores:create\"},{\"key\":\"stores:delete\"},{\"key\":\"stores:set_active\"},{\"key\":\"users:create\"},{\"key\":\"users:edit\"},{\"key\":\"users:delete\"},{\"key\":\"users:permissions\"},{\"key\":\"inventory:write\"},{\"key\":\"pending:create\"},{\"key\":\"pending:delete\"},{\"key\":\"admin:backup\"},{\"key\":\"admin:restore\"},{\"key\":\"departments:create\"},{\"key\":\"departments:edit\"},{\"key\":\"departments:delete\"},{\"key\":\"brands:create\"},{\"key\":\"brands:edit\"},{\"key\":\"brands:delete\"},{\"key\":\"attributes:create\"},{\"key\":\"attributes:edit\"},{\"key\":\"attributes:delete\"},{\"key\":\"attributes:create_value\"},{\"key\":\"attributes:edit_value\"},{\"key\":\"attributes:delete_value\"},{\"key\":\"variants:read\"},{\"key\":\"variants:create\"},{\"key\":\"sales:edit_price\"},{\"key\":\"sales:edit_invoice\"},{\"key\":\"customers:read\"},{\"key\":\"customers:create\"},{\"key\":\"customers:edit\"},{\"key\":\"customers:delete\"},{\"key\":\"suppliers:read\"},{\"key\":\"suppliers:create\"},{\"key\":\"suppliers:edit\"},{\"key\":\"suppliers:delete\"},{\"key\":\"customers:view_sensitive\"},{\"key\":\"suppliers:view_sensitive\"}]}"));}}),
+__turbopack_context__.v(JSON.parse("{\"permissions\":[{\"key\":\"*\"},{\"key\":\"sales:create\",\"requires\":[\"customers:read\",\"customers:create\",\"products:read\",\"variants:read\"]},{\"key\":\"sales:read\"},{\"key\":\"sales:edit\",\"requires\":[\"sales:read\",\"customers:read\",\"products:read\"]},{\"key\":\"sales:annul\",\"requires\":[\"sales:read\"]},{\"key\":\"sales:delete\",\"requires\":[\"sales:read\"]},{\"key\":\"sales:edit_price\",\"requires\":[\"products:read_prices_sale\"]},{\"key\":\"sales:edit_invoice\",\"requires\":[\"sales:read\"]},{\"key\":\"purchases:read\"},{\"key\":\"purchases:create\",\"requires\":[\"suppliers:read\",\"suppliers:create\",\"products:read\",\"variants:read\"]},{\"key\":\"purchases:edit\",\"requires\":[\"purchases:read\",\"suppliers:read\"]},{\"key\":\"purchases:annul\",\"requires\":[\"purchases:read\"]},{\"key\":\"purchases:delete\",\"requires\":[\"purchases:read\"]},{\"key\":\"products:read\"},{\"key\":\"products:create\",\"requires\":[\"brands:read\",\"departments:read\",\"attributes:read\",\"variants:read\",\"brands:create\",\"departments:create\",\"attributes:create\",\"variants:create\"]},{\"key\":\"products:edit\",\"requires\":[\"products:read\"]},{\"key\":\"products:delete\",\"requires\":[\"products:read\"]},{\"key\":\"products:read_prices_sale\",\"requires\":[\"products:read\"]},{\"key\":\"products:read_costs\",\"requires\":[\"products:read\"]},{\"key\":\"products:read_costs_disabled\",\"requires\":[\"products:read\"]},{\"key\":\"products:manual_sku\",\"requires\":[\"products:edit\"]},{\"key\":\"reports:read\"},{\"key\":\"dashboard:read\"},{\"key\":\"reports:create_snapshot\"},{\"key\":\"settings:edit\"},{\"key\":\"settings:advanced\"},{\"key\":\"catalog:manage\"},{\"key\":\"stores:create\"},{\"key\":\"stores:delete\"},{\"key\":\"stores:set_active\"},{\"key\":\"users:create\"},{\"key\":\"users:edit\"},{\"key\":\"users:delete\"},{\"key\":\"users:permissions\",\"requires\":[\"users:read\",\"users:edit\"]},{\"key\":\"inventory:write\",\"requires\":[\"products:read\"]},{\"key\":\"pending:create\",\"requires\":[\"inventory:write\"]},{\"key\":\"pending:delete\",\"requires\":[\"inventory:write\"]},{\"key\":\"admin:backup\"},{\"key\":\"admin:restore\"},{\"key\":\"departments:create\",\"requires\":[\"catalog:manage\"]},{\"key\":\"departments:edit\",\"requires\":[\"catalog:manage\"]},{\"key\":\"departments:delete\",\"requires\":[\"catalog:manage\"]},{\"key\":\"brands:create\",\"requires\":[\"catalog:manage\"]},{\"key\":\"brands:edit\",\"requires\":[\"catalog:manage\"]},{\"key\":\"brands:delete\",\"requires\":[\"catalog:manage\"]},{\"key\":\"attributes:create\",\"requires\":[\"catalog:manage\"]},{\"key\":\"attributes:edit\",\"requires\":[\"catalog:manage\"]},{\"key\":\"attributes:delete\",\"requires\":[\"catalog:manage\"]},{\"key\":\"attributes:create_value\",\"requires\":[\"catalog:manage\"]},{\"key\":\"attributes:edit_value\",\"requires\":[\"catalog:manage\"]},{\"key\":\"attributes:delete_value\",\"requires\":[\"catalog:manage\"]},{\"key\":\"variants:read\",\"requires\":[\"products:read\"]},{\"key\":\"variants:create\",\"requires\":[\"variants:read\",\"products:read\"]},{\"key\":\"customers:read\"},{\"key\":\"customers:create\",\"requires\":[\"customers:read\"]},{\"key\":\"customers:edit\",\"requires\":[\"customers:read\"]},{\"key\":\"customers:delete\",\"requires\":[\"customers:read\"]},{\"key\":\"customers:view_sensitive\",\"requires\":[\"customers:read\"]},{\"key\":\"suppliers:read\"},{\"key\":\"suppliers:create\",\"requires\":[\"suppliers:read\"]},{\"key\":\"suppliers:edit\",\"requires\":[\"suppliers:read\"]},{\"key\":\"suppliers:delete\",\"requires\":[\"suppliers:read\"]},{\"key\":\"suppliers:view_sensitive\",\"requires\":[\"suppliers:read\"]}]}"));}}),
 "[project]/src/lib/permissionsMeta.ts [app-client] (ecmascript)": ((__turbopack_context__) => {
 "use strict";
 
@@ -717,7 +717,7 @@ const METADATA_MAP = {
     'customers:read': {
         label: 'Ver clientes',
         description: 'Permite ver la lista y fichas de clientes.',
-        category: 'configuracion',
+        category: 'clientes',
         affected: [
             'Clientes'
         ]
@@ -725,7 +725,7 @@ const METADATA_MAP = {
     'customers:create': {
         label: 'Crear clientes',
         description: 'Permite crear nuevos clientes en el sistema.',
-        category: 'configuracion',
+        category: 'clientes',
         affected: [
             'Nuevo Cliente'
         ]
@@ -733,7 +733,7 @@ const METADATA_MAP = {
     'customers:edit': {
         label: 'Editar clientes',
         description: 'Permite editar la información de clientes.',
-        category: 'configuracion',
+        category: 'clientes',
         affected: [
             'Editar Cliente'
         ]
@@ -741,7 +741,7 @@ const METADATA_MAP = {
     'customers:delete': {
         label: 'Eliminar clientes',
         description: 'Permite eliminar clientes del sistema.',
-        category: 'configuracion',
+        category: 'clientes',
         affected: [
             'Eliminar Cliente'
         ]
@@ -749,7 +749,7 @@ const METADATA_MAP = {
     'customers:view_sensitive': {
         label: 'Ver datos sensibles de clientes',
         description: 'Permite ver datos personales sensibles (DNI, teléfono, correo) en la ficha de cliente.',
-        category: 'configuracion',
+        category: 'clientes',
         affected: [
             'DNI Cliente',
             'Teléfono',
@@ -760,7 +760,7 @@ const METADATA_MAP = {
     'suppliers:read': {
         label: 'Ver proveedores',
         description: 'Permite ver la lista y fichas de proveedores.',
-        category: 'configuracion',
+        category: 'proveedores',
         affected: [
             'Proveedores'
         ]
@@ -768,7 +768,7 @@ const METADATA_MAP = {
     'suppliers:create': {
         label: 'Crear proveedores',
         description: 'Permite crear nuevos proveedores en el sistema.',
-        category: 'configuracion',
+        category: 'proveedores',
         affected: [
             'Nuevo Proveedor'
         ]
@@ -776,7 +776,7 @@ const METADATA_MAP = {
     'suppliers:edit': {
         label: 'Editar proveedores',
         description: 'Permite editar la información de proveedores.',
-        category: 'configuracion',
+        category: 'proveedores',
         affected: [
             'Editar Proveedor'
         ]
@@ -784,7 +784,7 @@ const METADATA_MAP = {
     'suppliers:delete': {
         label: 'Eliminar proveedores',
         description: 'Permite eliminar proveedores del sistema.',
-        category: 'configuracion',
+        category: 'proveedores',
         affected: [
             'Eliminar Proveedor'
         ]
@@ -792,7 +792,7 @@ const METADATA_MAP = {
     'suppliers:view_sensitive': {
         label: 'Ver datos sensibles de proveedores',
         description: 'Permite ver datos sensibles de proveedores (RIF, cuentas, contactos) en la ficha de proveedor.',
-        category: 'configuracion',
+        category: 'proveedores',
         affected: [
             'RIF',
             'Cuenta',
@@ -818,6 +818,8 @@ const CATEGORIES_DISPLAY = {
     productos: 'Productos',
     configuracion: 'Configuración',
     catalogo: 'Catálogo',
+    clientes: 'Clientes',
+    proveedores: 'Proveedores',
     usuarios: 'Usuarios',
     general: 'General'
 };

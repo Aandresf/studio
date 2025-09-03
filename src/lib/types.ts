@@ -98,7 +98,7 @@ export interface InventoryMovement {
     description?: string;
 }
 
-export type ReportType = 'INVENTORY' | 'SALES' | 'PURCHASES';
+export type ReportType = 'INVENTORY' | 'SALES' | 'PURCHASES' | 'PROFITS';
 
 export interface ReportMetadata {
     id: number;

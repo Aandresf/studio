@@ -18,7 +18,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 
 import { ReportMetadata, ReportType, FullReport } from '@/lib/types';
 import { useBackendStatus } from '@/app/(app)/layout';
-import { getReports, createReport, getReportById, exportInventoryToExcel, getHistoricalSummary } from '@/lib/api';
+import { getReports, createReport, getReportById, exportInventoryToExcel, getHistoricalSummary, fetchAPI } from '@/lib/api';
+import { getDepartments, getSubdepartments } from '@/lib/api';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import ProtectedRedirect from '@/components/ProtectedRedirect';
 
@@ -28,6 +29,7 @@ const reportOptions: { type: ReportType; label: string; icon: React.ElementType 
   { type: 'SALES', label: 'Libro de Ventas', icon: ShoppingCart },
   { type: 'PURCHASES', label: 'Libro de Compras', icon: Package },
   { type: 'INVENTORY', label: 'Inventario', icon: Box },
+    { type: 'PROFITS', label: 'Ganancias', icon: FileText },
 ];
 
 interface HistoricalSummary {
@@ -134,15 +136,25 @@ export default function ReportsPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
+    const [departments, setDepartments] = useState<any[]>([]);
+    const [subdepartments, setSubdepartments] = useState<any[]>([]);
+    const [selectedDepartment, setSelectedDepartment] = useState<number | null>(null);
+    const [selectedSubdepartment, setSelectedSubdepartment] = useState<number | null>(null);
     const [error, setError] = useState<string | null>(null);
     
     const [selectedReportType, setSelectedReportType] = useState<ReportType | null>(null);
     const [outputFormat, setOutputFormat] = useState<OutputFormat>('excel');
+    const [exportMode, setExportMode] = useState<'summary' | 'detailed'>('summary');
     const [date, setDate] = useState<DateRange | undefined>({ from: new Date(new Date().setDate(1)), to: new Date() });
     
     const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
+    const [isProfitsModalOpen, setIsProfitsModalOpen] = useState(false);
     const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
     const [selectedReport, setSelectedReport] = useState<FullReport | null>(null);
+    const [profitsResult, setProfitsResult] = useState<any[] | null>(null);
+    const [profitGroupBy, setProfitGroupBy] = useState<'product' | 'department' | 'subdepartment' | 'client' | 'product-detailed' | 'period'>('product');
+    const [profitTopN, setProfitTopN] = useState<number | null>(20);
+    const [profitPeriodGranularity, setProfitPeriodGranularity] = useState<'day' | 'month' | 'year'>('month');
 
     const fetchReports = useCallback(async () => {
         if (!isBackendReady) {
@@ -164,12 +176,50 @@ export default function ReportsPage() {
     }, [isBackendReady]);
 
     useEffect(() => {
+        (async () => {
+            try {
+                const deps = await getDepartments();
+                setDepartments(deps || []);
+            } catch (e) {}
+        })();
+    }, []);
+
+    useEffect(() => {
+        (async () => {
+            if (!selectedDepartment) { setSubdepartments([]); setSelectedSubdepartment(null); return; }
+            try {
+                const subs = await getSubdepartments(selectedDepartment);
+                setSubdepartments(subs || []);
+            } catch (e) {}
+        })();
+    }, [selectedDepartment]);
+
+    useEffect(() => {
         fetchReports();
     }, [fetchReports, refetchKey]);
 
     const handleReportSelection = (reportType: ReportType) => {
+        if (reportType === 'PROFITS') {
+            setIsProfitsModalOpen(true);
+            return;
+        }
         setSelectedReportType(reportType);
         setIsGenerateModalOpen(true);
+    };
+
+    const handleComputeProfits = async () => {
+        if (!date?.from || !date?.to) return toastError('Validación', 'Seleccione un rango de fechas');
+        const startDate = format(date.from, 'yyyy-MM-dd');
+        const endDate = format(date.to, 'yyyy-MM-dd');
+        try {
+            const payload: any = { startDate, endDate, groupBy: profitGroupBy, filters: { departmentId: selectedDepartment, subdepartmentId: selectedSubdepartment } };
+            if (profitTopN) payload.topN = profitTopN;
+            if (profitGroupBy === 'period') payload.periodGranularity = profitPeriodGranularity;
+            const data = await fetchAPI('/reports/profits', { method: 'POST', body: JSON.stringify(payload) });
+            setProfitsResult(data as any[]);
+        } catch (e) {
+            // toast already displayed by fetchAPI
+        }
     };
 
     const handleGenerateReport = async () => {
@@ -185,7 +235,10 @@ export default function ReportsPage() {
         if (selectedReportType === 'INVENTORY' && outputFormat === 'excel') {
             setIsExporting(true);
             try {
-                await exportInventoryToExcel(startDate, endDate);
+                const filters: any = {};
+                if (selectedDepartment) filters.departmentId = selectedDepartment;
+                if (selectedSubdepartment) filters.subdepartmentId = selectedSubdepartment;
+                await exportInventoryToExcel(startDate, endDate, exportMode, filters);
                 toastSuccess("Éxito", "La exportación a Excel ha comenzado. El archivo se descargará en breve.");
                 setIsGenerateModalOpen(false);
             } catch (err) {
@@ -199,7 +252,10 @@ export default function ReportsPage() {
         // Lógica existente para generar otros informes
         setIsSubmitting(true);
         try {
-            await createReport(selectedReportType, startDate, endDate);
+            const filters: any = {};
+            if (selectedDepartment) filters.departmentId = selectedDepartment;
+            if (selectedSubdepartment) filters.subdepartmentId = selectedSubdepartment;
+            await createReport(selectedReportType, startDate, endDate, filters);
             toastSuccess("Éxito", "El informe se ha generado correctamente.");
             fetchReports(); // Refresh the list
             setIsGenerateModalOpen(false); // Close modal on success
@@ -234,7 +290,7 @@ export default function ReportsPage() {
                         <Card
                             key={report.type}
                             className="cursor-pointer transition-all hover:border-primary hover:shadow-lg"
-                            onClick={() => handleReportSelection(report.type)}
+                                onClick={() => handleReportSelection(report.type)}
                         >
                             <CardContent className="flex flex-col items-center justify-center p-8 gap-4">
                                 <report.icon className="h-12 w-12 text-primary" />
@@ -333,12 +389,135 @@ export default function ReportsPage() {
                                 </Button>
                             </div>
                         </div>
+                        {selectedReportType === 'INVENTORY' && (
+                            <div className="grid gap-3">
+                                <Label>Filtros</Label>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <select className="p-2 border rounded" value={selectedDepartment ?? ''} onChange={(e) => setSelectedDepartment(e.target.value ? Number(e.target.value) : null)}>
+                                        <option value="">-- Departamento --</option>
+                                        {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                                    </select>
+                                    <select className="p-2 border rounded" value={selectedSubdepartment ?? ''} onChange={(e) => setSelectedSubdepartment(e.target.value ? Number(e.target.value) : null)}>
+                                        <option value="">-- Subdepartamento --</option>
+                                        {subdepartments.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                    </select>
+                                </div>
+                            </div>
+                        )}
+                        {selectedReportType === 'INVENTORY' && outputFormat === 'excel' && (
+                            <div className="grid gap-3">
+                                <Label>Modo de Exportación</Label>
+                                <div className="flex gap-2">
+                                    <Button
+                                        variant={exportMode === 'summary' ? 'secondary' : 'outline'}
+                                        onClick={() => setExportMode('summary')}
+                                    >
+                                        Resumido
+                                    </Button>
+                                    <Button
+                                        variant={exportMode === 'detailed' ? 'secondary' : 'outline'}
+                                        onClick={() => setExportMode('detailed')}
+                                    >
+                                        Detallado
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setIsGenerateModalOpen(false)}>Cancelar</Button>
                         <Button onClick={handleGenerateReport} disabled={isSubmitting || isExporting}>
                             {isSubmitting ? 'Generando...' : isExporting ? 'Exportando...' : 'Generar Informe'}
                         </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Modal para ganancias */}
+            <Dialog open={isProfitsModalOpen} onOpenChange={setIsProfitsModalOpen}>
+                <DialogContent className="sm:max-w-xl">
+                    <DialogHeader>
+                        <DialogTitle>Reporte de Ganancias</DialogTitle>
+                        <DialogDescription>Seleccione rango y agrupación para calcular ganancias.</DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-6 py-4">
+                        <div className="grid gap-3">
+                            <Label htmlFor="date-range">Rango de Fechas</Label>
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button id="date-range" variant={'outline'} className={cn('w-full justify-start text-left font-normal', !date && 'text-muted-foreground')}>
+                                        <CalendarIcon className="mr-2 h-4 w-4" />
+                                        {date?.from ? (date.to ? `${format(date.from, 'LLL dd, y', { locale: es })} - ${format(date.to, 'LLL dd, y', { locale: es })}` : format(date.from, 'LLL dd, y', { locale: es })) : <span>Seleccione un rango</span>}
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                    <Calendar initialFocus mode="range" defaultMonth={date?.from} selected={date} onSelect={setDate} numberOfMonths={1} locale={es} />
+                                </PopoverContent>
+                            </Popover>
+                        </div>
+                        <div>
+                            <Label>Agrupar Por</Label>
+                            <div className="flex flex-wrap gap-2 mt-2">
+                                <Button variant={profitGroupBy === 'product' ? 'secondary' : 'outline'} onClick={() => setProfitGroupBy('product')}>Producto</Button>
+                                <Button variant={profitGroupBy === 'product-detailed' ? 'secondary' : 'outline'} onClick={() => setProfitGroupBy('product-detailed')}>Producto (detallado)</Button>
+                                <Button variant={profitGroupBy === 'department' ? 'secondary' : 'outline'} onClick={() => setProfitGroupBy('department')}>Departamentos</Button>
+                                <Button variant={profitGroupBy === 'subdepartment' ? 'secondary' : 'outline'} onClick={() => setProfitGroupBy('subdepartment')}>Subdepartamentos</Button>
+                                <Button variant={profitGroupBy === 'client' ? 'secondary' : 'outline'} onClick={() => setProfitGroupBy('client')}>Cliente</Button>
+                                <Button variant={profitGroupBy === 'period' ? 'secondary' : 'outline'} onClick={() => setProfitGroupBy('period')}>Periodo</Button>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                            <div>
+                                <Label>Top N</Label>
+                                <input type="number" value={profitTopN ?? ''} onChange={(e) => setProfitTopN(e.target.value ? Number(e.target.value) : null)} className="p-2 border rounded w-full" />
+                            </div>
+                            {profitGroupBy === 'period' && (
+                                <div>
+                                    <Label>Granularidad</Label>
+                                    <select value={profitPeriodGranularity} onChange={(e) => setProfitPeriodGranularity(e.target.value as any)} className="p-2 border rounded w-full">
+                                        <option value="day">Día</option>
+                                        <option value="month">Mes</option>
+                                        <option value="year">Año</option>
+                                    </select>
+                                </div>
+                            )}
+                        </div>
+                        <div className="flex gap-2">
+                            <Button onClick={() => { setProfitGroupBy('product'); setProfitTopN(1); handleComputeProfits(); }}>Producto más rentable</Button>
+                            <Button onClick={() => { setProfitGroupBy('client'); setProfitTopN(1); handleComputeProfits(); }}>Cliente más rentable</Button>
+                        </div>
+                        <div>
+                            <Button onClick={handleComputeProfits}>Calcular</Button>
+                        </div>
+                        {profitsResult && (
+                            <div className="pt-4">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Nombre</TableHead>
+                                            <TableHead>Vendidos</TableHead>
+                                            <TableHead>Ingresos</TableHead>
+                                            <TableHead>Costo</TableHead>
+                                            <TableHead>Ganancia</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {profitsResult.map((r: any, idx: number) => (
+                                            <TableRow key={idx}>
+                                                <TableCell className="font-medium">{r.product_name || r.department_name || r.subdepartment_name}</TableCell>
+                                                <TableCell>{(r.qty_sold || 0).toLocaleString()}</TableCell>
+                                                <TableCell>${(r.revenue || 0).toFixed(2)}</TableCell>
+                                                <TableCell>${(r.cost || 0).toFixed(2)}</TableCell>
+                                                <TableCell>${((r.revenue || 0) - (r.cost || 0)).toFixed(2)}</TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        )}
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => { setIsProfitsModalOpen(false); setProfitsResult(null); }}>Cerrar</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

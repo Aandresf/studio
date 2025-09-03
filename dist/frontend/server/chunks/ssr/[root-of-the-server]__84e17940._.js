@@ -641,54 +641,52 @@ class ApiError extends Error {
 // Generic fetch function
 async function fetchAPI(endpoint, options = {}) {
     const url = `${API_BASE_URL}${endpoint}`;
-    // Attach Content-Type and current user id (if available) to help the backend
+    // Extract responseType from options so it doesn't get forwarded to fetch
+    const { responseType = 'json', ...reqOptions } = options;
+    // Attach Content-Type and any provided headers
     const headers = {
         'Content-Type': 'application/json',
-        ...options.headers
+        ...reqOptions.headers
     };
     // Note: authentication now uses HttpOnly cookie session; do not attach x-user-id from client.
     const config = {
-        ...options,
+        ...reqOptions,
         headers,
         // Ensure cookies (HttpOnly session) are sent with requests to the backend
         credentials: 'include'
     };
     try {
         const response = await fetch(url, config);
-        const responseBody = await response.text();
         if (!response.ok) {
+            const responseText = await response.text();
             let errorData;
             try {
-                errorData = JSON.parse(responseBody);
+                errorData = JSON.parse(responseText);
             } catch  {
                 errorData = {
                     error: 'El servidor respondió con un error inesperado.',
-                    details: responseBody
+                    details: responseText
                 };
             }
             const errorMessage = errorData.error || `Error HTTP: ${response.status}`;
             // Lanzamos nuestro error personalizado
             throw new ApiError(errorMessage, response.status, errorData.details);
         }
-        if (response.status === 204 || responseBody.length === 0) {
+        if (response.status === 204) {
             return null;
         }
+        if (responseType === 'blob') {
+            return response.blob();
+        }
+        const responseBody = await response.text();
+        if (!responseBody || responseBody.length === 0) return null;
         return JSON.parse(responseBody);
     } catch (error) {
-        // Si el error ya es una instancia de ApiError, significa que ya lo hemos procesado.
-        // Lo volvemos a lanzar para que el componente que llama lo maneje.
-        if (error instanceof ApiError) {
-            // No mostramos un toast aquí para evitar duplicados. El componente decidirá.
-            throw error;
-        }
-        // Si no es un ApiError, probablemente sea un error de red.
+        if (error instanceof ApiError) throw error;
         const message = error instanceof Error ? error.message : 'Ocurrió un error de red o de conexión.';
-        console.error(`--- Network or Parsing Error ---
-        URL: ${url}
-        Error: ${message}
-        --------------------------------`);
+        console.error(`--- Network or Parsing Error ---\n        URL: ${url}\n        Error: ${message}\n        --------------------------------`);
         (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$use$2d$toast$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["toastError"])("Error de Conexión", message);
-        throw error; // Lo lanzamos para que la lógica de la aplicación pueda reaccionar.
+        throw error;
     }
 }
 ;
@@ -992,64 +990,62 @@ const getHistoricalSummary = (date)=>{
         })
     });
 };
-const createReport = (type, startDate, endDate)=>{
+const createReport = (type, startDate, endDate, filters)=>{
     return fetchAPI(`/reports/${type.toLowerCase()}`, {
         method: 'POST',
         body: JSON.stringify({
             startDate,
-            endDate
+            endDate,
+            filters: filters || {}
         })
     });
 };
-const exportInventoryToExcel = async (startDate, endDate)=>{
-    const url = `${API_BASE_URL}/reports/inventory-excel`;
-    console.log(`--- API Request (Excel Export) ---
-    URL: ${url}
-    Method: POST
-    Body: ${{
-        startDate,
-        endDate
-    }}
-    -------------------`);
+const exportInventoryToExcel = async (startDate, endDate, mode = 'summary', filters)=>{
     try {
-        const response = await fetch(url, {
+        // Usamos fetchAPI para mantener consistencia y enviar cookies de sesión
+        const payload = {
+            startDate,
+            endDate,
+            mode,
+            filters: filters || {}
+        };
+        const blob = await fetchAPI('/reports/inventory-excel', {
             method: 'POST',
+            body: JSON.stringify(payload),
+            responseType: 'blob',
             headers: {
                 'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                startDate,
-                endDate
-            })
-        });
-        if (!response.ok) {
-            const errorText = await response.text();
-            let errorData;
-            try {
-                errorData = JSON.parse(errorText);
-            } catch  {
-                errorData = {
-                    error: 'El servidor respondió con un error inesperado durante la exportación.',
-                    details: errorText
-                };
             }
-            const errorMessage = errorData.error || `Error HTTP: ${response.status}`;
-            (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$use$2d$toast$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["toastError"])("Error de Exportación", errorMessage);
-            throw new Error(errorMessage);
-        }
-        const blob = await response.blob();
+        });
+        // Nota: fetchAPI con responseType blob ya lanzó en caso de error.
         const downloadUrl = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = downloadUrl;
-        // Extraer el nombre del archivo de la cabecera Content-Disposition si existe, si não, usar uno por defecto.
-        const disposition = response.headers.get('content-disposition');
+        // Intentar obtener filename desde cabeceras no es posible aquí porque fetchAPI devuelve el blob.
+        // Para conservar compatibilidad, pedimos al backend que ponga el nombre en una cabecera "x-filename" opcional.
+        // Si no existe, usamos el nombre por defecto.
         let filename = `reporte-inventario-${startDate}-a-${endDate}.xlsx`;
-        if (disposition && disposition.indexOf('attachment') !== -1) {
-            const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
-            const matches = filenameRegex.exec(disposition);
-            if (matches != null && matches[1]) {
-                filename = matches[1].replace(/['"]/g, '');
+        try {
+            // Intentamos otra petición HEAD para leer headers si el servidor soporta HEAD
+            const headResp = await fetch(`${API_BASE_URL}/reports/inventory-excel`, {
+                method: 'HEAD',
+                credentials: 'include'
+            });
+            const xf = headResp.headers.get('x-filename') || headResp.headers.get('content-disposition');
+            if (xf) {
+                // si es content-disposition, extraer nombre
+                if (xf.indexOf('filename') !== -1) {
+                    const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+                    const matches = filenameRegex.exec(xf);
+                    if (matches != null && matches[1]) {
+                        filename = matches[1].replace(/['"]/g, '');
+                    }
+                } else {
+                    filename = xf;
+                }
             }
+        } catch (e) {
+        // Silencioso: si HEAD falla, seguimos con el nombre por defecto.
         }
         a.download = filename;
         document.body.appendChild(a);
@@ -1057,9 +1053,12 @@ const exportInventoryToExcel = async (startDate, endDate)=>{
         a.remove();
         window.URL.revokeObjectURL(downloadUrl);
     } catch (error) {
-        if (!(error instanceof Error && error.message.includes('Error de Exportación'))) {
-            const message = error instanceof Error ? error.message : 'Ocurrió un error de red o de conexión.';
-            (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$use$2d$toast$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["toastError"])("Error de Conexión", message);
+        // fetchAPI ya mostró un toast de conexión cuando corresponde.
+        if (error instanceof ApiError) {
+            (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$use$2d$toast$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["toastError"])('Error de Exportación', error.message);
+        } else {
+            const message = error instanceof Error ? error.message : 'Ocurrió un error de exportación.';
+            (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$use$2d$toast$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["toastError"])('Error de Exportación', message);
         }
         throw error;
     }

@@ -61,3 +61,11 @@ Tareas pendientes (priorizadas)
 Registro de cambios aplicados en esta sesión:
 - Eliminadas pruebas y actualizada `package.json` (ver `src-backend/package.json`).
 - Añadido endpoint `/api/variants/:id/movements`.
+ - Añadido endpoint `/api/variants/:id/movements`.
+
+11) Agregar permiso 'reports:profit' a la base de datos
+      - Estado: Pendiente
+      - Solución: Ejecutar `scripts/add_reports_profit_permission.sql` contra la base de datos SQLite para crear la entrada en `permissions` y asignarla a role_id=1 / user_id=1 (ajustar ids según su DB).
+      - Comando sugerido:
+         sqlite3 src-backend/data/<tu_db>.db < scripts/add_reports_profit_permission.sql
+      - Archivos: `scripts/add_reports_profit_permission.sql`

@@ -1,6 +1,7 @@
 function hasPermission(req, required) {
   if (!required) return true;
   const user = req.currentUser;
+  console.log(user);
   if (!user || !Array.isArray(user.permissions)) return false;
   if (user.permissions.includes('*')) return true;
   return user.permissions.includes(required);

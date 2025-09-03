@@ -5,264 +5,364 @@ const fs = require('fs');
 const { generateInventoryExcel } = require('../excel-generator.js');
 const databaseManager = require('../database-manager');
 const { dataDir } = require('../config');
-
 const { requirePermission } = require('../lib/authorize');
+
 const router = express.Router();
 
+async function buildDetailedInventory(all, get, startDate, endDate, filters = {}) {
+    const rows = [];
+    // Apply optional department/subdepartment filters
+    let variantSql = `SELECT pv.id as variant_id, pv.sku as variant_sku, pv.cost_price, p.id as product_id, p.name as product_name, p.department_id, p.subdepartment_id
+         FROM product_variants pv JOIN products p ON pv.product_id = p.id`;
+    const variantParams = [];
+    if (filters.departmentId) {
+        variantSql += ' WHERE p.department_id = ?';
+        variantParams.push(filters.departmentId);
+    }
+    if (filters.subdepartmentId) {
+        if (variantParams.length === 0) variantSql += ' WHERE p.subdepartment_id = ?';
+        else variantSql += ' AND p.subdepartment_id = ?';
+        variantParams.push(filters.subdepartmentId);
+    }
+    const variants = await all(variantSql, variantParams);
+
+    for (const v of variants) {
+        const latestSnapshot = await get(
+            `SELECT snapshot_date FROM inventory_snapshots WHERE product_id = ? AND date(snapshot_date) < ? ORDER BY snapshot_date DESC LIMIT 1`,
+            [v.product_id, startDate]
+        );
+        const calculationStartDate = latestSnapshot ? latestSnapshot.snapshot_date : '1970-01-01';
+
+        const historicalMovements = await all(
+            `SELECT im.type, im.quantity, im.unit_cost FROM inventory_movements im WHERE im.variant_id = ? AND im.status = 'Activo' AND date(im.transaction_date) > ? AND date(im.transaction_date) < ? ORDER BY im.transaction_date ASC, im.created_at ASC`,
+            [v.variant_id, calculationStartDate, startDate]
+        );
+
+        let initialStock = 0;
+        let initialAvgCost = v.cost_price || 0;
+        for (const m of historicalMovements) {
+            if (m.type === 'ENTRADA') {
+                const currentTotalValue = initialStock * initialAvgCost;
+                const entryValue = m.quantity * (m.unit_cost || 0);
+                initialStock += m.quantity;
+                initialAvgCost = initialStock > 0 ? (currentTotalValue + entryValue) / initialStock : 0;
+            } else {
+                initialStock -= m.quantity;
+            }
+        }
+
+        let existenciaAcumulada = initialStock;
+        let costoPromedioActual = initialAvgCost;
+
+        const movements = await all(
+            `SELECT im.type, im.quantity, im.unit_cost FROM inventory_movements im WHERE im.variant_id = ? AND im.status = 'Activo' AND date(im.transaction_date) BETWEEN ? AND ? ORDER BY im.transaction_date ASC, im.created_at ASC`,
+            [v.variant_id, startDate, endDate]
+        );
+
+        let totalEntradas = 0, totalSalidas = 0, valorEntradas = 0, valorSalidas = 0;
+        for (const m of movements) {
+            if (m.type === 'ENTRADA') {
+                const prevValue = existenciaAcumulada * costoPromedioActual;
+                const entryValue = m.quantity * (m.unit_cost || 0);
+                existenciaAcumulada += m.quantity;
+                costoPromedioActual = existenciaAcumulada > 0 ? (prevValue + entryValue) / existenciaAcumulada : 0;
+                totalEntradas += m.quantity; valorEntradas += entryValue;
+            } else {
+                const salidaValue = m.quantity * costoPromedioActual;
+                existenciaAcumulada -= m.quantity; totalSalidas += m.quantity; valorSalidas += salidaValue;
+            }
+        }
+
+        const attrRows = await all(`SELECT av.value as attribute_value FROM variant_attribute_values vav JOIN attribute_values av ON vav.attribute_value_id = av.id WHERE vav.variant_id = ? ORDER BY av.id`, [v.variant_id]);
+        // description format: sku - nombre - valor - valor - ...
+        let descriptionParts = [];
+        if (v.variant_sku) descriptionParts.push(v.variant_sku);
+        descriptionParts.push(v.product_name || '');
+        if (attrRows && attrRows.length) {
+            descriptionParts = descriptionParts.concat(attrRows.map(r => r.attribute_value));
+        }
+        const description = descriptionParts.filter(Boolean).join(' - ');
+
+        rows.push({
+            code: v.variant_sku || `V-${v.variant_id}`,
+            description,
+            existenciaAnterior: initialStock,
+            entradas: totalEntradas,
+            salidas: totalSalidas,
+            retiros: 0,
+            autoconsumo: 0,
+            existenciaActual: existenciaAcumulada,
+            valorUnitarioAnterior: initialAvgCost,
+            valorExistenciaAnterior: initialStock * initialAvgCost,
+            valorEntradas,
+            valorSalidas,
+            valorRetiros: 0,
+            valorAutoconsumo: 0,
+            valorUnitarioActual: costoPromedioActual,
+            valorExistenciaActual: existenciaAcumulada * costoPromedioActual,
+            valorPromedio: totalEntradas > 0 ? (valorEntradas / totalEntradas) : initialAvgCost
+        });
+    }
+    return rows;
+}
+
+async function buildSummaryInventory(all, get, startDate, endDate, filters = {}) {
+    const rows = [];
+    // apply optional filters on department/subdepartment
+    let prodSql = 'SELECT id, name, base_sku, department_id, subdepartment_id FROM products';
+    const prodParams = [];
+    if (filters.departmentId) {
+        prodSql += ' WHERE department_id = ?';
+        prodParams.push(filters.departmentId);
+    }
+    if (filters.subdepartmentId) {
+        if (prodParams.length === 0) prodSql += ' WHERE subdepartment_id = ?';
+        else prodSql += ' AND subdepartment_id = ?';
+        prodParams.push(filters.subdepartmentId);
+    }
+    const products = await all(prodSql, prodParams);
+    for (const p of products) {
+        const latestSnapshot = await get(`SELECT snapshot_date, closing_stock, closing_average_cost FROM inventory_snapshots WHERE product_id = ? AND date(snapshot_date) < ? ORDER BY snapshot_date DESC LIMIT 1`, [p.id, startDate]);
+        let initialStock = 0, initialAvgCost = 0, calculationStartDate = '1970-01-01';
+        if (latestSnapshot) { initialStock = latestSnapshot.closing_stock; initialAvgCost = latestSnapshot.closing_average_cost; calculationStartDate = latestSnapshot.snapshot_date; }
+
+        const historicalMovements = await all(`SELECT im.type, im.quantity, im.unit_cost FROM inventory_movements im JOIN product_variants pv ON im.variant_id = pv.id WHERE pv.product_id = ? AND im.status = 'Activo' AND date(im.transaction_date) > ? AND date(im.transaction_date) < ? ORDER BY im.transaction_date ASC, im.created_at ASC`, [p.id, calculationStartDate, startDate]);
+        for (const m of historicalMovements) {
+            if (m.type === 'ENTRADA') {
+                const curVal = initialStock * initialAvgCost; const entryVal = m.quantity * (m.unit_cost || 0);
+                initialStock += m.quantity; initialAvgCost = initialStock > 0 ? (curVal + entryVal) / initialStock : 0;
+            } else { initialStock -= m.quantity; }
+        }
+
+        let existenciaAcumulada = initialStock; let costoPromedioActual = initialAvgCost;
+        const movements = await all(`SELECT im.type, im.quantity, im.unit_cost FROM inventory_movements im JOIN product_variants pv ON im.variant_id = pv.id WHERE pv.product_id = ? AND im.status = 'Activo' AND date(im.transaction_date) BETWEEN ? AND ? ORDER BY im.transaction_date ASC, im.created_at ASC`, [p.id, startDate, endDate]);
+        let entradas = 0, salidas = 0, vEntradas = 0, vSalidas = 0;
+        for (const m of movements) {
+            if (m.type === 'ENTRADA') { const prev = existenciaAcumulada * costoPromedioActual; const ev = m.quantity * (m.unit_cost || 0); existenciaAcumulada += m.quantity; costoPromedioActual = existenciaAcumulada > 0 ? (prev + ev) / existenciaAcumulada : 0; entradas += m.quantity; vEntradas += ev; }
+            else { const sv = m.quantity * costoPromedioActual; existenciaAcumulada -= m.quantity; salidas += m.quantity; vSalidas += sv; }
+        }
+
+        rows.push({
+            code: p.base_sku || `P-${p.id}`,
+            description: p.name,
+            existenciaAnterior: initialStock,
+            entradas,
+            salidas,
+            retiros: 0,
+            autoconsumo: 0,
+            existenciaActual: existenciaAcumulada,
+            valorUnitarioAnterior: initialAvgCost,
+            valorExistenciaAnterior: initialStock * initialAvgCost,
+            valorEntradas: vEntradas,
+            valorSalidas: vSalidas,
+            valorRetiros: 0,
+            valorAutoconsumo: 0,
+            valorUnitarioActual: costoPromedioActual,
+            valorExistenciaActual: existenciaAcumulada * costoPromedioActual,
+            valorPromedio: entradas > 0 ? (vEntradas / entradas) : initialAvgCost
+        });
+    }
+    return rows;
+}
+
+// Endpoint: generate inventory excel, accepts mode: 'summary' | 'detailed'
 router.post('/inventory-excel', requirePermission('reports:read'), async (req, res) => {
-    const { startDate, endDate } = req.body;
-    
+    const { startDate, endDate, mode, filters } = req.body || {};
+    if (!startDate || !endDate) return res.status(400).json({ error: 'startDate and endDate are required' });
     try {
         const db = databaseManager.getActiveDb();
         const get = util.promisify(db.get.bind(db));
         const all = util.promisify(db.all.bind(db));
-
         const activeStoreId = databaseManager.getStoresConfig().activeStoreId;
         const settingsPath = path.join(dataDir, `database_${activeStoreId}_settings.json`);
-        
-        let storeDetails = { name: "MI TIENDA", rif: "J-000000000" };
-        if (fs.existsSync(settingsPath)) {
-            const savedSettings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
-            storeDetails = { ...storeDetails, ...savedSettings };
-        }
+        let storeDetails = { name: 'MI TIENDA', rif: 'J-000000000' };
+        if (fs.existsSync(settingsPath)) storeDetails = { ...storeDetails, ...JSON.parse(fs.readFileSync(settingsPath, 'utf8')) };
 
-    const products = await all("SELECT id, name, base_sku FROM products");
-        let inventoryData = [];
-
-        for (const product of products) {
-            const latestSnapshot = await get(
-                `SELECT snapshot_date, closing_stock, closing_average_cost 
-                 FROM inventory_snapshots
-                 WHERE product_id = ? AND date(snapshot_date) < ?
-                 ORDER BY snapshot_date DESC
-                 LIMIT 1`,
-                [product.id, startDate]
-            );
-
-            let initialStock = 0;
-            let initialAvgCost = 0;
-            let calculationStartDate = '1970-01-01';
-
-            if (latestSnapshot) {
-                initialStock = latestSnapshot.closing_stock;
-                initialAvgCost = latestSnapshot.closing_average_cost;
-                calculationStartDate = latestSnapshot.snapshot_date;
-            }
-
-            const historicalMovements = await all(
-                `SELECT im.type, im.quantity, im.unit_cost 
-                 FROM inventory_movements im
-                 JOIN product_variants pv ON im.variant_id = pv.id
-                 WHERE pv.product_id = ? AND im.status = 'Activo' AND date(im.transaction_date) > ? AND date(im.transaction_date) < ?
-                 ORDER BY im.transaction_date ASC, im.created_at ASC`,
-                [product.id, calculationStartDate, startDate]
-            );
-
-            for (const move of historicalMovements) {
-                if (move.type === 'ENTRADA') {
-                    const currentTotalValue = initialStock * initialAvgCost;
-                    const entryValue = move.quantity * (move.unit_cost || 0);
-                    initialStock += move.quantity;
-                    initialAvgCost = initialStock > 0 ? (currentTotalValue + entryValue) / initialStock : 0;
-                } else {
-                    initialStock -= move.quantity;
-                }
-            }
-
-            let existenciaAcumulada = initialStock;
-            let costoPromedioActual = initialAvgCost;
-
-            const movements = await all(
-                `SELECT im.type, im.quantity, im.unit_cost, im.price, im.transaction_date 
-                 FROM inventory_movements im
-                 JOIN product_variants pv ON im.variant_id = pv.id
-                 WHERE pv.product_id = ? AND im.status = 'Activo' AND date(im.transaction_date) BETWEEN ? AND ?
-                 ORDER BY im.transaction_date ASC, im.created_at ASC`,
-                [product.id, startDate, endDate]
-            );
-
-            let totalEntradasUnidades = 0, totalSalidasUnidades = 0, totalRetirosUnidades = 0, totalAutoconsumoUnidades = 0;
-            let valorEntradas = 0, valorSalidas = 0, valorRetiros = 0, valorAutoconsumo = 0;
-
-            for (const move of movements) {
-                if (move.type === 'ENTRADA') {
-                    const valorTotalAnterior = existenciaAcumulada * costoPromedioActual;
-                    const valorEntradaActual = move.quantity * move.unit_cost;
-                    existenciaAcumulada += move.quantity;
-                    costoPromedioActual = existenciaAcumulada > 0 ? (valorTotalAnterior + valorEntradaActual) / existenciaAcumulada : 0;
-                    totalEntradasUnidades += move.quantity;
-                    valorEntradas += valorEntradaActual;
-                } else {
-                    const valorSalida = move.quantity * costoPromedioActual;
-                    existenciaAcumulada -= move.quantity;
-                    if (move.type === 'SALIDA') { totalSalidasUnidades += move.quantity; valorSalidas += valorSalida; }
-                    else if (move.type === 'RETIRO') { totalRetirosUnidades += move.quantity; valorRetiros += valorSalida; }
-                    else if (move.type === 'AUTO-CONSUMO') { totalAutoconsumoUnidades += move.quantity; valorAutoconsumo += valorSalida; }
-                }
-            }
-
-            const valorExistenciaAnterior = initialStock * initialAvgCost;
-            const existenciaActual = existenciaAcumulada;
-            const valorExistenciaActual = existenciaActual * costoPromedioActual;
-
-            inventoryData.push({
-                code: product.base_sku || `P-${product.id}`,
-                description: product.name,
-                existenciaAnterior: initialStock,
-                entradas: totalEntradasUnidades,
-                salidas: totalSalidasUnidades,
-                retiros: totalRetirosUnidades,
-                autoconsumo: totalAutoconsumoUnidades,
-                existenciaActual,
-                valorUnitarioAnterior: initialAvgCost,
-                valorExistenciaAnterior,
-                valorEntradas,
-                valorSalidas,
-                valorRetiros,
-                valorAutoconsumo,
-                valorUnitarioActual: costoPromedioActual,
-                valorExistenciaActual,
-                valorPromedio: (totalEntradasUnidades > 0) ? (valorEntradas / totalEntradasUnidades) : initialAvgCost
-            });
-        }
+        const inventoryData = mode === 'detailed'
+            ? await buildDetailedInventory(all, get, startDate, endDate, filters || {})
+            : await buildSummaryInventory(all, get, startDate, endDate, filters || {});
 
         await generateInventoryExcel(res, storeDetails, inventoryData, startDate, endDate);
+    } catch (err) {
+        console.error('Error generating inventory excel:', err);
+        if (!res.headersSent) res.status(500).json({ error: 'Error interno al obtener los datos para el reporte.' });
+    }
+});
 
-    } catch (error) {
-        console.error('Error durante la obtención de datos para el reporte de Excel:', error);
-        if (!res.headersSent) {
-            res.status(500).json({ error: 'Error interno al obtener los datos para el reporte.' });
+// Inventory as of a specific date (snapshot-like report)
+router.post('/inventory-as-of', requirePermission('reports:read'), async (req, res) => {
+    const { date, mode, filters } = req.body || {};
+    if (!date) return res.status(400).json({ error: 'date is required' });
+    try {
+        const db = databaseManager.getActiveDb();
+        const get = util.promisify(db.get.bind(db));
+        const all = util.promisify(db.all.bind(db));
+        const activeStoreId = databaseManager.getStoresConfig().activeStoreId;
+        const settingsPath = path.join(dataDir, `database_${activeStoreId}_settings.json`);
+        let storeDetails = { name: 'MI TIENDA', rif: 'J-000000000' };
+        if (fs.existsSync(settingsPath)) storeDetails = { ...storeDetails, ...JSON.parse(fs.readFileSync(settingsPath, 'utf8')) };
+
+        // Build inventory as of date by reusing builders with startDate = date and endDate = date
+        const inventoryData = mode === 'detailed'
+            ? await buildDetailedInventory(all, get, date, date, filters || {})
+            : await buildSummaryInventory(all, get, date, date, filters || {});
+
+        await generateInventoryExcel(res, storeDetails, inventoryData, date, date);
+    } catch (err) {
+        console.error('Error generating inventory-as-of excel:', err);
+        if (!res.headersSent) res.status(500).json({ error: 'Error interno al obtener los datos para el reporte.' });
+    }
+});
+
+// Profits / earnings reports (JSON)
+router.post('/profits', requirePermission('reports:profit'), async (req, res) => {
+    const { startDate, endDate, groupBy = 'product', filters, topN, periodGranularity = 'month' } = req.body || {};
+    if (!startDate || !endDate) return res.status(400).json({ error: 'startDate and endDate are required' });
+    try {
+        const db = databaseManager.getActiveDb();
+        const all = util.promisify(db.all.bind(db));
+
+        // Common WHERE base
+        const baseWhere = `im.type = 'SALIDA' AND im.status = 'Activo' AND date(im.transaction_date) BETWEEN ? AND ?`;
+        const baseParams = [startDate, endDate];
+        // Apply product-level filters later per query
+
+        if (groupBy === 'client') {
+            let sql = `SELECT im.entity_document as entity_document, im.entity_name as entity_name, SUM(im.quantity) as qty_sold, SUM(im.price * im.quantity) as revenue, SUM((im.unit_cost) * im.quantity) as cost
+                FROM inventory_movements im
+                WHERE ${baseWhere}`;
+            if (filters?.departmentId) { sql += ' AND im.variant_id IN (SELECT id FROM product_variants WHERE product_id IN (SELECT id FROM products WHERE department_id = ?))'; baseParams.push(filters.departmentId); }
+            if (filters?.subdepartmentId) { sql += ' AND im.variant_id IN (SELECT id FROM product_variants WHERE product_id IN (SELECT id FROM products WHERE subdepartment_id = ?))'; baseParams.push(filters.subdepartmentId); }
+            sql += ' GROUP BY im.entity_document, im.entity_name ORDER BY revenue DESC';
+            if (topN) sql += ` LIMIT ${Number(topN)}`;
+            const rows = await all(sql, baseParams);
+            const result = rows.map(r => ({ entity_document: r.entity_document, entity_name: r.entity_name, qty_sold: r.qty_sold || 0, revenue: r.revenue || 0, cost: r.cost || 0, profit: (r.revenue || 0) - (r.cost || 0) }));
+            return res.json(result);
         }
+
+        if (groupBy === 'product-detailed') {
+            let sql = `SELECT pv.id as variant_id, pv.sku as variant_sku, p.id as product_id, p.name as product_name, SUM(im.quantity) as qty_sold, SUM(im.price * im.quantity) as revenue, SUM((im.unit_cost) * im.quantity) as cost
+                FROM inventory_movements im
+                JOIN product_variants pv ON im.variant_id = pv.id
+                JOIN products p ON pv.product_id = p.id
+                WHERE ${baseWhere}`;
+            const params = [...baseParams];
+            if (filters?.departmentId) { sql += ' AND p.department_id = ?'; params.push(filters.departmentId); }
+            if (filters?.subdepartmentId) { sql += ' AND p.subdepartment_id = ?'; params.push(filters.subdepartmentId); }
+            sql += ' GROUP BY pv.id ORDER BY revenue DESC';
+            if (topN) sql += ` LIMIT ${Number(topN)}`;
+            const rows = await all(sql, params);
+            const result = rows.map(r => ({ variant_id: r.variant_id, variant_sku: r.variant_sku, product_id: r.product_id, product_name: r.product_name, qty_sold: r.qty_sold || 0, revenue: r.revenue || 0, cost: r.cost || 0, profit: (r.revenue || 0) - (r.cost || 0) }));
+            return res.json(result);
+        }
+
+        if (groupBy === 'period') {
+            // periodGranularity: 'day' | 'month' | 'year'
+            let fmt = '%Y-%m';
+            if (periodGranularity === 'day') fmt = '%Y-%m-%d';
+            if (periodGranularity === 'year') fmt = '%Y';
+            let sql = `SELECT strftime('${fmt}', im.transaction_date) as period, SUM(im.quantity) as qty_sold, SUM(im.price * im.quantity) as revenue, SUM((im.unit_cost) * im.quantity) as cost
+                FROM inventory_movements im
+                JOIN product_variants pv ON im.variant_id = pv.id
+                JOIN products p ON pv.product_id = p.id
+                WHERE ${baseWhere}`;
+            const params = [...baseParams];
+            if (filters?.departmentId) { sql += ' AND p.department_id = ?'; params.push(filters.departmentId); }
+            if (filters?.subdepartmentId) { sql += ' AND p.subdepartment_id = ?'; params.push(filters.subdepartmentId); }
+            sql += ' GROUP BY period ORDER BY period ASC';
+            const rows = await all(sql, params);
+            const result = rows.map(r => ({ period: r.period, qty_sold: r.qty_sold || 0, revenue: r.revenue || 0, cost: r.cost || 0, profit: (r.revenue || 0) - (r.cost || 0) }));
+            return res.json(result);
+        }
+
+        // fallback to product grouping
+        let baseSql = `SELECT p.id as product_id, p.name as product_name, p.department_id, p.subdepartment_id, SUM(im.quantity) as qty_sold, SUM(im.price * im.quantity) as revenue, SUM((im.unit_cost) * im.quantity) as cost
+            FROM inventory_movements im
+            JOIN product_variants pv ON im.variant_id = pv.id
+            JOIN products p ON pv.product_id = p.id
+            WHERE ${baseWhere}`;
+        const params = [...baseParams];
+        if (filters?.departmentId) { baseSql += ' AND p.department_id = ?'; params.push(filters.departmentId); }
+        if (filters?.subdepartmentId) { baseSql += ' AND p.subdepartment_id = ?'; params.push(filters.subdepartmentId); }
+        baseSql += ' GROUP BY p.id ORDER BY revenue DESC';
+        if (topN) baseSql += ` LIMIT ${Number(topN)}`;
+        const rows = await all(baseSql, params);
+        const result = rows.map(r => ({ product_id: r.product_id, product_name: r.product_name, qty_sold: r.qty_sold || 0, revenue: r.revenue || 0, cost: r.cost || 0, profit: (r.revenue || 0) - (r.cost || 0) }));
+        return res.json(result);
+    } catch (err) {
+        console.error('Error computing profits:', err);
+        res.status(500).json({ error: 'Error interno al calcular ganancias.' });
     }
 });
 
 router.post('/historical-summary', requirePermission('reports:read'), async (req, res) => {
     const { date } = req.body;
-    if (!date) {
-        return res.status(400).json({ error: 'Se requiere una fecha.' });
-    }
-
+    if (!date) return res.status(400).json({ error: 'Se requiere una fecha.' });
     try {
         const db = databaseManager.getActiveDb();
         const get = util.promisify(db.get.bind(db));
         const all = util.promisify(db.all.bind(db));
-
-        const products = await all("SELECT id FROM products");
-        let totalStock = 0;
-        let totalValue = 0;
-
-        for (const product of products) {
-            const latestSnapshot = await get(
-                `SELECT snapshot_date, closing_stock, closing_average_cost 
-                 FROM inventory_snapshots
-                 WHERE product_id = ? AND date(snapshot_date) <= ?
-                 ORDER BY snapshot_date DESC
-                 LIMIT 1`,
-                [product.id, date]
-            );
-
-            let currentStock = 0;
-            let avgCost = 0;
-            let calculationStartDate = '1970-01-01';
-
-            if (latestSnapshot) {
-                currentStock = latestSnapshot.closing_stock;
-                avgCost = latestSnapshot.closing_average_cost;
-                calculationStartDate = latestSnapshot.snapshot_date;
+        const products = await all('SELECT id FROM products');
+        let totalStock = 0, totalValue = 0;
+        for (const p of products) {
+            const latestSnapshot = await get('SELECT snapshot_date, closing_stock, closing_average_cost FROM inventory_snapshots WHERE product_id = ? AND date(snapshot_date) <= ? ORDER BY snapshot_date DESC LIMIT 1', [p.id, date]);
+            let currentStock = 0, avgCost = 0, calcStart = '1970-01-01';
+            if (latestSnapshot) { currentStock = latestSnapshot.closing_stock; avgCost = latestSnapshot.closing_average_cost; calcStart = latestSnapshot.snapshot_date; }
+            const movements = await all('SELECT im.type, im.quantity, im.unit_cost FROM inventory_movements im JOIN product_variants pv ON im.variant_id = pv.id WHERE pv.product_id = ? AND im.status = "Activo" AND date(im.transaction_date) > ? AND date(im.transaction_date) <= ? ORDER BY im.transaction_date ASC, im.created_at ASC', [p.id, calcStart, date]);
+            for (const m of movements) {
+                if (m.type === 'ENTRADA') { const cur = currentStock * avgCost; const ev = m.quantity * (m.unit_cost || 0); currentStock += m.quantity; avgCost = currentStock > 0 ? (cur + ev) / currentStock : 0; }
+                else { currentStock -= m.quantity; }
             }
-
-            const movements = await all(
-                `SELECT im.type, im.quantity, im.unit_cost
-                 FROM inventory_movements im
-                 JOIN product_variants pv ON im.variant_id = pv.id
-                 WHERE pv.product_id = ? AND im.status = 'Activo' AND date(im.transaction_date) > ? AND date(im.transaction_date) <= ?
-                 ORDER BY im.transaction_date ASC, im.created_at ASC`,
-                [product.id, calculationStartDate, date]
-            );
-
-            for (const move of movements) {
-                if (move.type === 'ENTRADA') {
-                    const currentTotalValue = currentStock * avgCost;
-                    const entryValue = move.quantity * (move.unit_cost || 0);
-                    currentStock += move.quantity;
-                    avgCost = currentStock > 0 ? (currentTotalValue + entryValue) / currentStock : 0;
-                } else {
-                    currentStock -= move.quantity;
-                }
-            }
-            
-            if (currentStock > 0) {
-                totalStock += currentStock;
-                totalValue += currentStock * avgCost;
-            }
+            if (currentStock > 0) { totalStock += currentStock; totalValue += currentStock * avgCost; }
         }
-        
-        res.json({
-            date,
-            totalProductCount: products.length,
-            totalStock,
-            totalValue
-        });
-
-    } catch (error) {
-        console.error(`Error calculando el resumen histórico para la fecha ${date}:`, error);
+        res.json({ date, totalProductCount: products.length, totalStock, totalValue });
+    } catch (err) {
+        console.error('Error historical-summary:', err);
         res.status(500).json({ error: 'Error interno al calcular el resumen.' });
     }
 });
 
 router.post('/:type', requirePermission('reports:read'), async (req, res) => {
-    const { type } = req.params;
-    const { startDate, endDate } = req.body;
-    if (!startDate || !endDate) {
-        return res.status(400).json({ error: 'startDate and endDate are required' });
-    }
-
+    const { type } = req.params; const { startDate, endDate, filters } = req.body || {};
+    if (!startDate || !endDate) return res.status(400).json({ error: 'startDate and endDate are required' });
     try {
         const db = databaseManager.getActiveDb();
         const dbAll = util.promisify(db.all.bind(db));
-        let query;
         const reportType = type.toUpperCase();
-
         if (reportType === 'SALES' || reportType === 'PURCHASES') {
             const movementType = reportType === 'SALES' ? 'SALIDA' : 'ENTRADA';
-            query = `
-            SELECT p.name, p.base_sku as sku, pv.sku as variant_sku, im.*
-            FROM inventory_movements im
-            JOIN product_variants pv ON im.variant_id = pv.id
-            JOIN products p ON pv.product_id = p.id
-            WHERE im.type = ? AND date(im.transaction_date) BETWEEN ? AND ?
-            ORDER BY im.transaction_date
-        `;
-            const rows = await dbAll(query, [movementType, startDate, endDate]);
-            res.json(rows);
-        } else if (reportType === 'INVENTORY') {
-            query = `
-            SELECT p.name, p.base_sku as sku, pv.sku as variant_sku, im.*
-            FROM inventory_movements im
-            JOIN product_variants pv ON im.variant_id = pv.id
-            JOIN products p ON pv.product_id = p.id
-            WHERE im.transaction_date BETWEEN ? AND ?
-            ORDER BY p.name, im.transaction_date
-        `;
-            const rows = await dbAll(query, [startDate, endDate]);
-            res.json(rows);
-        } else {
-            res.status(400).json({ error: 'Invalid report type' });
+            let sql = `SELECT p.name, p.base_sku as sku, pv.sku as variant_sku, im.* FROM inventory_movements im JOIN product_variants pv ON im.variant_id = pv.id JOIN products p ON pv.product_id = p.id WHERE im.type = ? AND date(im.transaction_date) BETWEEN ? AND ?`;
+            const params = [movementType, startDate, endDate];
+            if (filters?.departmentId) { sql += ' AND p.department_id = ?'; params.push(filters.departmentId); }
+            if (filters?.subdepartmentId) { sql += ' AND p.subdepartment_id = ?'; params.push(filters.subdepartmentId); }
+            sql += ' ORDER BY im.transaction_date';
+            const rows = await dbAll(sql, params);
+            return res.json(rows);
         }
-    } catch (error) {
-        res.status(500).json({ error: error.message });
+        if (reportType === 'INVENTORY') {
+            let sql = `SELECT p.name, p.base_sku as sku, pv.sku as variant_sku, im.* FROM inventory_movements im JOIN product_variants pv ON im.variant_id = pv.id JOIN products p ON pv.product_id = p.id WHERE date(im.transaction_date) BETWEEN ? AND ?`;
+            const params = [startDate, endDate];
+            if (filters?.departmentId) { sql += ' AND p.department_id = ?'; params.push(filters.departmentId); }
+            if (filters?.subdepartmentId) { sql += ' AND p.subdepartment_id = ?'; params.push(filters.subdepartmentId); }
+            sql += ' ORDER BY p.name, im.transaction_date';
+            const rows = await dbAll(sql, params);
+            return res.json(rows);
+        }
+        res.status(400).json({ error: 'Invalid report type' });
+    } catch (err) {
+        console.error('Error in /:type report:', err);
+        res.status(500).json({ error: err.message });
     }
 });
 
-// Listing of generated inventory reports (protected)
 router.get('/', requirePermission('reports:read'), async (req, res) => {
     try {
         const db = databaseManager.getActiveDb();
         const dbAll = util.promisify(db.all.bind(db));
         const rows = await dbAll('SELECT * FROM inventory_reports ORDER BY generated_at DESC', []);
         res.json(rows);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
 });
 
