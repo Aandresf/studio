@@ -77,7 +77,8 @@ router.get('/', requirePermission('users:read'), async (req, res) => {
     const permissionsList = permissionsListRows.map(r => r.key);
     res.json({ users, roles, permissionsList });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+  console.error(err);
+  res.status(500).json({ error: err.message });
   }
 });
 
@@ -90,7 +91,8 @@ router.get('/:id', requirePermission('users:read'), async (req, res) => {
     user.permissions = await getPermissionsForUser(db, user.id);
     res.json(user);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+  console.error(err);
+  res.status(500).json({ error: err.message });
   }
 });
 
@@ -105,7 +107,15 @@ router.post('/', requirePermission('users:create'), async (req, res) => {
   const existing = await getSql(db, 'SELECT id FROM users WHERE username = ?', [username]);
     if (existing) return res.status(400).json({ error: 'username ya existe' });
 
-    const userId = nanoid(8);
+    // If roleId is provided, validate it exists to avoid FK constraint failures
+    if (roleId) {
+      const role = await getSql(db, 'SELECT id FROM roles WHERE id = ?', [roleId]);
+      if (!role) return res.status(400).json({ error: 'roleId inválido' });
+    }
+
+  const userId = nanoid(8);
+  // Debug logging: payload info to help diagnose FK failures
+  console.log('Creating user:', { userId, username, displayName, roleId });
   // Also set legacy `name` column to keep schema compatibility (NOT NULL constraint)
     // Hash password if provided
     let passwordHash = null;
@@ -126,14 +136,31 @@ router.post('/', requirePermission('users:create'), async (req, res) => {
     // Ensure permission rows exist and assign
     const map = await ensurePermissionIds(db, keysToAssign);
     for (const key of Object.keys(map)) {
-      await runSql(db, 'INSERT OR IGNORE INTO user_permissions (user_id, permission_id) VALUES (?, ?)', [userId, map[key]]);
+      const pid = map[key];
+      try {
+        // Double-check the permission row exists before inserting to get a clearer error
+        const perm = await getSql(db, 'SELECT id FROM permissions WHERE id = ?', [pid]);
+        if (!perm) {
+          console.warn('Permission id not found before assigning to user, creating placeholder:', pid, 'for key', key);
+          const res = await runSql(db, 'INSERT INTO permissions (key) VALUES (?)', [key]);
+          // res.lastID should be new id
+          const newId = res.lastID;
+          await runSql(db, 'INSERT OR IGNORE INTO user_permissions (user_id, permission_id) VALUES (?, ?)', [userId, newId]);
+        } else {
+          await runSql(db, 'INSERT OR IGNORE INTO user_permissions (user_id, permission_id) VALUES (?, ?)', [userId, pid]);
+        }
+      } catch (e) {
+        console.error('Failed to assign permission to user', { userId, key, permissionId: pid, error: e && e.message });
+        // Continue assigning other permissions instead of aborting the whole request
+      }
     }
 
   const user = await getSql(db, 'SELECT id, username as username, display_name as displayName, email, role_id as roleId, created_at as createdAt FROM users WHERE id = ?', [userId]);
   user.permissions = await getPermissionsForUser(db, userId);
     res.status(201).json(user);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+  console.error(err);
+  res.status(500).json({ error: err.message });
   }
 });
 
@@ -161,6 +188,12 @@ router.put('/:id', requirePermission('users:edit'), async (req, res) => {
   }
   params.push(req.params.id);
   await runSql(db, `UPDATE users SET username = ?, display_name = ?, role_id = ? ${passwordHashSql}, updated_at = datetime("now") WHERE id = ?`, params);
+
+  // If a new roleId is provided, validate it exists to prevent FK errors
+  if (roleId) {
+    const role = await getSql(db, 'SELECT id FROM roles WHERE id = ?', [roleId]);
+    if (!role) return res.status(400).json({ error: 'roleId inválido' });
+  }
 
     // If permissions provided, replace user_permissions
     if (typeof permissions !== 'undefined') {

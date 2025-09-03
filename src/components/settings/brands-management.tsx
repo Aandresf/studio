@@ -82,10 +82,13 @@ export function BrandsManagementCard({ subdepartmentId, includeGlobal = false }:
         setIsSaving(true);
         try {
             if (editingBrand) {
-                await updateBrand(editingBrand.id, brandName, subdepartmentId || editingBrand.subdepartmentId || null);
+                // updateBrand API only accepts (id, name)
+                await updateBrand(editingBrand.id, brandName);
                 toastSuccess("Éxito", "Marca actualizada correctamente.");
             } else {
-                await createBrand(brandName, subdepartmentId || null);
+                // ensure subdepartmentId is number|null
+                const subIdNum = typeof subdepartmentId === 'string' ? parseInt(subdepartmentId as string, 10) : (subdepartmentId as number | null | undefined) || null;
+                await createBrand(brandName, subIdNum);
                 toastSuccess("Éxito", "Marca creada correctamente.");
             }
             fetchBrands();
@@ -104,9 +107,8 @@ export function BrandsManagementCard({ subdepartmentId, includeGlobal = false }:
                     <CardTitle>Gestión de Marcas</CardTitle>
                     <CardDescription>Añade, edita o elimina las marcas de tus productos.</CardDescription>
                 </div>
-                <Button size="sm" onClick={() => { if (!isReadOnly) handleAddNew(); }} disabled={isReadOnly}>
-                    <PlusCircle className="h-4 w-4 mr-2" />
-                    Añadir Marca
+                <Button size="icon" onClick={() => { if (!isReadOnly) handleAddNew(); }} disabled={isReadOnly} aria-label="Añadir Marca">
+                    <PlusCircle className="h-4 w-4" />
                 </Button>
             </CardHeader>
             <CardContent>

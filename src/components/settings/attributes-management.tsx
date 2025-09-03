@@ -138,9 +138,8 @@ function AttributeValuesDialog({ attribute, isOpen, onClose }: { attribute: Attr
                     </div>
                 ) : (
                     <div className="py-4">
-                        <Button size="sm" onClick={() => { if (!isReadOnly) handleAddNewValue(); }} className="mb-4" disabled={isReadOnly}>
-                            <PlusCircle className="h-4 w-4 mr-2" />
-                            Añadir Valor
+                        <Button size="icon" onClick={() => { if (!isReadOnly) handleAddNewValue(); }} className="mb-4" disabled={isReadOnly} aria-label="Añadir Valor">
+                            <PlusCircle className="h-4 w-4" />
                         </Button>
                         <div className="border rounded-md max-h-[300px] overflow-y-auto">
                             <Table>
@@ -190,7 +189,6 @@ function AttributeValuesDialog({ attribute, isOpen, onClose }: { attribute: Attr
                 )}
 
                 <DialogFooter>
-                    <Button variant="outline" onClick={onClose}>Cerrar</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
@@ -266,11 +264,12 @@ export function AttributesManagementCard({ subdepartmentId, includeGlobal = fals
         }
         setIsSaving(true);
         try {
+            const subIdNum = typeof subdepartmentId === 'string' ? parseInt(subdepartmentId as string, 10) : (subdepartmentId as number | null | undefined) || null;
             if (editingAttribute) {
-                await updateAttribute(editingAttribute.id, attributeName, subdepartmentId || editingAttribute.subdepartmentId || null);
+                await updateAttribute(editingAttribute.id, attributeName, subIdNum);
                 toastSuccess("Éxito", "Atributo actualizado correctamente.");
             } else {
-                await createAttribute(attributeName, subdepartmentId || null);
+                await createAttribute(attributeName, subIdNum);
                 toastSuccess("Éxito", "Atributo creado correctamente.");
             }
             fetchAttributes();
@@ -290,9 +289,8 @@ export function AttributesManagementCard({ subdepartmentId, includeGlobal = fals
                         <CardTitle>Gestión de Atributos</CardTitle>
                         <CardDescription>Define atributos (ej. Talla, Color) y sus valores.</CardDescription>
                     </div>
-                    <Button size="sm" onClick={() => { if (!isReadOnly) handleAddNew(); }} disabled={isReadOnly}>
-                        <PlusCircle className="h-4 w-4 mr-2" />
-                        Añadir Atributo
+                    <Button size="icon" onClick={() => { if (!isReadOnly) handleAddNew(); }} disabled={isReadOnly} aria-label="Añadir Atributo">
+                        <PlusCircle className="h-4 w-4" />
                     </Button>
                 </CardHeader>
                 <CardContent>
