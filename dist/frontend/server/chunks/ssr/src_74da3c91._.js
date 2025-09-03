@@ -290,7 +290,9 @@ function SupplierList({ initialQuery }) {
     const router = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$navigation$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useRouter"])();
     const fetch = async ()=>{
         try {
+            console.log('[SupplierList] fetching suppliers with initialQuery=', initialQuery);
             const data = await (await __turbopack_context__.r("[project]/src/lib/api.ts [app-ssr] (ecmascript, async loader)")(__turbopack_context__.i)).getSuppliers(initialQuery);
+            console.log('[SupplierList] received suppliers shape=', Array.isArray(data) ? `array(${data.length})` : typeof data);
             setSuppliers(data || []);
         } catch (err) {}
     };
@@ -319,7 +321,7 @@ function SupplierList({ initialQuery }) {
                         children: "Proveedores"
                     }, void 0, false, {
                         fileName: "[project]/src/components/suppliers/SupplierList.tsx",
-                        lineNumber: 37,
+                        lineNumber: 39,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Button"], {
@@ -330,13 +332,13 @@ function SupplierList({ initialQuery }) {
                         children: "Nuevo Proveedor"
                     }, void 0, false, {
                         fileName: "[project]/src/components/suppliers/SupplierList.tsx",
-                        lineNumber: 38,
+                        lineNumber: 40,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/components/suppliers/SupplierList.tsx",
-                lineNumber: 36,
+                lineNumber: 38,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -351,7 +353,7 @@ function SupplierList({ initialQuery }) {
                                         children: c.name
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/suppliers/SupplierList.tsx",
-                                        lineNumber: 44,
+                                        lineNumber: 46,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -359,13 +361,13 @@ function SupplierList({ initialQuery }) {
                                         children: c.document || ''
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/suppliers/SupplierList.tsx",
-                                        lineNumber: 45,
+                                        lineNumber: 47,
                                         columnNumber: 15
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/suppliers/SupplierList.tsx",
-                                lineNumber: 43,
+                                lineNumber: 45,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -377,7 +379,7 @@ function SupplierList({ initialQuery }) {
                                         children: "Ver"
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/suppliers/SupplierList.tsx",
-                                        lineNumber: 48,
+                                        lineNumber: 50,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Button"], {
@@ -388,7 +390,7 @@ function SupplierList({ initialQuery }) {
                                         children: "Editar"
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/suppliers/SupplierList.tsx",
-                                        lineNumber: 49,
+                                        lineNumber: 51,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Button"], {
@@ -397,24 +399,24 @@ function SupplierList({ initialQuery }) {
                                         children: "Eliminar"
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/suppliers/SupplierList.tsx",
-                                        lineNumber: 50,
+                                        lineNumber: 52,
                                         columnNumber: 15
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/suppliers/SupplierList.tsx",
-                                lineNumber: 47,
+                                lineNumber: 49,
                                 columnNumber: 13
                             }, this)
                         ]
                     }, c.id, true, {
                         fileName: "[project]/src/components/suppliers/SupplierList.tsx",
-                        lineNumber: 42,
+                        lineNumber: 44,
                         columnNumber: 11
                     }, this))
             }, void 0, false, {
                 fileName: "[project]/src/components/suppliers/SupplierList.tsx",
-                lineNumber: 40,
+                lineNumber: 42,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$suppliers$2f$SupplierForm$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"], {
@@ -427,13 +429,13 @@ function SupplierList({ initialQuery }) {
                 onSaved: ()=>fetch()
             }, void 0, false, {
                 fileName: "[project]/src/components/suppliers/SupplierList.tsx",
-                lineNumber: 55,
+                lineNumber: 57,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/src/components/suppliers/SupplierList.tsx",
-        lineNumber: 35,
+        lineNumber: 37,
         columnNumber: 5
     }, this);
 }

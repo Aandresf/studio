@@ -116,10 +116,54 @@ router.get('/:id/history', requirePermission('customers:read'), async (req, res)
   try {
     console.log('[customers] GET /:id/history - id:', id);
     const db = databaseManager.getActiveDb();
+    const dbGet = util.promisify(db.get.bind(db));
     const dbAll = util.promisify(db.all.bind(db));
-    const rows = await dbAll(`SELECT t.* FROM sales_transactions t WHERE t.customer_id = ? ORDER BY t.transaction_date DESC LIMIT 200`, [id]);
-    console.log('[customers] GET /:id/history - returned rows:', Array.isArray(rows) ? rows.length : 0);
-    res.json(rows);
+
+    // Get customer to obtain document and name
+    const customer = await dbGet(`SELECT * FROM customers WHERE id = ?`, [id]);
+    if (!customer) return res.status(404).json({ error: 'Customer not found' });
+
+    // Look for inventory movements where the entity_document or entity_name matches the customer
+    // Only include movements with status 'Activo' or 'Anulado' to avoid 'Reemplazado' noise
+    const rows = await dbAll(
+      `SELECT im.* FROM inventory_movements im WHERE (im.entity_document = ? OR im.entity_name = ?) AND im.status IN ('Activo','Anulado') ORDER BY im.transaction_date DESC LIMIT 1000`,
+      [customer.document || '', customer.name || '']
+    );
+
+    // Group by transaction_id to return one entry per transaction
+    const grouped = (rows || []).reduce((acc, row) => {
+      if (!acc[row.transaction_id]) {
+        acc[row.transaction_id] = {
+          transaction_id: row.transaction_id,
+          transaction_date: row.transaction_date,
+          entity_name: row.entity_name,
+          entity_document: row.entity_document,
+          document_number: row.document_number,
+          status: 'Anulado',
+          total: 0,
+          movements: []
+        };
+      }
+      const mv = {
+        id: row.id,
+        variant_id: row.variant_id,
+        quantity: row.quantity,
+        unit_cost: row.unit_cost,
+        price: row.price,
+        status: row.status,
+        description: row.description,
+        created_at: row.created_at
+      };
+      acc[row.transaction_id].movements.push(mv);
+      acc[row.transaction_id].total += (row.quantity || 0) * (row.price || 0);
+      // if any movement is active, mark transaction as active
+      if (row.status === 'Activo') acc[row.transaction_id].status = 'Activo';
+      return acc;
+    }, {});
+
+    const results = Object.values(grouped).sort((a, b) => (b.transaction_date || '').localeCompare(a.transaction_date || ''));
+    console.log('[customers] GET /:id/history - returned transactions:', results.length);
+    res.json(results);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'db_error' });

@@ -12,19 +12,26 @@ interface VariantSelectionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   product: Product | null;
-  onVariantsSelected: (selectedVariants: (ProductVariant & { quantity: number })[]) => void;
+  // quantity is optional: for sale we provide quantity, for purchase we only return selected variants
+  onVariantsSelected: (selectedVariants: (ProductVariant & { quantity?: number })[]) => void;
   context: 'sale' | 'purchase'; // To determine the behavior of the dialog
+  // when selectOnly is true the dialog will only allow selecting variants (no quantity inputs)
+  // useful when quantity must be edited later from the cart instead of in the dialog.
+  selectOnly?: boolean;
 }
 
-export function VariantSelectionDialog({ open, onOpenChange, product, onVariantsSelected, context }: VariantSelectionDialogProps) {
+export function VariantSelectionDialog({ open, onOpenChange, product, onVariantsSelected, context, selectOnly }: VariantSelectionDialogProps) {
   const [quantities, setQuantities] = useState<Record<number, number>>({});
+  const [selectedVariantsMap, setSelectedVariantsMap] = useState<Record<number, boolean>>({});
 
   const isSale = context === 'sale';
+  const selectOnlyMode = !!selectOnly;
 
   useEffect(() => {
-    // Reset quantities when the dialog is opened or the product changes
+    // Reset quantities and selection when the dialog is opened or the product changes
     if (open) {
       setQuantities({});
+      setSelectedVariantsMap({});
     }
   }, [open, product]);
 
@@ -36,17 +43,34 @@ export function VariantSelectionDialog({ open, onOpenChange, product, onVariants
     }));
   };
 
+  const toggleVariantSelection = (variantId: number) => {
+    setSelectedVariantsMap(prev => ({ ...prev, [variantId]: !prev[variantId] }));
+  };
+
   const handleConfirm = () => {
     if (!product || !product.variants) return;
 
-    const selectedVariants = product.variants
-      .filter(variant => quantities[variant.id] && quantities[variant.id] > 0)
-      .map(variant => ({
-        ...variant,
-        quantity: quantities[variant.id],
-      }));
+    if (!product || !product.variants) return;
 
-    onVariantsSelected(selectedVariants);
+    // If we're in sale mode but selectOnlyMode is enabled, return selected variants without quantities
+    if (context === 'sale' && !selectOnlyMode) {
+      const selectedVariants = product.variants
+        .filter(variant => quantities[variant.id] && quantities[variant.id] > 0)
+        .map(variant => ({
+          ...variant,
+          quantity: quantities[variant.id],
+        }));
+
+      onVariantsSelected(selectedVariants);
+    } else {
+      // purchase OR selectOnlyMode: return selected variants (no quantity) based on checkboxes / row clicks
+      const selected = product.variants
+        .filter(variant => selectedVariantsMap[variant.id])
+        .map(variant => ({ ...variant }));
+
+      onVariantsSelected(selected);
+    }
+
     onOpenChange(false);
   };
 
@@ -116,13 +140,27 @@ export function VariantSelectionDialog({ open, onOpenChange, product, onVariants
                   <TableHead>SKU</TableHead>
                   <TableHead className="text-right">Stock Actual</TableHead>
                   <TableHead className="text-right">{isSale ? 'Precio Venta' : 'Costo'}</TableHead>
-                  <TableHead className="w-[100px]">Cantidad</TableHead>
+                  <TableHead className="w-[100px]">{isSale && !selectOnlyMode ? 'Cantidad' : 'Seleccionar'}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredVariants.length > 0 ? (
                   filteredVariants.map(variant => (
-                    <TableRow key={variant.id}>
+                    <TableRow
+                      key={variant.id}
+                      className={(selectOnlyMode || context === 'purchase') ? (selectedVariantsMap[variant.id] ? 'bg-slate-100' : '') : ''}
+                      onClick={(e) => {
+                        // In select-only or purchase context, clicking the row toggles selection. Avoid toggling when click comes from interactive children.
+                        if (selectOnlyMode || context === 'purchase') {
+                          const target = e.target as HTMLElement | null;
+                          const tag = target && target.tagName ? target.tagName.toLowerCase() : '';
+                          if (['input','button','svg','path'].includes(tag)) return;
+                          toggleVariantSelection(variant.id);
+                        }
+                      }}
+                      role={(selectOnlyMode || context === 'purchase') ? 'button' : undefined}
+                      tabIndex={(selectOnlyMode || context === 'purchase') ? 0 : undefined}
+                    >
                       <TableCell className="font-medium">
                         {variant.attribute_values?.map(v => v.value).join(' / ') || 'Estándar'}
                       </TableCell>
@@ -130,15 +168,26 @@ export function VariantSelectionDialog({ open, onOpenChange, product, onVariants
                       <TableCell className="text-right">{variant.current_stock}</TableCell>
                       <TableCell className="text-right">${isSale ? Number(variant.sale_price ?? 0).toFixed(2) : Number(variant.cost_price ?? 0).toFixed(2)}</TableCell>
                       <TableCell>
-                        <Input
-                          type="number"
-                          min="0"
-                          max={isSale ? variant.current_stock : undefined}
-                          value={quantities[variant.id] || ''}
-                          onChange={(e) => handleQuantityChange(variant.id, e.target.value)}
-                          className="text-center"
-                          placeholder="0"
-                        />
+                        {isSale && !selectOnlyMode ? (
+                          <Input
+                            type="number"
+                            min="0"
+                            max={variant.current_stock}
+                            value={quantities[variant.id] || ''}
+                            onChange={(e) => handleQuantityChange(variant.id, e.target.value)}
+                            className="text-center"
+                            placeholder="0"
+                          />
+                        ) : (
+                          <div className="flex items-center justify-center">
+                            <input
+                              type="checkbox"
+                              checked={!!selectedVariantsMap[variant.id]}
+                              onChange={(e) => { e.stopPropagation(); toggleVariantSelection(variant.id); }}
+                              aria-label={`Seleccionar variante ${variant.sku}`}
+                            />
+                          </div>
+                        )}
                         {/* Movements button removed - moved to ProductDetailDialog (kardex) */}
                       </TableCell>
                     </TableRow>
@@ -156,6 +205,7 @@ export function VariantSelectionDialog({ open, onOpenChange, product, onVariants
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button variant="ghost" onClick={() => { setQuantities({}); setSelectedVariantsMap({}); }}>Limpiar</Button>
           <Button onClick={handleConfirm}>{currentTexts.confirmButton}</Button>
         </DialogFooter>
       </DialogContent>

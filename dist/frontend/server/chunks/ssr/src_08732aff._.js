@@ -201,7 +201,7 @@ PopoverContent.displayName = __TURBOPACK__imported__module__$5b$project$5d2f$nod
 
 var { g: global, __dirname } = __turbopack_context__;
 {
-__turbopack_context__.v(JSON.parse("{\"permissions\":[{\"key\":\"*\"},{\"key\":\"sales:create\"},{\"key\":\"sales:read\"},{\"key\":\"sales:edit\"},{\"key\":\"sales:annul\"},{\"key\":\"sales:delete\"},{\"key\":\"purchases:read\"},{\"key\":\"purchases:create\"},{\"key\":\"purchases:edit\"},{\"key\":\"purchases:annul\"},{\"key\":\"purchases:delete\"},{\"key\":\"products:read\"},{\"key\":\"products:create\",\"requires\":[\"brands:read\",\"departments:read\",\"attributes:read\",\"variants:read\",\"brands:create\",\"departments:create\",\"attributes:create\",\"variants:create\"]},{\"key\":\"products:edit\"},{\"key\":\"products:delete\"},{\"key\":\"products:read_prices_sale\"},{\"key\":\"products:read_costs\"},{\"key\":\"products:read_costs_disabled\"},{\"key\":\"products:manual_sku\"},{\"key\":\"reports:read\"},{\"key\":\"dashboard:read\"},{\"key\":\"reports:create_snapshot\"},{\"key\":\"settings:edit\"},{\"key\":\"settings:advanced\"},{\"key\":\"catalog:manage\"},{\"key\":\"stores:create\"},{\"key\":\"stores:delete\"},{\"key\":\"stores:set_active\"},{\"key\":\"users:create\"},{\"key\":\"users:edit\"},{\"key\":\"users:delete\"},{\"key\":\"users:permissions\"},{\"key\":\"inventory:write\"},{\"key\":\"pending:create\"},{\"key\":\"pending:delete\"},{\"key\":\"admin:backup\"},{\"key\":\"admin:restore\"},{\"key\":\"departments:create\"},{\"key\":\"departments:edit\"},{\"key\":\"departments:delete\"},{\"key\":\"brands:create\"},{\"key\":\"brands:edit\"},{\"key\":\"brands:delete\"},{\"key\":\"attributes:create\"},{\"key\":\"attributes:edit\"},{\"key\":\"attributes:delete\"},{\"key\":\"attributes:create_value\"},{\"key\":\"attributes:edit_value\"},{\"key\":\"attributes:delete_value\"},{\"key\":\"variants:read\"},{\"key\":\"variants:create\"}]}"));}}),
+__turbopack_context__.v(JSON.parse("{\"permissions\":[{\"key\":\"*\"},{\"key\":\"sales:create\"},{\"key\":\"sales:read\"},{\"key\":\"sales:edit\"},{\"key\":\"sales:annul\"},{\"key\":\"sales:delete\"},{\"key\":\"purchases:read\"},{\"key\":\"purchases:create\"},{\"key\":\"purchases:edit\"},{\"key\":\"purchases:annul\"},{\"key\":\"purchases:delete\"},{\"key\":\"products:read\"},{\"key\":\"products:create\",\"requires\":[\"brands:read\",\"departments:read\",\"attributes:read\",\"variants:read\",\"brands:create\",\"departments:create\",\"attributes:create\",\"variants:create\"]},{\"key\":\"products:edit\"},{\"key\":\"products:delete\"},{\"key\":\"products:read_prices_sale\"},{\"key\":\"products:read_costs\"},{\"key\":\"products:read_costs_disabled\"},{\"key\":\"products:manual_sku\"},{\"key\":\"reports:read\"},{\"key\":\"dashboard:read\"},{\"key\":\"reports:create_snapshot\"},{\"key\":\"settings:edit\"},{\"key\":\"settings:advanced\"},{\"key\":\"catalog:manage\"},{\"key\":\"stores:create\"},{\"key\":\"stores:delete\"},{\"key\":\"stores:set_active\"},{\"key\":\"users:create\"},{\"key\":\"users:edit\"},{\"key\":\"users:delete\"},{\"key\":\"users:permissions\"},{\"key\":\"inventory:write\"},{\"key\":\"pending:create\"},{\"key\":\"pending:delete\"},{\"key\":\"admin:backup\"},{\"key\":\"admin:restore\"},{\"key\":\"departments:create\"},{\"key\":\"departments:edit\"},{\"key\":\"departments:delete\"},{\"key\":\"brands:create\"},{\"key\":\"brands:edit\"},{\"key\":\"brands:delete\"},{\"key\":\"attributes:create\"},{\"key\":\"attributes:edit\"},{\"key\":\"attributes:delete\"},{\"key\":\"attributes:create_value\"},{\"key\":\"attributes:edit_value\"},{\"key\":\"attributes:delete_value\"},{\"key\":\"variants:read\"},{\"key\":\"variants:create\"},{\"key\":\"sales:edit_price\"},{\"key\":\"sales:edit_invoice\"},{\"key\":\"customers:read\"},{\"key\":\"customers:create\"},{\"key\":\"customers:edit\"},{\"key\":\"customers:delete\"},{\"key\":\"suppliers:read\"},{\"key\":\"suppliers:create\"},{\"key\":\"suppliers:edit\"},{\"key\":\"suppliers:delete\"},{\"key\":\"customers:view_sensitive\"},{\"key\":\"suppliers:view_sensitive\"}]}"));}}),
 "[project]/src/lib/permissionsMeta.ts [app-ssr] (ecmascript)": ((__turbopack_context__) => {
 "use strict";
 
@@ -264,6 +264,22 @@ const METADATA_MAP = {
         category: 'ventas',
         affected: [
             'Eliminar (pendiente)'
+        ]
+    },
+    'sales:edit_price': {
+        label: 'Editar precio en venta',
+        description: 'Permite modificar el precio de venta al momento de crear una venta.',
+        category: 'ventas',
+        affected: [
+            'Precio Unit. en carrito'
+        ]
+    },
+    'sales:edit_invoice': {
+        label: 'Editar nº de factura (ventas)',
+        description: 'Permite modificar manualmente el número de factura al registrar una venta.',
+        category: 'ventas',
+        affected: [
+            'Nº de Factura'
         ]
     },
     'purchases:read': {
@@ -645,6 +661,92 @@ const METADATA_MAP = {
         category: 'usuarios',
         affected: [
             'Editor de Permisos'
+        ]
+    },
+    // Customers
+    'customers:read': {
+        label: 'Ver clientes',
+        description: 'Permite ver la lista y fichas de clientes.',
+        category: 'configuracion',
+        affected: [
+            'Clientes'
+        ]
+    },
+    'customers:create': {
+        label: 'Crear clientes',
+        description: 'Permite crear nuevos clientes en el sistema.',
+        category: 'configuracion',
+        affected: [
+            'Nuevo Cliente'
+        ]
+    },
+    'customers:edit': {
+        label: 'Editar clientes',
+        description: 'Permite editar la información de clientes.',
+        category: 'configuracion',
+        affected: [
+            'Editar Cliente'
+        ]
+    },
+    'customers:delete': {
+        label: 'Eliminar clientes',
+        description: 'Permite eliminar clientes del sistema.',
+        category: 'configuracion',
+        affected: [
+            'Eliminar Cliente'
+        ]
+    },
+    'customers:view_sensitive': {
+        label: 'Ver datos sensibles de clientes',
+        description: 'Permite ver datos personales sensibles (DNI, teléfono, correo) en la ficha de cliente.',
+        category: 'configuracion',
+        affected: [
+            'DNI Cliente',
+            'Teléfono',
+            'Email'
+        ]
+    },
+    // Suppliers
+    'suppliers:read': {
+        label: 'Ver proveedores',
+        description: 'Permite ver la lista y fichas de proveedores.',
+        category: 'configuracion',
+        affected: [
+            'Proveedores'
+        ]
+    },
+    'suppliers:create': {
+        label: 'Crear proveedores',
+        description: 'Permite crear nuevos proveedores en el sistema.',
+        category: 'configuracion',
+        affected: [
+            'Nuevo Proveedor'
+        ]
+    },
+    'suppliers:edit': {
+        label: 'Editar proveedores',
+        description: 'Permite editar la información de proveedores.',
+        category: 'configuracion',
+        affected: [
+            'Editar Proveedor'
+        ]
+    },
+    'suppliers:delete': {
+        label: 'Eliminar proveedores',
+        description: 'Permite eliminar proveedores del sistema.',
+        category: 'configuracion',
+        affected: [
+            'Eliminar Proveedor'
+        ]
+    },
+    'suppliers:view_sensitive': {
+        label: 'Ver datos sensibles de proveedores',
+        description: 'Permite ver datos sensibles de proveedores (RIF, cuentas, contactos) en la ficha de proveedor.',
+        category: 'configuracion',
+        affected: [
+            'RIF',
+            'Cuenta',
+            'Contactos'
         ]
     }
 };

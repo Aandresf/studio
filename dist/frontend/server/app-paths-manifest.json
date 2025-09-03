@@ -1,5 +1,5 @@
 {
-  "/(app)/customers/[id]/page": "app/(app)/customers/[id]/page.js",
+  "/(app)/catalog/page": "app/(app)/catalog/page.js",
   "/(app)/customers/page": "app/(app)/customers/page.js",
   "/(app)/dashboard/page": "app/(app)/dashboard/page.js",
   "/(app)/products/page": "app/(app)/products/page.js",
@@ -7,5 +7,5 @@
   "/(app)/users/page": "app/(app)/users/page.js",
   "/_not-found/page": "app/_not-found/page.js",
   "/favicon.ico/route": "app/favicon.ico/route.js",
-  "/page": "app/page.js"
+  "/login/page": "app/login/page.js"
 }

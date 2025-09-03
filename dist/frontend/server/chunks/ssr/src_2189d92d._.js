@@ -2245,13 +2245,16 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$api$2e$ts__$5b
 ;
 ;
 ;
-function VariantSelectionDialog({ open, onOpenChange, product, onVariantsSelected, context }) {
+function VariantSelectionDialog({ open, onOpenChange, product, onVariantsSelected, context, selectOnly }) {
     const [quantities, setQuantities] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])({});
+    const [selectedVariantsMap, setSelectedVariantsMap] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])({});
     const isSale = context === 'sale';
+    const selectOnlyMode = !!selectOnly;
     (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useEffect"])(()=>{
-        // Reset quantities when the dialog is opened or the product changes
+        // Reset quantities and selection when the dialog is opened or the product changes
         if (open) {
             setQuantities({});
+            setSelectedVariantsMap({});
         }
     }, [
         open,
@@ -2264,13 +2267,29 @@ function VariantSelectionDialog({ open, onOpenChange, product, onVariantsSelecte
                 [variantId]: isNaN(numQuantity) ? 0 : numQuantity
             }));
     };
+    const toggleVariantSelection = (variantId)=>{
+        setSelectedVariantsMap((prev)=>({
+                ...prev,
+                [variantId]: !prev[variantId]
+            }));
+    };
     const handleConfirm = ()=>{
         if (!product || !product.variants) return;
-        const selectedVariants = product.variants.filter((variant)=>quantities[variant.id] && quantities[variant.id] > 0).map((variant)=>({
-                ...variant,
-                quantity: quantities[variant.id]
-            }));
-        onVariantsSelected(selectedVariants);
+        if (!product || !product.variants) return;
+        // If we're in sale mode but selectOnlyMode is enabled, return selected variants without quantities
+        if (context === 'sale' && !selectOnlyMode) {
+            const selectedVariants = product.variants.filter((variant)=>quantities[variant.id] && quantities[variant.id] > 0).map((variant)=>({
+                    ...variant,
+                    quantity: quantities[variant.id]
+                }));
+            onVariantsSelected(selectedVariants);
+        } else {
+            // purchase OR selectOnlyMode: return selected variants (no quantity) based on checkboxes / row clicks
+            const selected = product.variants.filter((variant)=>selectedVariantsMap[variant.id]).map((variant)=>({
+                    ...variant
+                }));
+            onVariantsSelected(selected);
+        }
         onOpenChange(false);
     };
     // Movements modal state
@@ -2327,20 +2346,20 @@ function VariantSelectionDialog({ open, onOpenChange, product, onVariantsSelecte
                                     children: currentTexts.title
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                    lineNumber: 105,
+                                    lineNumber: 129,
                                     columnNumber: 11
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["DialogDescription"], {
                                     children: currentTexts.description
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                    lineNumber: 106,
+                                    lineNumber: 130,
                                     columnNumber: 11
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                            lineNumber: 104,
+                            lineNumber: 128,
                             columnNumber: 9
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2356,14 +2375,14 @@ function VariantSelectionDialog({ open, onOpenChange, product, onVariantsSelecte
                                                         children: "Variante"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                                        lineNumber: 115,
+                                                        lineNumber: 139,
                                                         columnNumber: 19
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TableHead"], {
                                                         children: "SKU"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                                        lineNumber: 116,
+                                                        lineNumber: 140,
                                                         columnNumber: 19
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TableHead"], {
@@ -2371,7 +2390,7 @@ function VariantSelectionDialog({ open, onOpenChange, product, onVariantsSelecte
                                                         children: "Stock Actual"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                                        lineNumber: 117,
+                                                        lineNumber: 141,
                                                         columnNumber: 19
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TableHead"], {
@@ -2379,44 +2398,61 @@ function VariantSelectionDialog({ open, onOpenChange, product, onVariantsSelecte
                                                         children: isSale ? 'Precio Venta' : 'Costo'
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                                        lineNumber: 118,
+                                                        lineNumber: 142,
                                                         columnNumber: 19
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TableHead"], {
                                                         className: "w-[100px]",
-                                                        children: "Cantidad"
+                                                        children: isSale && !selectOnlyMode ? 'Cantidad' : 'Seleccionar'
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                                        lineNumber: 119,
+                                                        lineNumber: 143,
                                                         columnNumber: 19
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                                lineNumber: 114,
+                                                lineNumber: 138,
                                                 columnNumber: 17
                                             }, this)
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                            lineNumber: 113,
+                                            lineNumber: 137,
                                             columnNumber: 15
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TableBody"], {
                                             children: filteredVariants.length > 0 ? filteredVariants.map((variant)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TableRow"], {
+                                                    className: selectOnlyMode || context === 'purchase' ? selectedVariantsMap[variant.id] ? 'bg-slate-100' : '' : '',
+                                                    onClick: (e)=>{
+                                                        // In select-only or purchase context, clicking the row toggles selection. Avoid toggling when click comes from interactive children.
+                                                        if (selectOnlyMode || context === 'purchase') {
+                                                            const target = e.target;
+                                                            const tag = target && target.tagName ? target.tagName.toLowerCase() : '';
+                                                            if ([
+                                                                'input',
+                                                                'button',
+                                                                'svg',
+                                                                'path'
+                                                            ].includes(tag)) return;
+                                                            toggleVariantSelection(variant.id);
+                                                        }
+                                                    },
+                                                    role: selectOnlyMode || context === 'purchase' ? 'button' : undefined,
+                                                    tabIndex: selectOnlyMode || context === 'purchase' ? 0 : undefined,
                                                     children: [
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TableCell"], {
                                                             className: "font-medium",
                                                             children: variant.attribute_values?.map((v)=>v.value).join(' / ') || 'Estándar'
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                                            lineNumber: 126,
+                                                            lineNumber: 164,
                                                             columnNumber: 23
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TableCell"], {
                                                             children: variant.sku
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                                            lineNumber: 129,
+                                                            lineNumber: 167,
                                                             columnNumber: 23
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TableCell"], {
@@ -2424,7 +2460,7 @@ function VariantSelectionDialog({ open, onOpenChange, product, onVariantsSelecte
                                                             children: variant.current_stock
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                                            lineNumber: 130,
+                                                            lineNumber: 168,
                                                             columnNumber: 23
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TableCell"], {
@@ -2435,32 +2471,51 @@ function VariantSelectionDialog({ open, onOpenChange, product, onVariantsSelecte
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                                            lineNumber: 131,
+                                                            lineNumber: 169,
                                                             columnNumber: 23
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TableCell"], {
-                                                            children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Input"], {
+                                                            children: isSale && !selectOnlyMode ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Input"], {
                                                                 type: "number",
                                                                 min: "0",
-                                                                max: isSale ? variant.current_stock : undefined,
+                                                                max: variant.current_stock,
                                                                 value: quantities[variant.id] || '',
                                                                 onChange: (e)=>handleQuantityChange(variant.id, e.target.value),
                                                                 className: "text-center",
                                                                 placeholder: "0"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                                                lineNumber: 133,
-                                                                columnNumber: 25
+                                                                lineNumber: 172,
+                                                                columnNumber: 27
+                                                            }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                                className: "flex items-center justify-center",
+                                                                children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
+                                                                    type: "checkbox",
+                                                                    checked: !!selectedVariantsMap[variant.id],
+                                                                    onChange: (e)=>{
+                                                                        e.stopPropagation();
+                                                                        toggleVariantSelection(variant.id);
+                                                                    },
+                                                                    "aria-label": `Seleccionar variante ${variant.sku}`
+                                                                }, void 0, false, {
+                                                                    fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
+                                                                    lineNumber: 183,
+                                                                    columnNumber: 29
+                                                                }, this)
+                                                            }, void 0, false, {
+                                                                fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
+                                                                lineNumber: 182,
+                                                                columnNumber: 27
                                                             }, this)
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                                            lineNumber: 132,
+                                                            lineNumber: 170,
                                                             columnNumber: 23
                                                         }, this)
                                                     ]
                                                 }, variant.id, true, {
                                                     fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                                    lineNumber: 125,
+                                                    lineNumber: 149,
                                                     columnNumber: 21
                                                 }, this)) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TableRow"], {
                                                 children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TableCell"], {
@@ -2469,33 +2524,33 @@ function VariantSelectionDialog({ open, onOpenChange, product, onVariantsSelecte
                                                     children: isSale ? 'No hay variantes con stock disponible.' : 'Este producto no tiene variantes definidas.'
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                                    lineNumber: 148,
+                                                    lineNumber: 197,
                                                     columnNumber: 21
                                                 }, this)
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                                lineNumber: 147,
+                                                lineNumber: 196,
                                                 columnNumber: 19
                                             }, this)
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                            lineNumber: 122,
+                                            lineNumber: 146,
                                             columnNumber: 15
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                    lineNumber: 112,
+                                    lineNumber: 136,
                                     columnNumber: 13
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                lineNumber: 111,
+                                lineNumber: 135,
                                 columnNumber: 11
                             }, this)
                         }, void 0, false, {
                             fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                            lineNumber: 110,
+                            lineNumber: 134,
                             columnNumber: 9
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["DialogFooter"], {
@@ -2506,7 +2561,19 @@ function VariantSelectionDialog({ open, onOpenChange, product, onVariantsSelecte
                                     children: "Cancelar"
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                    lineNumber: 158,
+                                    lineNumber: 207,
+                                    columnNumber: 11
+                                }, this),
+                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Button"], {
+                                    variant: "ghost",
+                                    onClick: ()=>{
+                                        setQuantities({});
+                                        setSelectedVariantsMap({});
+                                    },
+                                    children: "Limpiar"
+                                }, void 0, false, {
+                                    fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
+                                    lineNumber: 208,
                                     columnNumber: 11
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Button"], {
@@ -2514,24 +2581,24 @@ function VariantSelectionDialog({ open, onOpenChange, product, onVariantsSelecte
                                     children: currentTexts.confirmButton
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                    lineNumber: 159,
+                                    lineNumber: 209,
                                     columnNumber: 11
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                            lineNumber: 157,
+                            lineNumber: 206,
                             columnNumber: 9
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                    lineNumber: 103,
+                    lineNumber: 127,
                     columnNumber: 7
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                lineNumber: 102,
+                lineNumber: 126,
                 columnNumber: 5
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Dialog"], {
@@ -2546,20 +2613,20 @@ function VariantSelectionDialog({ open, onOpenChange, product, onVariantsSelecte
                                     children: "Movimientos de la Variante"
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                    lineNumber: 168,
+                                    lineNumber: 218,
                                     columnNumber: 11
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["DialogDescription"], {
                                     children: "Últimos movimientos relacionados con la variante seleccionada."
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                    lineNumber: 169,
+                                    lineNumber: 219,
                                     columnNumber: 11
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                            lineNumber: 167,
+                            lineNumber: 217,
                             columnNumber: 9
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2570,7 +2637,7 @@ function VariantSelectionDialog({ open, onOpenChange, product, onVariantsSelecte
                                     children: "Cargando..."
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                    lineNumber: 176,
+                                    lineNumber: 226,
                                     columnNumber: 15
                                 }, this) : selectedVariantMovements && selectedVariantMovements.length > 0 ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("table", {
                                     className: "w-full text-sm",
@@ -2583,39 +2650,39 @@ function VariantSelectionDialog({ open, onOpenChange, product, onVariantsSelecte
                                                         children: "Fecha"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                                        lineNumber: 180,
+                                                        lineNumber: 230,
                                                         columnNumber: 45
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("th", {
                                                         children: "Tipo"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                                        lineNumber: 180,
+                                                        lineNumber: 230,
                                                         columnNumber: 59
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("th", {
                                                         children: "Cantidad"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                                        lineNumber: 180,
+                                                        lineNumber: 230,
                                                         columnNumber: 72
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("th", {
                                                         children: "Documento"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                                        lineNumber: 180,
+                                                        lineNumber: 230,
                                                         columnNumber: 89
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                                lineNumber: 180,
+                                                lineNumber: 230,
                                                 columnNumber: 19
                                             }, this)
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                            lineNumber: 179,
+                                            lineNumber: 229,
                                             columnNumber: 17
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("tbody", {
@@ -2626,21 +2693,21 @@ function VariantSelectionDialog({ open, onOpenChange, product, onVariantsSelecte
                                                             children: formatDateSafe(m.transaction_date)
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                                            lineNumber: 185,
+                                                            lineNumber: 235,
                                                             columnNumber: 23
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("td", {
                                                             children: m.type
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                                            lineNumber: 186,
+                                                            lineNumber: 236,
                                                             columnNumber: 23
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("td", {
                                                             children: m.quantity
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                                            lineNumber: 187,
+                                                            lineNumber: 237,
                                                             columnNumber: 23
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("td", {
@@ -2650,7 +2717,7 @@ function VariantSelectionDialog({ open, onOpenChange, product, onVariantsSelecte
                                                                     children: m.document_number || '-'
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                                                    lineNumber: 189,
+                                                                    lineNumber: 239,
                                                                     columnNumber: 25
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("button", {
@@ -2670,57 +2737,57 @@ function VariantSelectionDialog({ open, onOpenChange, product, onVariantsSelecte
                                                                             d: "M9 12h6M9 16h6M7 8h10M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                                                            lineNumber: 191,
+                                                                            lineNumber: 241,
                                                                             columnNumber: 159
                                                                         }, this)
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                                                        lineNumber: 191,
+                                                                        lineNumber: 241,
                                                                         columnNumber: 27
                                                                     }, this)
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                                                    lineNumber: 190,
+                                                                    lineNumber: 240,
                                                                     columnNumber: 25
                                                                 }, this)
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                                            lineNumber: 188,
+                                                            lineNumber: 238,
                                                             columnNumber: 23
                                                         }, this)
                                                     ]
                                                 }, m.id, true, {
                                                     fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                                    lineNumber: 184,
+                                                    lineNumber: 234,
                                                     columnNumber: 21
                                                 }, this))
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                            lineNumber: 182,
+                                            lineNumber: 232,
                                             columnNumber: 17
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                    lineNumber: 178,
+                                    lineNumber: 228,
                                     columnNumber: 15
                                 }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                                     className: "text-center",
                                     children: "No se encontraron movimientos."
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                    lineNumber: 199,
+                                    lineNumber: 249,
                                     columnNumber: 15
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                lineNumber: 174,
+                                lineNumber: 224,
                                 columnNumber: 11
                             }, this)
                         }, void 0, false, {
                             fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                            lineNumber: 173,
+                            lineNumber: 223,
                             columnNumber: 9
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["DialogFooter"], {
@@ -2729,23 +2796,23 @@ function VariantSelectionDialog({ open, onOpenChange, product, onVariantsSelecte
                                 children: "Cerrar"
                             }, void 0, false, {
                                 fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                lineNumber: 204,
+                                lineNumber: 254,
                                 columnNumber: 11
                             }, this)
                         }, void 0, false, {
                             fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                            lineNumber: 203,
+                            lineNumber: 253,
                             columnNumber: 9
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                    lineNumber: 166,
+                    lineNumber: 216,
                     columnNumber: 7
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                lineNumber: 165,
+                lineNumber: 215,
                 columnNumber: 3
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Dialog"], {
@@ -2760,20 +2827,20 @@ function VariantSelectionDialog({ open, onOpenChange, product, onVariantsSelecte
                                     children: "Recibo de Movimiento"
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                    lineNumber: 212,
+                                    lineNumber: 262,
                                     columnNumber: 11
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["DialogDescription"], {
                                     children: "Detalle del movimiento seleccionado."
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                    lineNumber: 213,
+                                    lineNumber: 263,
                                     columnNumber: 11
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                            lineNumber: 211,
+                            lineNumber: 261,
                             columnNumber: 9
                         }, this),
                         selectedMovement ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2785,7 +2852,7 @@ function VariantSelectionDialog({ open, onOpenChange, product, onVariantsSelecte
                                             children: "Fecha:"
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                            lineNumber: 217,
+                                            lineNumber: 267,
                                             columnNumber: 16
                                         }, this),
                                         " ",
@@ -2793,7 +2860,7 @@ function VariantSelectionDialog({ open, onOpenChange, product, onVariantsSelecte
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                    lineNumber: 217,
+                                    lineNumber: 267,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2802,7 +2869,7 @@ function VariantSelectionDialog({ open, onOpenChange, product, onVariantsSelecte
                                             children: "Tipo:"
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                            lineNumber: 218,
+                                            lineNumber: 268,
                                             columnNumber: 16
                                         }, this),
                                         " ",
@@ -2810,7 +2877,7 @@ function VariantSelectionDialog({ open, onOpenChange, product, onVariantsSelecte
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                    lineNumber: 218,
+                                    lineNumber: 268,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2819,7 +2886,7 @@ function VariantSelectionDialog({ open, onOpenChange, product, onVariantsSelecte
                                             children: "Cantidad:"
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                            lineNumber: 219,
+                                            lineNumber: 269,
                                             columnNumber: 16
                                         }, this),
                                         " ",
@@ -2827,7 +2894,7 @@ function VariantSelectionDialog({ open, onOpenChange, product, onVariantsSelecte
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                    lineNumber: 219,
+                                    lineNumber: 269,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2836,7 +2903,7 @@ function VariantSelectionDialog({ open, onOpenChange, product, onVariantsSelecte
                                             children: "Precio/Coste unitario:"
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                            lineNumber: 220,
+                                            lineNumber: 270,
                                             columnNumber: 16
                                         }, this),
                                         " ",
@@ -2844,7 +2911,7 @@ function VariantSelectionDialog({ open, onOpenChange, product, onVariantsSelecte
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                    lineNumber: 220,
+                                    lineNumber: 270,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2853,7 +2920,7 @@ function VariantSelectionDialog({ open, onOpenChange, product, onVariantsSelecte
                                             children: "Documento:"
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                            lineNumber: 221,
+                                            lineNumber: 271,
                                             columnNumber: 16
                                         }, this),
                                         " ",
@@ -2861,7 +2928,7 @@ function VariantSelectionDialog({ open, onOpenChange, product, onVariantsSelecte
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                    lineNumber: 221,
+                                    lineNumber: 271,
                                     columnNumber: 13
                                 }, this),
                                 selectedMovement.description && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -2870,7 +2937,7 @@ function VariantSelectionDialog({ open, onOpenChange, product, onVariantsSelecte
                                             children: "Descripción:"
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                            lineNumber: 222,
+                                            lineNumber: 272,
                                             columnNumber: 51
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -2878,25 +2945,25 @@ function VariantSelectionDialog({ open, onOpenChange, product, onVariantsSelecte
                                             children: selectedMovement.description
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                            lineNumber: 222,
+                                            lineNumber: 272,
                                             columnNumber: 80
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                    lineNumber: 222,
+                                    lineNumber: 272,
                                     columnNumber: 46
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                            lineNumber: 216,
+                            lineNumber: 266,
                             columnNumber: 11
                         }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                             children: "No hay movimiento seleccionado."
                         }, void 0, false, {
                             fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                            lineNumber: 225,
+                            lineNumber: 275,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["DialogFooter"], {
@@ -2905,23 +2972,23 @@ function VariantSelectionDialog({ open, onOpenChange, product, onVariantsSelecte
                                 children: "Cerrar"
                             }, void 0, false, {
                                 fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                                lineNumber: 228,
+                                lineNumber: 278,
                                 columnNumber: 11
                             }, this)
                         }, void 0, false, {
                             fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                            lineNumber: 227,
+                            lineNumber: 277,
                             columnNumber: 9
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                    lineNumber: 210,
+                    lineNumber: 260,
                     columnNumber: 7
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/src/components/dialogs/VariantSelectionDialog.tsx",
-                lineNumber: 209,
+                lineNumber: 259,
                 columnNumber: 5
             }, this)
         ]
@@ -3083,13 +3150,22 @@ function SalesPage() {
     const canAnnulSales = currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('sales:annul');
     const isReadOnly = !canCreateSales && !canEditSales && !canAnnulSales;
     const hasAnySalesPermission = canReadSales || canCreateSales || canEditSales || canAnnulSales;
+    // permisos adicionales
+    const canEditPriceOnSale = currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('sales:edit_price');
+    const canEditInvoiceSale = currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('sales:edit_invoice');
+    const canViewCustomerSensitive = currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('customers:view_sensitive');
+    const generateInvoiceNumber = ()=>`V-${new Date().getFullYear()}${String(Date.now()).slice(-6)}`;
+    (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useEffect"])(()=>{
+        if (!invoiceNumber) setInvoiceNumber(generateInvoiceNumber());
+    }, []);
+    const displayClientDni = canViewCustomerSensitive ? clientDni : clientDni ? '••••••' : '';
     // 3. Finalmente la lógica de renderizado condicional
     if (!hasAnySalesPermission) {
         return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ProtectedRedirect$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"], {
             condition: false
         }, void 0, false, {
             fileName: "[project]/src/app/(app)/sales/page.tsx",
-            lineNumber: 142,
+            lineNumber: 153,
             columnNumber: 16
         }, this);
     }
@@ -3144,7 +3220,7 @@ function SalesPage() {
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/app/(app)/sales/page.tsx",
-                            lineNumber: 194,
+                            lineNumber: 205,
                             columnNumber: 39
                         }, this),
                         " ",
@@ -3152,14 +3228,14 @@ function SalesPage() {
                     ]
                 }, name, true, {
                     fileName: "[project]/src/app/(app)/sales/page.tsx",
-                    lineNumber: 194,
+                    lineNumber: 205,
                     columnNumber: 25
                 }, this)) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                 className: "text-muted-foreground",
                 children: "Sin atributos"
             }, void 0, false, {
                 fileName: "[project]/src/app/(app)/sales/page.tsx",
-                lineNumber: 196,
+                lineNumber: 207,
                 columnNumber: 23
             }, this);
         };
@@ -3174,7 +3250,7 @@ function SalesPage() {
                             children: product.name
                         }, void 0, false, {
                             fileName: "[project]/src/app/(app)/sales/page.tsx",
-                            lineNumber: 202,
+                            lineNumber: 213,
                             columnNumber: 25
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -3182,13 +3258,13 @@ function SalesPage() {
                             children: product.brand_name || product.brand?.name || ''
                         }, void 0, false, {
                             fileName: "[project]/src/app/(app)/sales/page.tsx",
-                            lineNumber: 203,
+                            lineNumber: 214,
                             columnNumber: 25
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/app/(app)/sales/page.tsx",
-                    lineNumber: 201,
+                    lineNumber: 212,
                     columnNumber: 21
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -3199,7 +3275,7 @@ function SalesPage() {
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/app/(app)/sales/page.tsx",
-                    lineNumber: 205,
+                    lineNumber: 216,
                     columnNumber: 21
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -3210,7 +3286,7 @@ function SalesPage() {
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/app/(app)/sales/page.tsx",
-                    lineNumber: 206,
+                    lineNumber: 217,
                     columnNumber: 21
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3218,13 +3294,13 @@ function SalesPage() {
                     children: attributes()
                 }, void 0, false, {
                     fileName: "[project]/src/app/(app)/sales/page.tsx",
-                    lineNumber: 207,
+                    lineNumber: 218,
                     columnNumber: 21
                 }, this)
             ]
         }, void 0, true, {
             fileName: "[project]/src/app/(app)/sales/page.tsx",
-            lineNumber: 200,
+            lineNumber: 211,
             columnNumber: 17
         }, this);
     };
@@ -3251,8 +3327,8 @@ function SalesPage() {
                 variantId: variant.id,
                 productId: variant.product_id,
                 productName: selectedProductForVariants?.name || 'N/A',
-                variantName: variant.attribute_values?.map((v)=>v.value).join(' / ') || 'Estándar',
-                quantity: variant.quantity,
+                variantName: variant.attribute_values?.map((v)=>v.value).join(' / ') || 'Est\u00e1ndar',
+                quantity: variant.quantity ?? 1,
                 price: variant.sale_price,
                 tax_rate: 16.00,
                 availableStock: variant.current_stock,
@@ -3275,6 +3351,10 @@ function SalesPage() {
         setCart(cart.filter((_, i)=>i !== index));
     };
     const handleOpenConfirmation = ()=>{
+        if (!selectedClient && !clientName) {
+            (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$use$2d$toast$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["toastError"])('Cliente requerido', 'Selecciona un cliente antes de continuar.');
+            return;
+        }
         const finalItems = cart.map((item)=>({
                 variantId: item.variantId,
                 name: `${item.productName} (${item.variantName})`,
@@ -3397,156 +3477,6 @@ function SalesPage() {
                 className: "flex flex-col gap-6",
                 children: [
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                        className: "grid md:grid-cols-2 gap-4",
-                        children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                            children: [
-                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$label$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Label"], {
-                                    children: "Cliente"
-                                }, void 0, false, {
-                                    fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                    lineNumber: 391,
-                                    columnNumber: 25
-                                }, this),
-                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                    className: "flex gap-2 items-center",
-                                    children: [
-                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                            className: "flex-1",
-                                            children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$AdvancedCombobox$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["AdvancedCombobox"], {
-                                                options: customerOptions,
-                                                value: selectedClient ? String(selectedClient.id) : '',
-                                                onChange: async (v)=>{
-                                                    try {
-                                                        const c = await (await __turbopack_context__.r("[project]/src/lib/api.ts [app-ssr] (ecmascript, async loader)")(__turbopack_context__.i)).getCustomer(v);
-                                                        setSelectedClient(c);
-                                                        setClientName(c?.name || '');
-                                                        setClientDni(c?.document || '');
-                                                    } catch (e) {}
-                                                },
-                                                valueAccessor: (o)=>String(o.id),
-                                                filterFn: (opts, search)=>{
-                                                    // Async filtering is not supported directly; fetch server side if search length > 1
-                                                    if (!search) return opts;
-                                                    // Simple local filter
-                                                    return opts.filter((o)=>(o.name || '').toLowerCase().includes(search.toLowerCase()) || (o.document || '').toLowerCase().includes(search.toLowerCase()));
-                                                },
-                                                renderOption: (o)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                                        className: "flex items-center justify-between",
-                                                        children: [
-                                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                                                children: [
-                                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                                                        className: "font-semibold",
-                                                                        children: o.name
-                                                                    }, void 0, false, {
-                                                                        fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                                        lineNumber: 412,
-                                                                        columnNumber: 119
-                                                                    }, void 0),
-                                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                                                        className: "text-xs text-muted-foreground",
-                                                                        children: o.document
-                                                                    }, void 0, false, {
-                                                                        fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                                        lineNumber: 412,
-                                                                        columnNumber: 164
-                                                                    }, void 0)
-                                                                ]
-                                                            }, void 0, true, {
-                                                                fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                                lineNumber: 412,
-                                                                columnNumber: 114
-                                                            }, void 0),
-                                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                                                className: "text-sm",
-                                                                children: o.email || ''
-                                                            }, void 0, false, {
-                                                                fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                                lineNumber: 412,
-                                                                columnNumber: 235
-                                                            }, void 0)
-                                                        ]
-                                                    }, void 0, true, {
-                                                        fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                        lineNumber: 412,
-                                                        columnNumber: 63
-                                                    }, void 0),
-                                                displayValue: (val)=>selectedClient?.name || clientName,
-                                                placeholder: isLoadingProducts ? 'Cargando...' : 'Buscar cliente...',
-                                                searchPlaceholder: "Buscar cliente...",
-                                                emptyMessage: "No se encontraron clientes.",
-                                                disabled: false
-                                            }, void 0, false, {
-                                                fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                lineNumber: 394,
-                                                columnNumber: 33
-                                            }, this)
-                                        }, void 0, false, {
-                                            fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                            lineNumber: 393,
-                                            columnNumber: 29
-                                        }, this),
-                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                            children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Button"], {
-                                                onClick: ()=>window.open('/customers', '_blank'),
-                                                children: "Buscar"
-                                            }, void 0, false, {
-                                                fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                lineNumber: 421,
-                                                columnNumber: 33
-                                            }, this)
-                                        }, void 0, false, {
-                                            fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                            lineNumber: 420,
-                                            columnNumber: 29
-                                        }, this),
-                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                            children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$customers$2f$CustomerQuickCreator$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"], {
-                                                onCreated: (c)=>{
-                                                    setSelectedClient(c);
-                                                    setClientName(c?.name || '');
-                                                    setClientDni(c?.document || '');
-                                                    loadCustomers();
-                                                }
-                                            }, void 0, false, {
-                                                fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                lineNumber: 425,
-                                                columnNumber: 33
-                                            }, this)
-                                        }, void 0, false, {
-                                            fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                            lineNumber: 423,
-                                            columnNumber: 29
-                                        }, this)
-                                    ]
-                                }, void 0, true, {
-                                    fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                    lineNumber: 392,
-                                    columnNumber: 25
-                                }, this),
-                                selectedClient && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                    className: "text-sm text-muted-foreground",
-                                    children: [
-                                        "Seleccionado: ",
-                                        selectedClient.name
-                                    ]
-                                }, void 0, true, {
-                                    fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                    lineNumber: 428,
-                                    columnNumber: 44
-                                }, this)
-                            ]
-                        }, void 0, true, {
-                            fileName: "[project]/src/app/(app)/sales/page.tsx",
-                            lineNumber: 390,
-                            columnNumber: 21
-                        }, this)
-                    }, void 0, false, {
-                        fileName: "[project]/src/app/(app)/sales/page.tsx",
-                        lineNumber: 389,
-                        columnNumber: 17
-                    }, this),
-                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                         className: "flex items-center justify-between",
                         children: [
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3557,22 +3487,22 @@ function SalesPage() {
                                         children: "Ventas"
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                        lineNumber: 433,
-                                        columnNumber: 21
+                                        lineNumber: 406,
+                                        columnNumber: 29
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                                         className: "text-sm text-muted-foreground",
                                         children: editingTransactionId ? `Editando venta a ${clientName}` : "Crea y gestiona facturas de venta."
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                        lineNumber: 434,
-                                        columnNumber: 21
+                                        lineNumber: 407,
+                                        columnNumber: 29
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                lineNumber: 432,
-                                columnNumber: 17
+                                lineNumber: 405,
+                                columnNumber: 25
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Button"], {
                                 variant: "outline",
@@ -3583,21 +3513,168 @@ function SalesPage() {
                                         className: "mr-2 h-4 w-4"
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                        lineNumber: 437,
-                                        columnNumber: 21
+                                        lineNumber: 410,
+                                        columnNumber: 29
                                     }, this),
                                     "Historial"
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                lineNumber: 436,
-                                columnNumber: 17
+                                lineNumber: 409,
+                                columnNumber: 25
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/app/(app)/sales/page.tsx",
-                        lineNumber: 431,
-                        columnNumber: 13
+                        lineNumber: 404,
+                        columnNumber: 17
+                    }, this),
+                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                        className: "grid md:grid-cols-2 gap-4",
+                        children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                            children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Card"], {
+                                children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["CardContent"], {
+                                    className: "p-4",
+                                    children: [
+                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$label$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Label"], {
+                                            children: "Cliente"
+                                        }, void 0, false, {
+                                            fileName: "[project]/src/app/(app)/sales/page.tsx",
+                                            lineNumber: 417,
+                                            columnNumber: 41
+                                        }, this),
+                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                            className: "flex gap-2 items-center",
+                                            children: [
+                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                    className: "flex-1",
+                                                    children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$AdvancedCombobox$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["AdvancedCombobox"], {
+                                                        options: customerOptions,
+                                                        value: selectedClient ? String(selectedClient.id) : '',
+                                                        onChange: async (v)=>{
+                                                            try {
+                                                                const c = await (await __turbopack_context__.r("[project]/src/lib/api.ts [app-ssr] (ecmascript, async loader)")(__turbopack_context__.i)).getCustomer(v);
+                                                                setSelectedClient(c);
+                                                                setClientName(c?.name || '');
+                                                                setClientDni(c?.document || '');
+                                                            } catch (e) {}
+                                                        },
+                                                        valueAccessor: (o)=>String(o.id),
+                                                        filterFn: (opts, search)=>{
+                                                            if (!search) return opts;
+                                                            return opts.filter((o)=>(o.name || '').toLowerCase().includes(search.toLowerCase()) || (o.document || '').toLowerCase().includes(search.toLowerCase()));
+                                                        },
+                                                        renderOption: (o)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                                className: "flex items-center justify-between",
+                                                                children: [
+                                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                                        children: [
+                                                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                                                className: "font-semibold",
+                                                                                children: o.name
+                                                                            }, void 0, false, {
+                                                                                fileName: "[project]/src/app/(app)/sales/page.tsx",
+                                                                                lineNumber: 436,
+                                                                                columnNumber: 135
+                                                                            }, void 0),
+                                                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                                                className: "text-xs text-muted-foreground",
+                                                                                children: o.document
+                                                                            }, void 0, false, {
+                                                                                fileName: "[project]/src/app/(app)/sales/page.tsx",
+                                                                                lineNumber: 436,
+                                                                                columnNumber: 180
+                                                                            }, void 0)
+                                                                        ]
+                                                                    }, void 0, true, {
+                                                                        fileName: "[project]/src/app/(app)/sales/page.tsx",
+                                                                        lineNumber: 436,
+                                                                        columnNumber: 130
+                                                                    }, void 0),
+                                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                                        className: "text-sm",
+                                                                        children: o.email || ''
+                                                                    }, void 0, false, {
+                                                                        fileName: "[project]/src/app/(app)/sales/page.tsx",
+                                                                        lineNumber: 436,
+                                                                        columnNumber: 251
+                                                                    }, void 0)
+                                                                ]
+                                                            }, void 0, true, {
+                                                                fileName: "[project]/src/app/(app)/sales/page.tsx",
+                                                                lineNumber: 436,
+                                                                columnNumber: 79
+                                                            }, void 0),
+                                                        displayValue: (val)=>selectedClient?.name || clientName,
+                                                        placeholder: isLoadingProducts ? 'Cargando...' : 'Buscar cliente...',
+                                                        searchPlaceholder: "Buscar cliente...",
+                                                        emptyMessage: "No se encontraron clientes.",
+                                                        disabled: false
+                                                    }, void 0, false, {
+                                                        fileName: "[project]/src/app/(app)/sales/page.tsx",
+                                                        lineNumber: 420,
+                                                        columnNumber: 49
+                                                    }, this)
+                                                }, void 0, false, {
+                                                    fileName: "[project]/src/app/(app)/sales/page.tsx",
+                                                    lineNumber: 419,
+                                                    columnNumber: 45
+                                                }, this),
+                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                                    children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$customers$2f$CustomerQuickCreator$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["default"], {
+                                                        onCreated: (c)=>{
+                                                            setSelectedClient(c);
+                                                            setClientName(c?.name || '');
+                                                            setClientDni(c?.document || '');
+                                                            loadCustomers();
+                                                        }
+                                                    }, void 0, false, {
+                                                        fileName: "[project]/src/app/(app)/sales/page.tsx",
+                                                        lineNumber: 446,
+                                                        columnNumber: 49
+                                                    }, this)
+                                                }, void 0, false, {
+                                                    fileName: "[project]/src/app/(app)/sales/page.tsx",
+                                                    lineNumber: 444,
+                                                    columnNumber: 45
+                                                }, this)
+                                            ]
+                                        }, void 0, true, {
+                                            fileName: "[project]/src/app/(app)/sales/page.tsx",
+                                            lineNumber: 418,
+                                            columnNumber: 41
+                                        }, this),
+                                        selectedClient && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                            className: "text-sm text-muted-foreground",
+                                            children: [
+                                                "Seleccionado: ",
+                                                selectedClient.name
+                                            ]
+                                        }, void 0, true, {
+                                            fileName: "[project]/src/app/(app)/sales/page.tsx",
+                                            lineNumber: 449,
+                                            columnNumber: 60
+                                        }, this)
+                                    ]
+                                }, void 0, true, {
+                                    fileName: "[project]/src/app/(app)/sales/page.tsx",
+                                    lineNumber: 416,
+                                    columnNumber: 37
+                                }, this)
+                            }, void 0, false, {
+                                fileName: "[project]/src/app/(app)/sales/page.tsx",
+                                lineNumber: 415,
+                                columnNumber: 33
+                            }, this)
+                        }, void 0, false, {
+                            fileName: "[project]/src/app/(app)/sales/page.tsx",
+                            lineNumber: 414,
+                            columnNumber: 29
+                        }, this)
+                    }, void 0, false, {
+                        fileName: "[project]/src/app/(app)/sales/page.tsx",
+                        lineNumber: 413,
+                        columnNumber: 17
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                         className: "grid grid-cols-1 lg:grid-cols-3 gap-8 items-start",
@@ -3611,12 +3688,12 @@ function SalesPage() {
                                                 children: editingTransactionId ? "Editar Venta" : "Nueva Venta"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                lineNumber: 443,
+                                                lineNumber: 457,
                                                 columnNumber: 37
                                             }, this)
                                         }, void 0, false, {
                                             fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                            lineNumber: 443,
+                                            lineNumber: 457,
                                             columnNumber: 25
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["CardContent"], {
@@ -3633,23 +3710,23 @@ function SalesPage() {
                                                                     children: "Cliente"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                                    lineNumber: 446,
+                                                                    lineNumber: 460,
                                                                     columnNumber: 61
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Input"], {
                                                                     id: "clientName",
                                                                     value: clientName,
-                                                                    onChange: (e)=>setClientName(e.target.value),
-                                                                    placeholder: "Nombre del cliente"
+                                                                    readOnly: true,
+                                                                    placeholder: "Nombre del cliente (seleccionado desde el buscador)"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                                    lineNumber: 446,
+                                                                    lineNumber: 460,
                                                                     columnNumber: 104
                                                                 }, this)
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                            lineNumber: 446,
+                                                            lineNumber: 460,
                                                             columnNumber: 33
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3660,29 +3737,29 @@ function SalesPage() {
                                                                     children: "DNI Cliente"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                                    lineNumber: 447,
+                                                                    lineNumber: 461,
                                                                     columnNumber: 61
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Input"], {
                                                                     id: "clientDni",
                                                                     value: clientDni,
-                                                                    onChange: (e)=>setClientDni(e.target.value),
+                                                                    readOnly: true,
                                                                     placeholder: "Cédula o RIF"
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                                    lineNumber: 447,
+                                                                    lineNumber: 461,
                                                                     columnNumber: 107
                                                                 }, this)
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                            lineNumber: 447,
+                                                            lineNumber: 461,
                                                             columnNumber: 33
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                    lineNumber: 445,
+                                                    lineNumber: 459,
                                                     columnNumber: 29
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3691,7 +3768,7 @@ function SalesPage() {
                                                             children: "Añadir Producto"
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                            lineNumber: 450,
+                                                            lineNumber: 464,
                                                             columnNumber: 33
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$AdvancedCombobox$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["AdvancedCombobox"], {
@@ -3708,13 +3785,13 @@ function SalesPage() {
                                                             disabled: isLoadingProducts || isReadOnly
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                            lineNumber: 451,
+                                                            lineNumber: 465,
                                                             columnNumber: 33
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                    lineNumber: 449,
+                                                    lineNumber: 463,
                                                     columnNumber: 29
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3728,44 +3805,44 @@ function SalesPage() {
                                                                             children: "Producto"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                                            lineNumber: 467,
+                                                                            lineNumber: 481,
                                                                             columnNumber: 60
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TableHead"], {
                                                                             children: "Cantidad"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                                            lineNumber: 467,
+                                                                            lineNumber: 481,
                                                                             columnNumber: 91
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TableHead"], {
                                                                             children: "Precio Unit."
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                                            lineNumber: 467,
+                                                                            lineNumber: 481,
                                                                             columnNumber: 122
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TableHead"], {
                                                                             children: "Total"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                                            lineNumber: 467,
+                                                                            lineNumber: 481,
                                                                             columnNumber: 157
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TableHead"], {}, void 0, false, {
                                                                             fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                                            lineNumber: 467,
+                                                                            lineNumber: 481,
                                                                             columnNumber: 185
                                                                         }, this)
                                                                     ]
                                                                 }, void 0, true, {
                                                                     fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                                    lineNumber: 467,
+                                                                    lineNumber: 481,
                                                                     columnNumber: 50
                                                                 }, this)
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                                lineNumber: 467,
+                                                                lineNumber: 481,
                                                                 columnNumber: 37
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TableBody"], {
@@ -3778,7 +3855,7 @@ function SalesPage() {
                                                                                         children: item.productName
                                                                                     }, void 0, false, {
                                                                                         fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                                                        lineNumber: 471,
+                                                                                        lineNumber: 485,
                                                                                         columnNumber: 60
                                                                                     }, this),
                                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -3791,30 +3868,58 @@ function SalesPage() {
                                                                                         ]
                                                                                     }, void 0, true, {
                                                                                         fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                                                        lineNumber: 471,
+                                                                                        lineNumber: 485,
                                                                                         columnNumber: 109
                                                                                     }, this)
                                                                                 ]
                                                                             }, void 0, true, {
                                                                                 fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                                                lineNumber: 471,
+                                                                                lineNumber: 485,
                                                                                 columnNumber: 49
                                                                             }, this),
                                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TableCell"], {
-                                                                                children: item.quantity
+                                                                                children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Input"], {
+                                                                                    type: "number",
+                                                                                    value: item.quantity,
+                                                                                    min: 0,
+                                                                                    onChange: (e)=>{
+                                                                                        const newItems = [
+                                                                                            ...cart
+                                                                                        ];
+                                                                                        newItems[index].quantity = parseInt(e.target.value, 10) || 0;
+                                                                                        setCart(newItems);
+                                                                                    },
+                                                                                    className: "w-20 text-center"
+                                                                                }, void 0, false, {
+                                                                                    fileName: "[project]/src/app/(app)/sales/page.tsx",
+                                                                                    lineNumber: 487,
+                                                                                    columnNumber: 53
+                                                                                }, this)
                                                                             }, void 0, false, {
                                                                                 fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                                                lineNumber: 472,
+                                                                                lineNumber: 486,
                                                                                 columnNumber: 49
                                                                             }, this),
                                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TableCell"], {
-                                                                                children: [
-                                                                                    "$",
-                                                                                    Number(item.price ?? 0).toFixed(2)
-                                                                                ]
-                                                                            }, void 0, true, {
+                                                                                children: canEditPriceOnSale ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Input"], {
+                                                                                    type: "number",
+                                                                                    value: item.price,
+                                                                                    onChange: (e)=>{
+                                                                                        const newItems = [
+                                                                                            ...cart
+                                                                                        ];
+                                                                                        newItems[index].price = parseFloat(e.target.value) || 0;
+                                                                                        setCart(newItems);
+                                                                                    },
+                                                                                    className: "text-right w-24"
+                                                                                }, void 0, false, {
+                                                                                    fileName: "[project]/src/app/(app)/sales/page.tsx",
+                                                                                    lineNumber: 494,
+                                                                                    columnNumber: 53
+                                                                                }, this) : `$${Number(item.price ?? 0).toFixed(2)}`
+                                                                            }, void 0, false, {
                                                                                 fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                                                lineNumber: 473,
+                                                                                lineNumber: 493,
                                                                                 columnNumber: 49
                                                                             }, this),
                                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TableCell"], {
@@ -3824,7 +3929,7 @@ function SalesPage() {
                                                                                 ]
                                                                             }, void 0, true, {
                                                                                 fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                                                lineNumber: 474,
+                                                                                lineNumber: 500,
                                                                                 columnNumber: 49
                                                                             }, this),
                                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TableCell"], {
@@ -3839,23 +3944,23 @@ function SalesPage() {
                                                                                         className: "h-4 w-4 text-destructive"
                                                                                     }, void 0, false, {
                                                                                         fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                                                        lineNumber: 482,
+                                                                                        lineNumber: 508,
                                                                                         columnNumber: 57
                                                                                     }, this)
                                                                                 }, void 0, false, {
                                                                                     fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                                                    lineNumber: 476,
+                                                                                    lineNumber: 502,
                                                                                     columnNumber: 53
                                                                                 }, this)
                                                                             }, void 0, false, {
                                                                                 fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                                                lineNumber: 475,
+                                                                                lineNumber: 501,
                                                                                 columnNumber: 49
                                                                             }, this)
                                                                         ]
                                                                     }, item.id, true, {
                                                                         fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                                        lineNumber: 470,
+                                                                        lineNumber: 484,
                                                                         columnNumber: 45
                                                                     }, this)) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TableRow"], {
                                                                     children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TableCell"], {
@@ -3864,45 +3969,45 @@ function SalesPage() {
                                                                         children: "El carrito está vacío."
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                                        lineNumber: 486,
+                                                                        lineNumber: 512,
                                                                         columnNumber: 57
                                                                     }, this)
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                                    lineNumber: 486,
+                                                                    lineNumber: 512,
                                                                     columnNumber: 47
                                                                 }, this)
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                                lineNumber: 468,
+                                                                lineNumber: 482,
                                                                 columnNumber: 37
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                        lineNumber: 466,
+                                                        lineNumber: 480,
                                                         columnNumber: 33
                                                     }, this)
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                    lineNumber: 465,
+                                                    lineNumber: 479,
                                                     columnNumber: 29
                                                 }, this)
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                            lineNumber: 444,
+                                            lineNumber: 458,
                                             columnNumber: 25
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                    lineNumber: 442,
+                                    lineNumber: 456,
                                     columnNumber: 21
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                lineNumber: 441,
+                                lineNumber: 455,
                                 columnNumber: 17
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -3915,12 +4020,12 @@ function SalesPage() {
                                                     children: "Configuración"
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                    lineNumber: 495,
+                                                    lineNumber: 521,
                                                     columnNumber: 37
                                                 }, this)
                                             }, void 0, false, {
                                                 fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                lineNumber: 495,
+                                                lineNumber: 521,
                                                 columnNumber: 25
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["CardContent"], {
@@ -3933,7 +4038,7 @@ function SalesPage() {
                                                                 children: "Fecha de Venta"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                                lineNumber: 497,
+                                                                lineNumber: 523,
                                                                 columnNumber: 57
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$popover$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Popover"], {
@@ -3948,7 +4053,7 @@ function SalesPage() {
                                                                                     className: "mr-2 h-4 w-4"
                                                                                 }, void 0, false, {
                                                                                     fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                                                    lineNumber: 497,
+                                                                                    lineNumber: 523,
                                                                                     columnNumber: 242
                                                                                 }, this),
                                                                                 date ? (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$date$2d$fns$2f$format$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$locals$3e$__["format"])(date, "PPP", {
@@ -3957,18 +4062,18 @@ function SalesPage() {
                                                                                     children: "Seleccione fecha"
                                                                                 }, void 0, false, {
                                                                                     fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                                                    lineNumber: 497,
+                                                                                    lineNumber: 523,
                                                                                     columnNumber: 329
                                                                                 }, this)
                                                                             ]
                                                                         }, void 0, true, {
                                                                             fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                                            lineNumber: 497,
+                                                                            lineNumber: 523,
                                                                             columnNumber: 119
                                                                         }, this)
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                                        lineNumber: 497,
+                                                                        lineNumber: 523,
                                                                         columnNumber: 95
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$popover$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["PopoverContent"], {
@@ -3980,24 +4085,24 @@ function SalesPage() {
                                                                             initialFocus: true
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                                            lineNumber: 497,
+                                                                            lineNumber: 523,
                                                                             columnNumber: 424
                                                                         }, this)
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                                        lineNumber: 497,
+                                                                        lineNumber: 523,
                                                                         columnNumber: 385
                                                                     }, this)
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                                lineNumber: 497,
+                                                                lineNumber: 523,
                                                                 columnNumber: 86
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                        lineNumber: 497,
+                                                        lineNumber: 523,
                                                         columnNumber: 29
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -4008,35 +4113,36 @@ function SalesPage() {
                                                                 children: "Nº de Factura"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                                lineNumber: 498,
+                                                                lineNumber: 524,
                                                                 columnNumber: 57
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Input"], {
                                                                 id: "invoiceNumber",
                                                                 value: invoiceNumber,
                                                                 onChange: (e)=>setInvoiceNumber(e.target.value),
-                                                                placeholder: "Opcional"
+                                                                placeholder: "Opcional",
+                                                                readOnly: !canEditInvoiceSale
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                                lineNumber: 498,
+                                                                lineNumber: 524,
                                                                 columnNumber: 109
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                        lineNumber: 498,
+                                                        lineNumber: 524,
                                                         columnNumber: 29
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                lineNumber: 496,
+                                                lineNumber: 522,
                                                 columnNumber: 25
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                        lineNumber: 494,
+                                        lineNumber: 520,
                                         columnNumber: 21
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Card"], {
@@ -4046,12 +4152,12 @@ function SalesPage() {
                                                     children: "Resumen"
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                    lineNumber: 502,
+                                                    lineNumber: 528,
                                                     columnNumber: 37
                                                 }, this)
                                             }, void 0, false, {
                                                 fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                lineNumber: 502,
+                                                lineNumber: 528,
                                                 columnNumber: 25
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["CardContent"], {
@@ -4064,7 +4170,7 @@ function SalesPage() {
                                                                 children: "Subtotal"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                                lineNumber: 504,
+                                                                lineNumber: 530,
                                                                 columnNumber: 67
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -4074,13 +4180,13 @@ function SalesPage() {
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                                lineNumber: 504,
+                                                                lineNumber: 530,
                                                                 columnNumber: 88
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                        lineNumber: 504,
+                                                        lineNumber: 530,
                                                         columnNumber: 29
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -4090,7 +4196,7 @@ function SalesPage() {
                                                                 children: "Impuestos"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                                lineNumber: 505,
+                                                                lineNumber: 531,
                                                                 columnNumber: 67
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -4100,18 +4206,18 @@ function SalesPage() {
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                                lineNumber: 505,
+                                                                lineNumber: 531,
                                                                 columnNumber: 89
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                        lineNumber: 505,
+                                                        lineNumber: 531,
                                                         columnNumber: 29
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$separator$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Separator"], {}, void 0, false, {
                                                         fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                        lineNumber: 506,
+                                                        lineNumber: 532,
                                                         columnNumber: 29
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -4121,7 +4227,7 @@ function SalesPage() {
                                                                 children: "Total"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                                lineNumber: 507,
+                                                                lineNumber: 533,
                                                                 columnNumber: 89
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -4131,25 +4237,25 @@ function SalesPage() {
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                                lineNumber: 507,
+                                                                lineNumber: 533,
                                                                 columnNumber: 107
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                        lineNumber: 507,
+                                                        lineNumber: 533,
                                                         columnNumber: 29
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                lineNumber: 503,
+                                                lineNumber: 529,
                                                 columnNumber: 25
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                        lineNumber: 501,
+                                        lineNumber: 527,
                                         columnNumber: 21
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -4164,15 +4270,25 @@ function SalesPage() {
                                                         className: "mr-2 h-4 w-4 animate-spin"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                        lineNumber: 516,
+                                                        lineNumber: 542,
                                                         columnNumber: 43
                                                     }, this),
                                                     isLoading ? "Procesando..." : editingTransactionId ? "Guardar Cambios" : "Registrar Venta"
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                lineNumber: 511,
+                                                lineNumber: 537,
                                                 columnNumber: 26
+                                            }, this),
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Button"], {
+                                                variant: "outline",
+                                                onClick: resetForm,
+                                                disabled: isReadOnly,
+                                                children: "Limpiar"
+                                            }, void 0, false, {
+                                                fileName: "[project]/src/app/(app)/sales/page.tsx",
+                                                lineNumber: 545,
+                                                columnNumber: 25
                                             }, this),
                                             editingTransactionId && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Button"], {
                                                 variant: "ghost",
@@ -4183,14 +4299,14 @@ function SalesPage() {
                                                         className: "mr-2 h-4 w-4"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                        lineNumber: 521,
+                                                        lineNumber: 550,
                                                         columnNumber: 33
                                                     }, this),
                                                     "Cancelar Edición"
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                lineNumber: 520,
+                                                lineNumber: 549,
                                                 columnNumber: 29
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Button"], {
@@ -4200,13 +4316,13 @@ function SalesPage() {
                                                 children: "Poner en Espera"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                lineNumber: 524,
+                                                lineNumber: 553,
                                                 columnNumber: 25
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                        lineNumber: 510,
+                                        lineNumber: 536,
                                         columnNumber: 25
                                     }, this),
                                     pendingSales.length > 0 && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Card"], {
@@ -4217,20 +4333,20 @@ function SalesPage() {
                                                         children: "Ventas en Espera"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                        lineNumber: 534,
+                                                        lineNumber: 563,
                                                         columnNumber: 41
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["CardDescription"], {
                                                         children: "Restaura o elimina las ventas pendientes."
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                        lineNumber: 534,
+                                                        lineNumber: 563,
                                                         columnNumber: 80
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                lineNumber: 534,
+                                                lineNumber: 563,
                                                 columnNumber: 29
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["CardContent"], {
@@ -4245,7 +4361,7 @@ function SalesPage() {
                                                                         children: sale.clientName || "Cliente General"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                                        lineNumber: 539,
+                                                                        lineNumber: 568,
                                                                         columnNumber: 45
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -4259,13 +4375,13 @@ function SalesPage() {
                                                                         ]
                                                                     }, void 0, true, {
                                                                         fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                                        lineNumber: 540,
+                                                                        lineNumber: 569,
                                                                         columnNumber: 45
                                                                     }, this)
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                                lineNumber: 538,
+                                                                lineNumber: 567,
                                                                 columnNumber: 41
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -4286,17 +4402,17 @@ function SalesPage() {
                                                                                         className: "h-4 w-4"
                                                                                     }, void 0, false, {
                                                                                         fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                                                        lineNumber: 543,
+                                                                                        lineNumber: 572,
                                                                                         columnNumber: 200
                                                                                     }, this)
                                                                                 }, void 0, false, {
                                                                                     fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                                                    lineNumber: 543,
+                                                                                    lineNumber: 572,
                                                                                     columnNumber: 78
                                                                                 }, this)
                                                                             }, void 0, false, {
                                                                                 fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                                                lineNumber: 543,
+                                                                                lineNumber: 572,
                                                                                 columnNumber: 54
                                                                             }, this),
                                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$tooltip$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TooltipContent"], {
@@ -4304,18 +4420,18 @@ function SalesPage() {
                                                                                     children: "Restaurar"
                                                                                 }, void 0, false, {
                                                                                     fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                                                    lineNumber: 543,
+                                                                                    lineNumber: 572,
                                                                                     columnNumber: 277
                                                                                 }, this)
                                                                             }, void 0, false, {
                                                                                 fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                                                lineNumber: 543,
+                                                                                lineNumber: 572,
                                                                                 columnNumber: 261
                                                                             }, this)
                                                                         ]
                                                                     }, void 0, true, {
                                                                         fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                                        lineNumber: 543,
+                                                                        lineNumber: 572,
                                                                         columnNumber: 45
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$tooltip$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Tooltip"], {
@@ -4333,17 +4449,17 @@ function SalesPage() {
                                                                                         className: "h-4 w-4"
                                                                                     }, void 0, false, {
                                                                                         fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                                                        lineNumber: 544,
+                                                                                        lineNumber: 573,
                                                                                         columnNumber: 213
                                                                                     }, this)
                                                                                 }, void 0, false, {
                                                                                     fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                                                    lineNumber: 544,
+                                                                                    lineNumber: 573,
                                                                                     columnNumber: 78
                                                                                 }, this)
                                                                             }, void 0, false, {
                                                                                 fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                                                lineNumber: 544,
+                                                                                lineNumber: 573,
                                                                                 columnNumber: 54
                                                                             }, this),
                                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$tooltip$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TooltipContent"], {
@@ -4351,59 +4467,59 @@ function SalesPage() {
                                                                                     children: "Eliminar"
                                                                                 }, void 0, false, {
                                                                                     fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                                                    lineNumber: 544,
+                                                                                    lineNumber: 573,
                                                                                     columnNumber: 284
                                                                                 }, this)
                                                                             }, void 0, false, {
                                                                                 fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                                                lineNumber: 544,
+                                                                                lineNumber: 573,
                                                                                 columnNumber: 268
                                                                             }, this)
                                                                         ]
                                                                     }, void 0, true, {
                                                                         fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                                        lineNumber: 544,
+                                                                        lineNumber: 573,
                                                                         columnNumber: 45
                                                                     }, this)
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                                lineNumber: 542,
+                                                                lineNumber: 571,
                                                                 columnNumber: 41
                                                             }, this)
                                                         ]
                                                     }, sale.id, true, {
                                                         fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                        lineNumber: 537,
+                                                        lineNumber: 566,
                                                         columnNumber: 37
                                                     }, this))
                                             }, void 0, false, {
                                                 fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                                lineNumber: 535,
+                                                lineNumber: 564,
                                                 columnNumber: 29
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                        lineNumber: 533,
+                                        lineNumber: 562,
                                         columnNumber: 25
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/app/(app)/sales/page.tsx",
-                                lineNumber: 493,
+                                lineNumber: 519,
                                 columnNumber: 17
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/app/(app)/sales/page.tsx",
-                        lineNumber: 440,
+                        lineNumber: 454,
                         columnNumber: 13
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/app/(app)/sales/page.tsx",
-                lineNumber: 388,
+                lineNumber: 403,
                 columnNumber: 9
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$dialogs$2f$VariantSelectionDialog$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["VariantSelectionDialog"], {
@@ -4411,11 +4527,12 @@ function SalesPage() {
                 onOpenChange: setIsVariantDialogOpen,
                 product: selectedProductForVariants,
                 onVariantsSelected: handleVariantsSelected,
-                context: "sale"
+                context: "sale",
+                selectOnly: true
             }, void 0, false, {
                 fileName: "[project]/src/app/(app)/sales/page.tsx",
-                lineNumber: 554,
-                columnNumber: 9
+                lineNumber: 583,
+                columnNumber: 5
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$dialogs$2f$SalesHistoryDialog$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["SalesHistoryDialog"], {
                 open: isHistoryOpen,
@@ -4427,7 +4544,7 @@ function SalesPage() {
                 canAnnul: currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('sales:annul')
             }, void 0, false, {
                 fileName: "[project]/src/app/(app)/sales/page.tsx",
-                lineNumber: 555,
+                lineNumber: 584,
                 columnNumber: 9
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$dialogs$2f$SalesReceiptDialog$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["SalesReceiptDialog"], {
@@ -4439,7 +4556,7 @@ function SalesPage() {
                 transactionId: selectedTransactionId
             }, void 0, false, {
                 fileName: "[project]/src/app/(app)/sales/page.tsx",
-                lineNumber: 564,
+                lineNumber: 593,
                 columnNumber: 9
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$dialogs$2f$SalesConfirmationDialog$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["SalesConfirmationDialog"], {
@@ -4450,13 +4567,13 @@ function SalesPage() {
                 isSaving: isLoading
             }, void 0, false, {
                 fileName: "[project]/src/app/(app)/sales/page.tsx",
-                lineNumber: 565,
+                lineNumber: 594,
                 columnNumber: 9
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/src/app/(app)/sales/page.tsx",
-        lineNumber: 387,
+        lineNumber: 402,
         columnNumber: 9
     }, this);
 }

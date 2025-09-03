@@ -1,4 +1,4 @@
-export type PermissionCategory = 'ventas' | 'compras' | 'productos' | 'configuracion' | 'usuarios' | 'general' | 'catalogo';
+export type PermissionCategory = 'ventas' | 'compras' | 'productos' | 'configuracion' | 'usuarios' | 'general' | 'catalogo' | 'clientes' | 'proveedores';
 
 export interface PermissionMeta {
   key: string;
@@ -19,6 +19,8 @@ const METADATA_MAP: Record<string, Partial<PermissionMeta>> = {
   'sales:edit': { label: 'Editar ventas', description: 'Permite editar ventas activas.', category: 'ventas', affected: ['Editar Venta', 'Guardar Cambios'] },
   'sales:annul': { label: 'Anular ventas', description: 'Permite anular/invalidar ventas y revertir stock.', category: 'ventas', affected: ['Anular Venta'] },
   'sales:delete': { label: 'Eliminar ventas (pendientes)', description: 'Permite eliminar ventas pendientes guardadas.', category: 'ventas', affected: ['Eliminar (pendiente)'] },
+  'sales:edit_price': { label: 'Editar precio en venta', description: 'Permite modificar el precio de venta al momento de crear una venta.', category: 'ventas', affected: ['Precio Unit. en carrito'] },
+  'sales:edit_invoice': { label: 'Editar nº de factura (ventas)', description: 'Permite modificar manualmente el número de factura al registrar una venta.', category: 'ventas', affected: ['Nº de Factura'] },
 
   'purchases:read': { label: 'Ver compras', description: 'Permite ver el historial y recibos de compras.', category: 'compras', affected: ['Historial', 'Ver Recibo'] },
   'purchases:create': { label: 'Crear compras', description: 'Permite registrar nuevas compras.', category: 'compras', affected: ['Registrar Compra', 'Guardar Cambios'] },
@@ -87,15 +89,17 @@ const METADATA_MAP: Record<string, Partial<PermissionMeta>> = {
   'users:delete': { label: 'Eliminar usuarios', description: 'Permite eliminar usuarios del sistema.', category: 'usuarios', affected: ['Eliminar Usuario'] },
   'users:permissions': { label: 'Gestionar permisos', description: 'Permite asignar y modificar permisos de otros usuarios.', category: 'usuarios', affected: ['Editor de Permisos'] },
   // Customers
-  'customers:read': { label: 'Ver clientes', description: 'Permite ver la lista y fichas de clientes.', category: 'configuracion', affected: ['Clientes'] },
-  'customers:create': { label: 'Crear clientes', description: 'Permite crear nuevos clientes en el sistema.', category: 'configuracion', affected: ['Nuevo Cliente'] },
-  'customers:edit': { label: 'Editar clientes', description: 'Permite editar la información de clientes.', category: 'configuracion', affected: ['Editar Cliente'] },
-  'customers:delete': { label: 'Eliminar clientes', description: 'Permite eliminar clientes del sistema.', category: 'configuracion', affected: ['Eliminar Cliente'] },
+  'customers:read': { label: 'Ver clientes', description: 'Permite ver la lista y fichas de clientes.', category: 'clientes', affected: ['Clientes'] },
+  'customers:create': { label: 'Crear clientes', description: 'Permite crear nuevos clientes en el sistema.', category: 'clientes', affected: ['Nuevo Cliente'] },
+  'customers:edit': { label: 'Editar clientes', description: 'Permite editar la información de clientes.', category: 'clientes', affected: ['Editar Cliente'] },
+  'customers:delete': { label: 'Eliminar clientes', description: 'Permite eliminar clientes del sistema.', category: 'clientes', affected: ['Eliminar Cliente'] },
+  'customers:view_sensitive': { label: 'Ver datos sensibles de clientes', description: 'Permite ver datos personales sensibles (DNI, teléfono, correo) en la ficha de cliente.', category: 'clientes', affected: ['DNI Cliente', 'Teléfono', 'Email'] },
   // Suppliers
-  'suppliers:read': { label: 'Ver proveedores', description: 'Permite ver la lista y fichas de proveedores.', category: 'configuracion', affected: ['Proveedores'] },
-  'suppliers:create': { label: 'Crear proveedores', description: 'Permite crear nuevos proveedores en el sistema.', category: 'configuracion', affected: ['Nuevo Proveedor'] },
-  'suppliers:edit': { label: 'Editar proveedores', description: 'Permite editar la información de proveedores.', category: 'configuracion', affected: ['Editar Proveedor'] },
-  'suppliers:delete': { label: 'Eliminar proveedores', description: 'Permite eliminar proveedores del sistema.', category: 'configuracion', affected: ['Eliminar Proveedor'] },
+  'suppliers:read': { label: 'Ver proveedores', description: 'Permite ver la lista y fichas de proveedores.', category: 'proveedores', affected: ['Proveedores'] },
+  'suppliers:create': { label: 'Crear proveedores', description: 'Permite crear nuevos proveedores en el sistema.', category: 'proveedores', affected: ['Nuevo Proveedor'] },
+  'suppliers:edit': { label: 'Editar proveedores', description: 'Permite editar la información de proveedores.', category: 'proveedores', affected: ['Editar Proveedor'] },
+  'suppliers:delete': { label: 'Eliminar proveedores', description: 'Permite eliminar proveedores del sistema.', category: 'proveedores', affected: ['Eliminar Proveedor'] },
+  'suppliers:view_sensitive': { label: 'Ver datos sensibles de proveedores', description: 'Permite ver datos sensibles de proveedores (RIF, cuentas, contactos) en la ficha de proveedor.', category: 'proveedores', affected: ['RIF', 'Cuenta', 'Contactos'] },
 };
 
 export const PERMISSIONS_META: PermissionMeta[] = (permissionsJson.permissions || []).map(p => {
@@ -116,6 +120,8 @@ export const CATEGORIES_DISPLAY: Record<PermissionCategory, string> = {
   productos: 'Productos',
   configuracion: 'Configuración',
   catalogo: 'Catálogo',
+  clientes: 'Clientes',
+  proveedores: 'Proveedores',
   usuarios: 'Usuarios',
   general: 'General'
 };

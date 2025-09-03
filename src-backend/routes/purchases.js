@@ -29,7 +29,7 @@ router.post('/', requirePermission('purchases:create'), async (req, res) => {
         await run('BEGIN TRANSACTION');
 
         for (const item of items) {
-            const { variantId, quantity, unitCost, description } = item;
+            const { variantId, quantity, unitCost, description, sale_price } = item;
 
             if (!variantId || !quantity || unitCost === undefined) {
                 throw new Error('Cada item debe tener variantId, quantity y unitCost.');
@@ -52,8 +52,11 @@ router.post('/', requirePermission('purchases:create'), async (req, res) => {
             `;
             await run(movementSql, [variantId, transactionId, transaction_date, entity_name, entity_document, document_number, quantity, unitCost, description]);
 
-            const variantSql = `UPDATE product_variants SET current_stock = ?, cost_price = ? WHERE id = ?`;
-            await run(variantSql, [new_stock, new_avg_cost, variantId]);
+            // Update variant: update sale_price only if provided in the payload. If sale_price is missing, keep existing.
+            const variantSql = `UPDATE product_variants SET current_stock = ?, cost_price = ?, sale_price = (CASE WHEN ? IS NOT NULL THEN ? ELSE sale_price END) WHERE id = ?`;
+            // Normalize sale_price: treat undefined or empty string as NULL (do not overwrite existing sale_price)
+            const salePriceParam = (sale_price === undefined || sale_price === '') ? null : (isNaN(Number(sale_price)) ? null : Number(sale_price));
+            await run(variantSql, [new_stock, new_avg_cost, salePriceParam, salePriceParam, variantId]);
         }
 
         await run('COMMIT');
@@ -120,7 +123,11 @@ router.put('/', requirePermission('purchases:edit'), async (req, res) => {
                 VALUES (?, ?, ?, ?, ?, ?, 'ENTRADA', ?, ?, 'Activo')`,
                 [item.variantId, transaction_id, transaction_date, entity_name, entity_document, document_number, item.quantity, item.unitCost]
             );
-            await run('UPDATE product_variants SET current_stock = ?, cost_price = ? WHERE id = ?', [new_stock, new_avg_cost, item.variantId]);
+
+            // Normalize sale_price: treat undefined or empty string as NULL (do not overwrite existing sale_price)
+            const salePriceParam = (item.sale_price === undefined || item.sale_price === '') ? null : (isNaN(Number(item.sale_price)) ? null : Number(item.sale_price));
+            const variantSql = `UPDATE product_variants SET current_stock = ?, cost_price = ?, sale_price = (CASE WHEN ? IS NOT NULL THEN ? ELSE sale_price END) WHERE id = ?`;
+            await run(variantSql, [new_stock, new_avg_cost, salePriceParam, salePriceParam, item.variantId]);
         }
 
         await run('COMMIT');

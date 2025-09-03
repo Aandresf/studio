@@ -63,6 +63,8 @@
     { "key": "variants:read" },
     { "key": "variants:create" }
   ,
+  { "key": "sales:edit_price" },
+  { "key": "sales:edit_invoice" },
   { "key": "customers:read" },
   { "key": "customers:create" },
   { "key": "customers:edit" },
@@ -72,5 +74,8 @@
   { "key": "suppliers:create" },
   { "key": "suppliers:edit" },
   { "key": "suppliers:delete" }
+  ,
+  { "key": "customers:view_sensitive" },
+  { "key": "suppliers:view_sensitive" }
   ]
 }

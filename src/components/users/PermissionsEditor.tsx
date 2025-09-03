@@ -18,7 +18,7 @@ function groupByCategory(list: PermissionMeta[]) {
   return map;
 }
 
-const TAB_ORDER = ['catalogo','productos','ventas','compras','configuracion','usuarios','general'];
+const TAB_ORDER = ['catalogo','productos','ventas','compras','clientes','proveedores','configuracion','usuarios','general'];
 
 function sortPermissions(list: PermissionMeta[], category: string) {
   if (category !== 'catalogo') {

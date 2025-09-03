@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { getCustomerHistory } from '@/lib/api';
+import { SalesReceiptDialog } from '@/components/dialogs/SalesReceiptDialog';
 
 interface CustomerDetailDialogProps {
   open: boolean;
@@ -14,6 +15,8 @@ interface CustomerDetailDialogProps {
 
 export function CustomerDetailDialog({ open, onOpenChange, customer, onEdit }: CustomerDetailDialogProps) {
   const [history, setHistory] = useState<any[]>([]);
+  const [openReceipt, setOpenReceipt] = useState(false);
+  const [selectedTransactionId, setSelectedTransactionId] = useState<string | null>(null);
 
   useEffect(() => {
     if (open && customer?.id) {
@@ -45,6 +48,7 @@ export function CustomerDetailDialog({ open, onOpenChange, customer, onEdit }: C
             <div className="mb-2"><strong>Documento:</strong> {customer?.document ?? customer?.base_sku}</div>
             <div className="mb-2"><strong>Email:</strong> {customer?.email ?? ''}</div>
             <div className="mb-2"><strong>Teléfono:</strong> {customer?.phone ?? ''}</div>
+            <div className="mb-2"><strong>Dirección:</strong> {customer?.address ?? ''}</div>
             <div className="mb-2"><strong>Notas:</strong> {customer?.notes}</div>
           </div>
 
@@ -54,11 +58,29 @@ export function CustomerDetailDialog({ open, onOpenChange, customer, onEdit }: C
             {history.length === 0 ? (
               <div className="text-muted">Sin movimientos</div>
             ) : (
-              <ul className="space-y-2">
-                {history.map((h, i) => (
-                  <li key={i} className="text-sm">{h.date || h.created_at} — {h.description || h.type || JSON.stringify(h)}</li>
+              <div className="space-y-3">
+                {history.map((tx: any) => (
+                  <div
+                    key={tx.transaction_id}
+                    className="p-2 rounded bg-white/50 cursor-pointer"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => { setSelectedTransactionId(tx.transaction_id); setOpenReceipt(true); }}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { setSelectedTransactionId(tx.transaction_id); setOpenReceipt(true); } }}
+                  >
+                    <div className="flex justify-between items-center">
+                      <div className="text-sm">
+                        <div><strong>{tx.transaction_date}</strong></div>
+                        <div className="text-xs text-muted-foreground">{tx.entity_name} — {tx.entity_document}</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-medium">{tx.total?.toFixed ? tx.total.toFixed(2) : tx.total}</div>
+                        <div className={`text-xs ${tx.status === 'Activo' ? 'text-green-600' : 'text-red-600'}`}>{tx.status}</div>
+                      </div>
+                    </div>
+                  </div>
                 ))}
-              </ul>
+              </div>
             )}
           </div>
         </div>
@@ -67,6 +89,7 @@ export function CustomerDetailDialog({ open, onOpenChange, customer, onEdit }: C
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cerrar</Button>
           <Button onClick={() => { onOpenChange(false); onEdit(); }}>Editar</Button>
         </div>
+  <SalesReceiptDialog open={openReceipt} onOpenChange={setOpenReceipt} transactionId={selectedTransactionId} />
       </DialogContent>
     </Dialog>
   );

@@ -40,8 +40,10 @@ interface CartItem {
     variantName: string;
     quantity: number;
     unitCost: number;
+    salePrice?: number;
     tax_rate: number;
     sku: string | null;
+    availableStock?: number;
 }
 
 interface PendingPurchase {
@@ -152,6 +154,15 @@ export default function PurchasesPage() {
     const canCreateProducts = currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('products:create');
     const isReadOnly = canReadPurchases && !canCreatePurchases && !canEditPurchases && !canAnnulPurchases;
 
+    // permisos adicionales
+    const canViewSupplierSensitive = hasPermission('suppliers:view_sensitive');
+    const canEditInvoicePurchase = hasPermission('purchases:edit_invoice');
+
+    const generateInvoiceNumber = () => `C-${new Date().getFullYear()}${String(Date.now()).slice(-6)}`;
+
+    const displaySupplierRif = canViewSupplierSensitive ? supplierRif : (supplierRif ? '••••••' : '');
+
+
     // Mostrar un placeholder mientras cargan los permisos/usuario (evita cambio en el orden de hooks)
     if (currentUser?.loading) {
         return (
@@ -245,17 +256,21 @@ export default function PurchasesPage() {
         }
     };
 
-    const handleVariantsSelected = (selectedVariants: (ProductVariant & { quantity: number })[]) => {
+    const handleVariantsSelected = (selectedVariants: (ProductVariant & { quantity?: number })[]) => {
+        // For purchases, VariantSelectionDialog returns variants without quantity (selected via checkbox).
+        // Use quantity from variant.quantity if provided (sale flow), otherwise default to 1 for purchase additions.
         const newCartItems: CartItem[] = selectedVariants.map(variant => ({
             id: `temp-${variant.id}-${Date.now()}`,
             variantId: variant.id,
             productId: variant.product_id,
             productName: selectedProductForVariants?.name || 'N/A',
             variantName: variant.attribute_values?.map(v => v.value).join(' / ') || 'Estándar',
-            quantity: variant.quantity,
+            quantity: variant.quantity ?? 1,
             unitCost: variant.cost_price,
+            salePrice: variant.sale_price ?? undefined,
             tax_rate: 16.00,
             sku: variant.sku,
+            availableStock: variant.current_stock,
         }));
 
         const newCart = [...cart];
@@ -276,16 +291,34 @@ export default function PurchasesPage() {
         setCart(updatedCart);
     };
 
+    const handleQuantityChange = (index: number, newQty: number) => {
+        const updatedCart = [...cart];
+        updatedCart[index].quantity = newQty;
+        setCart(updatedCart);
+    };
+
+    const handleSalePriceChange = (index: number, newPrice: number) => {
+        const updatedCart = [...cart];
+        updatedCart[index].salePrice = newPrice;
+        setCart(updatedCart);
+    };
+
     const removeCartItem = (index: number) => {
         setCart(cart.filter((_, i) => i !== index));
     };
 
     const handleOpenConfirmation = () => {
+        // exigir proveedor seleccionado
+        if (!selectedSupplier && !supplier) {
+            toastError('Proveedor requerido', 'Selecciona un proveedor antes de continuar.');
+            return;
+        }
         const finalItems = cart.map(item => ({
             variantId: item.variantId,
             name: `${item.productName} (${item.variantName})`,
             quantity: item.quantity,
             unitCost: item.unitCost,
+            sale_price: item.salePrice,
             tax_rate: item.tax_rate,
         }));
         // @ts-ignore
@@ -415,62 +448,63 @@ export default function PurchasesPage() {
     return (
         <TooltipProvider>
             <div className="flex flex-col gap-6">
-                <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                        <Label>Proveedor</Label>
-                        <div className="flex gap-2 items-center">
-                            <div className="flex-1">
-                                <AdvancedCombobox<any>
-                                    options={supplierOptions}
-                                    value={selectedSupplier ? String(selectedSupplier.id) : ''}
-                                    onChange={async (v) => {
-                                        try {
-                                            const s = await (await import('@/lib/api')).getSupplier(v);
-                                            setSelectedSupplier(s);
-                                            setSupplier(s?.name || '');
-                                            setSupplierRif(s?.document || '');
-                                        } catch (e) {}
-                                    }}
-                                    valueAccessor={(o:any) => String(o.id)}
-                                    filterFn={(opts: any[], search: string) => {
-                                        if (!search) return opts;
-                                        return opts.filter(o => (o.name || '').toLowerCase().includes(search.toLowerCase()) || (o.document || '').toLowerCase().includes(search.toLowerCase()));
-                                    }}
-                                    renderOption={(o:any) => (<div className="flex items-center justify-between"><div><div className="font-semibold">{o.name}</div><div className="text-xs text-muted-foreground">{o.document}</div></div><div className="text-sm">{o.email || ''}</div></div>)}
-                                    displayValue={(val) => selectedSupplier?.name || supplier}
-                                    placeholder={isLoadingProducts ? 'Cargando...' : 'Buscar proveedor...'}
-                                    searchPlaceholder="Buscar proveedor..."
-                                    emptyMessage="No se encontraron proveedores."
-                                    disabled={false}
-                                />
-                            </div>
-                            <div>
-                                <Button onClick={async () => { window.open('/suppliers', '_blank'); }}>Buscar</Button>
-                            </div>
-                            <div>
-                                <SupplierQuickCreator onCreated={(s:any) => { setSelectedSupplier(s); setSupplier(s?.name || ''); setSupplierRif(s?.document || ''); loadSuppliers(); }} />
-                            </div>
+                    <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                            <h1 className="font-semibold text-lg md:text-2xl">Compras</h1>
+                            <p className="text-sm text-muted-foreground">{editingTransactionId ? `Editando compra a ${supplier}` : "Registra nuevas órdenes de compra."}</p>
                         </div>
-                        {selectedSupplier && <div className="text-sm text-muted-foreground">Seleccionado: {selectedSupplier.name}</div>}
+                        <Button variant="outline" onClick={() => setIsHistoryOpen(true)} disabled={editingTransactionId !== null}>
+                            <History className="mr-2 h-4 w-4" />Historial
+                        </Button>
                     </div>
-                </div>
-                <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                        <h1 className="font-semibold text-lg md:text-2xl">Compras</h1>
-                        <p className="text-sm text-muted-foreground">{editingTransactionId ? `Editando compra a ${supplier}` : "Registra nuevas órdenes de compra."}</p>
+                    <div className="grid md:grid-cols-2 gap-4">
+                        <div>
+                            <Card>
+                                <CardContent className="p-4">
+                                    <Label>Proveedor</Label>
+                                    <div className="flex gap-2 items-center">
+                                        <div className="flex-1">
+                                            <AdvancedCombobox<any>
+                                                options={supplierOptions}
+                                                value={selectedSupplier ? String(selectedSupplier.id) : ''}
+                                                onChange={async (v) => {
+                                                    try {
+                                                        const s = await (await import('@/lib/api')).getSupplier(v);
+                                                        setSelectedSupplier(s);
+                                                        setSupplier(s?.name || '');
+                                                        setSupplierRif(s?.document || '');
+                                                    } catch (e) {}
+                                                }}
+                                                valueAccessor={(o:any) => String(o.id)}
+                                                filterFn={(opts: any[], search: string) => {
+                                                    if (!search) return opts;
+                                                    return opts.filter(o => (o.name || '').toLowerCase().includes(search.toLowerCase()) || (o.document || '').toLowerCase().includes(search.toLowerCase()));
+                                                }}
+                                                renderOption={(o:any) => (<div className="flex items-center justify-between"><div><div className="font-semibold">{o.name}</div><div className="text-xs text-muted-foreground">{o.document}</div></div><div className="text-sm">{o.email || ''}</div></div>)}
+                                                displayValue={(val) => selectedSupplier?.name || supplier}
+                                                placeholder={isLoadingProducts ? 'Cargando...' : 'Buscar proveedor...'}
+                                                searchPlaceholder="Buscar proveedor..."
+                                                emptyMessage="No se encontraron proveedores."
+                                                disabled={false}
+                                            />
+                                        </div>
+                                        <div>
+                                            <SupplierQuickCreator onCreated={(s:any) => { setSelectedSupplier(s); setSupplier(s?.name || ''); setSupplierRif(s?.document || ''); loadSuppliers(); }} />
+                                        </div>
+                                    </div>
+                                    {selectedSupplier && <div className="text-sm text-muted-foreground">Seleccionado: {selectedSupplier.name}</div>}
+                                </CardContent>
+                            </Card>
+                        </div>
                     </div>
-                    <Button variant="outline" onClick={() => setIsHistoryOpen(true)} disabled={editingTransactionId !== null}>
-                        <History className="mr-2 h-4 w-4" />Historial
-                    </Button>
-                </div>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
                     <div className="lg:col-span-2 space-y-6">
                         <Card>
                             <CardHeader><CardTitle>{editingTransactionId ? "Editar Orden de Compra" : "Nueva Orden de Compra"}</CardTitle></CardHeader>
                             <CardContent className="space-y-4">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="grid gap-2"><Label htmlFor="supplier">Proveedor</Label><Input id="supplier" value={supplier} onChange={e => setSupplier(e.target.value)} placeholder="Nombre del proveedor" /></div>
-                                    <div className="grid gap-2"><Label htmlFor="supplierRif">RIF Proveedor</Label><Input id="supplierRif" value={supplierRif} onChange={e => setSupplierRif(e.target.value)} placeholder="Ej: J-12345678" /></div>
+                                    <div className="grid gap-2"><Label htmlFor="supplier">Proveedor</Label><Input id="supplier" value={supplier} readOnly placeholder="Nombre del proveedor (seleccionado desde el buscador)" /></div>
+                                        <div className="grid gap-2"><Label htmlFor="supplierRif">RIF Proveedor</Label><Input id="supplierRif" value={supplierRif} readOnly placeholder="Ej: J-12345678" /></div>
                                 </div>
                                 <div className="flex items-end gap-2">
                                     <div className="flex-grow">
@@ -500,27 +534,45 @@ export default function PurchasesPage() {
                                 <div className="border rounded-md">
 
                                     <Table>
-                                        <TableHeader><TableRow><TableHead>Producto</TableHead><TableHead>Cantidad</TableHead><TableHead>Costo Unit.</TableHead><TableHead>Total</TableHead><TableHead></TableHead></TableRow></TableHeader>
+                                        <TableHeader><TableRow><TableHead>Producto</TableHead><TableHead>Cantidad</TableHead><TableHead>Costo Unit.</TableHead><TableHead>Precio Venta</TableHead><TableHead>Total</TableHead><TableHead></TableHead></TableRow></TableHeader>
                                         <TableBody>
                                             {cart.length > 0 ? cart.map((item, index) => (
                                                 <TableRow key={item.id}>
                                                     <TableCell><p className="font-medium">{item.productName}</p><p className="text-xs text-muted-foreground">{item.variantName} ({item.sku})</p></TableCell>
-                                                    <TableCell>{item.quantity}</TableCell>
-                                                    <TableCell>
-                                                        {canReadCostsGlobal ? (
+                                                        <TableCell>
                                                             <Input
                                                                 type="number"
-                                                                value={item.unitCost}
-                                                                onChange={(e) => handleCostChange(index, parseFloat(e.target.value) || 0)}
-                                                                className="text-right w-24"
-                                                                disabled={!canEditCostsGlobal}
-                                                                aria-label={`Costo unitario ${item.productName}`}
+                                                                value={item.quantity}
+                                                                min={0}
+                                                                onChange={(e) => handleQuantityChange(index, parseInt(e.target.value) || 0)}
+                                                                className="text-right w-20"
+                                                                aria-label={`Cantidad ${item.productName}`}
                                                             />
-                                                        ) : (
-                                                            <div className="text-right w-24">—</div>
-                                                        )}
-                                                    </TableCell>
-                                                    <TableCell>${Number(item.quantity * (item.unitCost ?? 0)).toFixed(2)}</TableCell>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            {canReadCostsGlobal ? (
+                                                                <Input
+                                                                    type="number"
+                                                                    value={item.unitCost}
+                                                                    onChange={(e) => handleCostChange(index, parseFloat(e.target.value) || 0)}
+                                                                    className="text-right w-24"
+                                                                    disabled={!canEditCostsGlobal}
+                                                                    aria-label={`Costo unitario ${item.productName}`}
+                                                                />
+                                                            ) : (
+                                                                <div className="text-right w-24">—</div>
+                                                            )}
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Input
+                                                                type="number"
+                                                                value={item.salePrice ?? ''}
+                                                                onChange={(e) => handleSalePriceChange(index, parseFloat(e.target.value) || 0)}
+                                                                className="text-right w-24"
+                                                                aria-label={`Precio venta ${item.productName}`}
+                                                            />
+                                                        </TableCell>
+                                                        <TableCell>${Number(item.quantity * (item.unitCost ?? 0)).toFixed(2)}</TableCell>
                                                     <TableCell>
                                                         <Button
                                                             variant="ghost"
@@ -544,7 +596,9 @@ export default function PurchasesPage() {
                             <CardHeader><CardTitle>Configuración</CardTitle></CardHeader>
                             <CardContent className="space-y-4">
                                 <div className="grid gap-2"><Label>Fecha de Compra</Label><Popover><PopoverTrigger asChild><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{date ? format(date, "PPP", { locale: es }) : <span>Seleccione fecha</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={date} onSelect={(d) => setDate(d || new Date())} initialFocus /></PopoverContent></Popover></div>
-                                <div className="grid gap-2"><Label htmlFor="invoiceNumber">Nº de Factura</Label><Input id="invoiceNumber" value={invoiceNumber} onChange={e => setInvoiceNumber(e.target.value)} placeholder="Opcional" /></div>
+                                <div className="grid gap-2"><Label htmlFor="invoiceNumber">Nº de Factura</Label>
+                                    <Input id="invoiceNumber" value={invoiceNumber} onChange={e => setInvoiceNumber(e.target.value)} placeholder="Opcional" readOnly={!canEditInvoicePurchase} />
+                                </div>
                             </CardContent>
                         </Card>
                         <Card>

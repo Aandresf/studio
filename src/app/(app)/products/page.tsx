@@ -148,10 +148,12 @@ export default function ProductsPage() {
         if (!showInactive && product.status === 'Inactivo') {
             return false;
         }
-    const query = searchQuery.toLowerCase();
-    const nameMatch = product.name.toLowerCase().includes(query);
-    const skuMatch = (((product as any).sku as string | undefined)?.toLowerCase().includes(query)) ?? false;
-        return nameMatch || skuMatch;
+        const query = searchQuery.trim().toLowerCase();
+        if (!query) return true;
+        const nameMatch = (product.name || '').toLowerCase().includes(query);
+        const skuMatch = ((((product as any).sku as string | undefined) || (product as any).base_sku || '') as string).toLowerCase().includes(query);
+        const descMatch = ((product.description || '') as string).toLowerCase().includes(query);
+        return nameMatch || skuMatch || descMatch;
     });
 
     if (!canReadProducts) return <ProtectedRedirect condition={false} />;
@@ -177,7 +179,7 @@ export default function ProductsPage() {
                             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                             <Input
                                 type="search"
-                                placeholder="Buscar por nombre o código..."
+                                placeholder="Buscar por nombre o documento..."
                                 className="w-full appearance-none bg-background pl-8 shadow-none md:w-1/3 lg:w-1/3"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}

@@ -137,6 +137,17 @@ export default function SalesPage() {
     const isReadOnly = !canCreateSales && !canEditSales && !canAnnulSales;
     const hasAnySalesPermission = canReadSales || canCreateSales || canEditSales || canAnnulSales;
 
+    // permisos adicionales
+    const canEditPriceOnSale = currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('sales:edit_price');
+    const canEditInvoiceSale = currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('sales:edit_invoice');
+    const canViewCustomerSensitive = currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('customers:view_sensitive');
+
+    const generateInvoiceNumber = () => `V-${new Date().getFullYear()}${String(Date.now()).slice(-6)}`;
+
+    React.useEffect(() => { if (!invoiceNumber) setInvoiceNumber(generateInvoiceNumber()); }, []);
+
+    const displayClientDni = canViewCustomerSensitive ? clientDni : (clientDni ? '••••••' : '');
+
     // 3. Finalmente la lógica de renderizado condicional
     if (!hasAnySalesPermission) {
         return <ProtectedRedirect condition={false} />;
@@ -227,15 +238,15 @@ export default function SalesPage() {
         }
     };
 
-    const handleVariantsSelected = (selectedVariants: (ProductVariant & { quantity: number })[]) => {
+    const handleVariantsSelected = (selectedVariants: (ProductVariant & { quantity?: number })[]) => {
     if (isReadOnly) return;
         const newCartItems: CartItem[] = selectedVariants.map(variant => ({
             id: `temp-${variant.id}-${Date.now()}`,
             variantId: variant.id,
             productId: variant.product_id,
             productName: selectedProductForVariants?.name || 'N/A',
-            variantName: variant.attribute_values?.map(v => v.value).join(' / ') || 'Estándar',
-            quantity: variant.quantity,
+            variantName: variant.attribute_values?.map(v => v.value).join(' / ') || 'Est\u00e1ndar',
+            quantity: variant.quantity ?? 1, // default to 1 when coming from select-only
             price: variant.sale_price,
             tax_rate: 16.00,
             availableStock: variant.current_stock,
@@ -259,6 +270,10 @@ export default function SalesPage() {
     };
 
     const handleOpenConfirmation = () => {
+        if (!selectedClient && !clientName) {
+            toastError('Cliente requerido', 'Selecciona un cliente antes de continuar.');
+            return;
+        }
         const finalItems = cart.map(item => ({
             variantId: item.variantId,
             name: `${item.productName} (${item.variantName})`,
@@ -386,65 +401,64 @@ export default function SalesPage() {
     return (
         <TooltipProvider>
         <div className="flex flex-col gap-6">
+                <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                            <h1 className="font-semibold text-lg md:text-2xl">Ventas</h1>
+                            <p className="text-sm text-muted-foreground">{editingTransactionId ? `Editando venta a ${clientName}` : "Crea y gestiona facturas de venta."}</p>
+                        </div>
+                        <Button variant="outline" onClick={() => setIsHistoryOpen(true)} disabled={editingTransactionId !== null}>
+                            <History className="mr-2 h-4 w-4" />Historial
+                        </Button>
+                    </div>
                 <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                        <Label>Cliente</Label>
-                        <div className="flex gap-2 items-center">
-                            <div className="flex-1">
-                                <AdvancedCombobox<any>
-                                    options={customerOptions}
-                                    value={selectedClient ? String(selectedClient.id) : ''}
-                                    onChange={async (v) => {
-                                        try {
-                                            const c = await (await import('@/lib/api')).getCustomer(v);
-                                            setSelectedClient(c);
-                                            setClientName(c?.name || '');
-                                            setClientDni(c?.document || '');
-                                        } catch (e) {}
-                                    }}
-                                    valueAccessor={(o:any) => String(o.id)}
-                                    filterFn={(opts: any[], search: string) => {
-                                        // Async filtering is not supported directly; fetch server side if search length > 1
-                                        if (!search) return opts;
-                                        // Simple local filter
-                                        return opts.filter(o => (o.name || '').toLowerCase().includes(search.toLowerCase()) || (o.document || '').toLowerCase().includes(search.toLowerCase()));
-                                    }}
-                                    renderOption={(o:any) => (<div className="flex items-center justify-between"><div><div className="font-semibold">{o.name}</div><div className="text-xs text-muted-foreground">{o.document}</div></div><div className="text-sm">{o.email || ''}</div></div>)}
-                                    displayValue={(val) => selectedClient?.name || clientName}
-                                    placeholder={isLoadingProducts ? 'Cargando...' : 'Buscar cliente...'}
-                                    searchPlaceholder="Buscar cliente..."
-                                    emptyMessage="No se encontraron clientes."
-                                    disabled={false}
-                                />
-                            </div>
                             <div>
-                                <Button onClick={() => window.open('/customers', '_blank')}>Buscar</Button>
-                            </div>
-                            <div>
-                                {/* Quick create inline */}
-                                <CustomerQuickCreator onCreated={(c:any) => { setSelectedClient(c); setClientName(c?.name || ''); setClientDni(c?.document || ''); loadCustomers(); }} />
+                                <Card>
+                                    <CardContent className="p-4">
+                                        <Label>Cliente</Label>
+                                        <div className="flex gap-2 items-center">
+                                            <div className="flex-1">
+                                                <AdvancedCombobox<any>
+                                                    options={customerOptions}
+                                                    value={selectedClient ? String(selectedClient.id) : ''}
+                                                    onChange={async (v) => {
+                                                        try {
+                                                            const c = await (await import('@/lib/api')).getCustomer(v);
+                                                            setSelectedClient(c);
+                                                            setClientName(c?.name || '');
+                                                            setClientDni(c?.document || '');
+                                                        } catch (e) {}
+                                                    }}
+                                                    valueAccessor={(o:any) => String(o.id)}
+                                                    filterFn={(opts: any[], search: string) => {
+                                                        if (!search) return opts;
+                                                        return opts.filter(o => (o.name || '').toLowerCase().includes(search.toLowerCase()) || (o.document || '').toLowerCase().includes(search.toLowerCase()));
+                                                    }}
+                                                    renderOption={(o:any) => (<div className="flex items-center justify-between"><div><div className="font-semibold">{o.name}</div><div className="text-xs text-muted-foreground">{o.document}</div></div><div className="text-sm">{o.email || ''}</div></div>)}
+                                                    displayValue={(val) => selectedClient?.name || clientName}
+                                                    placeholder={isLoadingProducts ? 'Cargando...' : 'Buscar cliente...'}
+                                                    searchPlaceholder="Buscar cliente..."
+                                                    emptyMessage="No se encontraron clientes."
+                                                    disabled={false}
+                                                />
+                                            </div>
+                                            <div>
+                                                {/* Quick create inline */}
+                                                <CustomerQuickCreator onCreated={(c:any) => { setSelectedClient(c); setClientName(c?.name || ''); setClientDni(c?.document || ''); loadCustomers(); }} />
+                                            </div>
+                                        </div>
+                                        {selectedClient && <div className="text-sm text-muted-foreground">Seleccionado: {selectedClient.name}</div>}
+                                    </CardContent>
+                                </Card>
                             </div>
                         </div>
-                        {selectedClient && <div className="text-sm text-muted-foreground">Seleccionado: {selectedClient.name}</div>}
-                    </div>
-                </div>
-            <div className="flex items-center justify-between">
-                <div className="flex-1">
-                    <h1 className="font-semibold text-lg md:text-2xl">Ventas</h1>
-                    <p className="text-sm text-muted-foreground">{editingTransactionId ? `Editando venta a ${clientName}` : "Crea y gestiona facturas de venta."}</p>
-                </div>
-                <Button variant="outline" onClick={() => setIsHistoryOpen(true)} disabled={editingTransactionId !== null}>
-                    <History className="mr-2 h-4 w-4" />Historial
-                </Button>
-            </div>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
                 <div className="lg:col-span-2 space-y-6">
                     <Card>
                         <CardHeader><CardTitle>{editingTransactionId ? "Editar Venta" : "Nueva Venta"}</CardTitle></CardHeader>
                         <CardContent className="space-y-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="grid gap-2"><Label htmlFor="clientName">Cliente</Label><Input id="clientName" value={clientName} onChange={e => setClientName(e.target.value)} placeholder="Nombre del cliente" /></div>
-                                <div className="grid gap-2"><Label htmlFor="clientDni">DNI Cliente</Label><Input id="clientDni" value={clientDni} onChange={e => setClientDni(e.target.value)} placeholder="Cédula o RIF" /></div>
+                                <div className="grid gap-2"><Label htmlFor="clientName">Cliente</Label><Input id="clientName" value={clientName} readOnly placeholder="Nombre del cliente (seleccionado desde el buscador)" /></div>
+                                <div className="grid gap-2"><Label htmlFor="clientDni">DNI Cliente</Label><Input id="clientDni" value={clientDni} readOnly placeholder="Cédula o RIF" /></div>
                             </div>
                             <div>
                                 <Label>Añadir Producto</Label>
@@ -469,8 +483,20 @@ export default function SalesPage() {
                                         {cart.length > 0 ? cart.map((item, index) => (
                                             <TableRow key={item.id}>
                                                 <TableCell><p className="font-medium">{item.productName}</p><p className="text-xs text-muted-foreground">{item.variantName} ({item.sku})</p></TableCell>
-                                                <TableCell>{item.quantity}</TableCell>
-                                                <TableCell>${Number(item.price ?? 0).toFixed(2)}</TableCell>
+                                                <TableCell>
+                                                    <Input type="number" value={item.quantity} min={0} onChange={(e) => {
+                                                        const newItems = [...cart];
+                                                        newItems[index].quantity = parseInt(e.target.value, 10) || 0;
+                                                        setCart(newItems);
+                                                    }} className="w-20 text-center" />
+                                                </TableCell>
+                                                <TableCell>{canEditPriceOnSale ? (
+                                                    <Input type="number" value={item.price} onChange={(e) => {
+                                                        const newItems = [...cart];
+                                                        newItems[index].price = parseFloat(e.target.value) || 0;
+                                                        setCart(newItems);
+                                                    }} className="text-right w-24" />
+                                                ) : (`$${Number(item.price ?? 0).toFixed(2)}`)}</TableCell>
                                                 <TableCell>${Number(item.quantity * (item.price ?? 0)).toFixed(2)}</TableCell>
                                                 <TableCell>
                                                     <Button
@@ -495,7 +521,7 @@ export default function SalesPage() {
                         <CardHeader><CardTitle>Configuración</CardTitle></CardHeader>
                         <CardContent className="space-y-4">
                             <div className="grid gap-2"><Label>Fecha de Venta</Label><Popover><PopoverTrigger asChild><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{date ? format(date, "PPP", { locale: es }) : <span>Seleccione fecha</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={date} onSelect={(d) => setDate(d || new Date())} initialFocus /></PopoverContent></Popover></div>
-                            <div className="grid gap-2"><Label htmlFor="invoiceNumber">Nº de Factura</Label><Input id="invoiceNumber" value={invoiceNumber} onChange={e => setInvoiceNumber(e.target.value)} placeholder="Opcional" /></div>
+                            <div className="grid gap-2"><Label htmlFor="invoiceNumber">Nº de Factura</Label><Input id="invoiceNumber" value={invoiceNumber} onChange={e => setInvoiceNumber(e.target.value)} placeholder="Opcional" readOnly={!canEditInvoiceSale} /></div>
                         </CardContent>
                     </Card>
                     <Card>
@@ -515,6 +541,9 @@ export default function SalesPage() {
                          >
                             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             {isLoading ? "Procesando..." : (editingTransactionId ? "Guardar Cambios" : "Registrar Venta")}
+                        </Button>
+                        <Button variant="outline" onClick={resetForm} disabled={isReadOnly}>
+                            Limpiar
                         </Button>
                         {editingTransactionId && (
                             <Button variant="ghost" size="sm" onClick={resetForm}>
@@ -550,8 +579,8 @@ export default function SalesPage() {
                     )}
                 </div>
             </div>
-        </div>
-        <VariantSelectionDialog open={isVariantDialogOpen} onOpenChange={setIsVariantDialogOpen} product={selectedProductForVariants} onVariantsSelected={handleVariantsSelected} context="sale" />
+    </div>
+    <VariantSelectionDialog open={isVariantDialogOpen} onOpenChange={setIsVariantDialogOpen} product={selectedProductForVariants} onVariantsSelected={handleVariantsSelected} context="sale" selectOnly />
         <SalesHistoryDialog 
             open={isHistoryOpen} 
             onOpenChange={setIsHistoryOpen} 
