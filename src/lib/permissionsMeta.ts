@@ -86,6 +86,16 @@ const METADATA_MAP: Record<string, Partial<PermissionMeta>> = {
   'users:edit': { label: 'Editar usuarios', description: 'Permite editar información de usuarios existentes.', category: 'usuarios', affected: ['Editar Usuario'] },
   'users:delete': { label: 'Eliminar usuarios', description: 'Permite eliminar usuarios del sistema.', category: 'usuarios', affected: ['Eliminar Usuario'] },
   'users:permissions': { label: 'Gestionar permisos', description: 'Permite asignar y modificar permisos de otros usuarios.', category: 'usuarios', affected: ['Editor de Permisos'] },
+  // Customers
+  'customers:read': { label: 'Ver clientes', description: 'Permite ver la lista y fichas de clientes.', category: 'configuracion', affected: ['Clientes'] },
+  'customers:create': { label: 'Crear clientes', description: 'Permite crear nuevos clientes en el sistema.', category: 'configuracion', affected: ['Nuevo Cliente'] },
+  'customers:edit': { label: 'Editar clientes', description: 'Permite editar la información de clientes.', category: 'configuracion', affected: ['Editar Cliente'] },
+  'customers:delete': { label: 'Eliminar clientes', description: 'Permite eliminar clientes del sistema.', category: 'configuracion', affected: ['Eliminar Cliente'] },
+  // Suppliers
+  'suppliers:read': { label: 'Ver proveedores', description: 'Permite ver la lista y fichas de proveedores.', category: 'configuracion', affected: ['Proveedores'] },
+  'suppliers:create': { label: 'Crear proveedores', description: 'Permite crear nuevos proveedores en el sistema.', category: 'configuracion', affected: ['Nuevo Proveedor'] },
+  'suppliers:edit': { label: 'Editar proveedores', description: 'Permite editar la información de proveedores.', category: 'configuracion', affected: ['Editar Proveedor'] },
+  'suppliers:delete': { label: 'Eliminar proveedores', description: 'Permite eliminar proveedores del sistema.', category: 'configuracion', affected: ['Eliminar Proveedor'] },
 };
 
 export const PERMISSIONS_META: PermissionMeta[] = (permissionsJson.permissions || []).map(p => {

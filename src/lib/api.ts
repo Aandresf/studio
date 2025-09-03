@@ -72,6 +72,9 @@ async function fetchAPI(endpoint: string, options: RequestInit = {}) {
     }
 }
 
+// Export fetchAPI for backwards compatibility with older modules.
+export { fetchAPI };
+
 // Auth helpers
 export const login = (username: string, password: string) => fetchAPI('/auth/login', {
     method: 'POST',
@@ -303,6 +306,57 @@ export const createInventoryMovement = (movement: Omit<InventoryMovement, 'id' |
         body: JSON.stringify(movement),
     });
 };
+
+// Customers API
+export const getCustomers = (q?: string): Promise<any[]> => {
+    const endpoint = q ? `/customers?q=${encodeURIComponent(q)}` : '/customers';
+    console.log('[frontend api] getCustomers -> requesting', endpoint);
+    return fetchAPI(endpoint).then((res) => { console.log('[frontend api] getCustomers -> response shape:', Array.isArray(res) ? `array(${res.length})` : typeof res); return res; });
+};
+
+export const getCustomer = (id: string | number) => {
+    const endpoint = `/customers/${id}`;
+    console.log('[frontend api] getCustomer -> requesting', endpoint);
+    return fetchAPI(endpoint).then((res) => { console.log('[frontend api] getCustomer -> response:', res); return res; });
+};
+
+export const createCustomer = (payload: any) => fetchAPI('/customers', { method: 'POST', body: JSON.stringify(payload) });
+
+export const updateCustomer = (id: string | number, payload: any) => fetchAPI(`/customers/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
+
+export const deleteCustomer = (id: string | number) => fetchAPI(`/customers/${id}`, { method: 'DELETE' });
+
+export const getCustomerHistory = (id: string | number) => {
+    const endpoint = `/customers/${id}/history`;
+    console.log('[frontend api] getCustomerHistory -> requesting', endpoint);
+    return fetchAPI(endpoint).then((res) => { console.log('[frontend api] getCustomerHistory -> response shape:', Array.isArray(res)?`array(${res.length})`:typeof res); return res; });
+};
+
+// Suppliers API
+export const getSuppliers = (q?: string): Promise<any[]> => {
+    const endpoint = q ? `/suppliers?q=${encodeURIComponent(q)}` : '/suppliers';
+    console.log('[frontend api] getSuppliers -> requesting', endpoint);
+    return fetchAPI(endpoint).then((res) => { console.log('[frontend api] getSuppliers -> response shape:', Array.isArray(res)?`array(${res.length})`:typeof res); return res; });
+};
+
+export const getSupplier = (id: string | number) => {
+    const endpoint = `/suppliers/${id}`;
+    console.log('[frontend api] getSupplier -> requesting', endpoint);
+    return fetchAPI(endpoint).then((res) => { console.log('[frontend api] getSupplier -> response:', res); return res; });
+};
+
+export const createSupplier = (payload: any) => fetchAPI('/suppliers', { method: 'POST', body: JSON.stringify(payload) });
+
+export const updateSupplier = (id: string | number, payload: any) => fetchAPI(`/suppliers/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
+
+export const deleteSupplier = (id: string | number) => fetchAPI(`/suppliers/${id}`, { method: 'DELETE' });
+
+export const getSupplierHistory = (id: string | number) => {
+    const endpoint = `/suppliers/${id}/history`;
+    console.log('[frontend api] getSupplierHistory -> requesting', endpoint);
+    return fetchAPI(endpoint).then((res) => { console.log('[frontend api] getSupplierHistory -> response shape:', Array.isArray(res)?`array(${res.length})`:typeof res); return res; });
+};
+
 
 export const getLatestSnapshot = (): Promise<{ last_date: string | null }> => {
     return fetchAPI('/inventory/latest-snapshot');

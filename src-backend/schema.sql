@@ -255,3 +255,33 @@ CREATE TABLE IF NOT EXISTS user_permissions (
 CREATE INDEX IF NOT EXISTS idx_permissions_key ON permissions (key);
 CREATE INDEX IF NOT EXISTS idx_role_permissions_role_id ON role_permissions (role_id);
 CREATE INDEX IF NOT EXISTS idx_user_permissions_user_id ON user_permissions (user_id);
+
+-- -----------------------------------------------------
+-- Tabla `customers` (Clientes)
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS customers (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  document TEXT,
+  email TEXT,
+  phone TEXT,
+  address TEXT,
+  notes TEXT,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now')),
+  updated_at TEXT
+);
+
+-- -----------------------------------------------------
+-- Tabla `suppliers` (Proveedores)
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS suppliers (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  document TEXT,
+  email TEXT,
+  phone TEXT,
+  address TEXT,
+  notes TEXT,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now')),
+  updated_at TEXT
+);

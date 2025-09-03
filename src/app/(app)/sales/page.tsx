@@ -21,6 +21,9 @@ import { Separator } from '@/components/ui/separator';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { AdvancedCombobox } from '@/components/ui/AdvancedCombobox';
+import { useAsyncOptions } from '@/hooks/use-async-options';
+import { getCustomers } from '@/lib/api';
+import CustomerQuickCreator from '@/components/customers/CustomerQuickCreator';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { SalesHistoryDialog } from '@/components/dialogs/SalesHistoryDialog';
 import { SalesReceiptDialog } from '@/components/dialogs/SalesReceiptDialog';
@@ -61,6 +64,7 @@ export default function SalesPage() {
     const [date, setDate] = React.useState<Date>(new Date());
     const [clientName, setClientName] = React.useState('');
     const [clientDni, setClientDni] = React.useState('');
+    const [selectedClient, setSelectedClient] = React.useState<any | null>(null);
     const [invoiceNumber, setInvoiceNumber] = React.useState('');
     const [isLoading, setIsLoading] = React.useState(false);
     const [isLoadingProducts, setIsLoadingProducts] = React.useState(true);
@@ -100,6 +104,27 @@ export default function SalesPage() {
         };
         fetchInitialData();
     }, [isBackendReady, refetchKey]);
+
+    // Prefill from query param ?clientId=
+    const searchParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+    React.useEffect(() => {
+        const clientId = searchParams.get('clientId');
+        if (clientId) {
+            (async () => {
+                try {
+                    const c = await (await import('@/lib/api')).getCustomer(clientId);
+                    setSelectedClient(c);
+                    setClientName(c?.name || '');
+                    setClientDni(c?.document || '');
+                } catch (e) {}
+            })();
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Load customers for combobox
+    const { options: customerOptions, load: loadCustomers, loading: loadingCustomers } = useAsyncOptions(getCustomers);
+    React.useEffect(() => { loadCustomers(); }, [refetchKey]);
 
     // 4. Memos (useMemo)
     const productMap = React.useMemo(() => new Map(products.map(p => [p.id, p])), [products]);
@@ -361,6 +386,48 @@ export default function SalesPage() {
     return (
         <TooltipProvider>
         <div className="flex flex-col gap-6">
+                <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                        <Label>Cliente</Label>
+                        <div className="flex gap-2 items-center">
+                            <div className="flex-1">
+                                <AdvancedCombobox<any>
+                                    options={customerOptions}
+                                    value={selectedClient ? String(selectedClient.id) : ''}
+                                    onChange={async (v) => {
+                                        try {
+                                            const c = await (await import('@/lib/api')).getCustomer(v);
+                                            setSelectedClient(c);
+                                            setClientName(c?.name || '');
+                                            setClientDni(c?.document || '');
+                                        } catch (e) {}
+                                    }}
+                                    valueAccessor={(o:any) => String(o.id)}
+                                    filterFn={(opts: any[], search: string) => {
+                                        // Async filtering is not supported directly; fetch server side if search length > 1
+                                        if (!search) return opts;
+                                        // Simple local filter
+                                        return opts.filter(o => (o.name || '').toLowerCase().includes(search.toLowerCase()) || (o.document || '').toLowerCase().includes(search.toLowerCase()));
+                                    }}
+                                    renderOption={(o:any) => (<div className="flex items-center justify-between"><div><div className="font-semibold">{o.name}</div><div className="text-xs text-muted-foreground">{o.document}</div></div><div className="text-sm">{o.email || ''}</div></div>)}
+                                    displayValue={(val) => selectedClient?.name || clientName}
+                                    placeholder={isLoadingProducts ? 'Cargando...' : 'Buscar cliente...'}
+                                    searchPlaceholder="Buscar cliente..."
+                                    emptyMessage="No se encontraron clientes."
+                                    disabled={false}
+                                />
+                            </div>
+                            <div>
+                                <Button onClick={() => window.open('/customers', '_blank')}>Buscar</Button>
+                            </div>
+                            <div>
+                                {/* Quick create inline */}
+                                <CustomerQuickCreator onCreated={(c:any) => { setSelectedClient(c); setClientName(c?.name || ''); setClientDni(c?.document || ''); loadCustomers(); }} />
+                            </div>
+                        </div>
+                        {selectedClient && <div className="text-sm text-muted-foreground">Seleccionado: {selectedClient.name}</div>}
+                    </div>
+                </div>
             <div className="flex items-center justify-between">
                 <div className="flex-1">
                     <h1 className="font-semibold text-lg md:text-2xl">Ventas</h1>

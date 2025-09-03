@@ -3,7 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, ShoppingCart, Package, Box, BarChart3, Store, Settings } from 'lucide-react';
+import { Home, ShoppingCart, Package, Box, BarChart3, Store, Settings, Users, Truck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getStores } from '@/lib/api';
 import { CurrentUserProvider, useCurrentUser } from '@/hooks/use-current-user';
@@ -28,8 +28,10 @@ const navItems = [
   { href: '/dashboard', icon: Home, label: 'Panel de Control', permission: null },
   { href: '/sales', icon: ShoppingCart, label: 'Ventas', permission: 'sales:read' },
   { href: '/purchases', icon: Package, label: 'Compras', permission: 'purchases:read' },
+  { href: '/customers', icon: Users, label: 'Clientes', permission: 'customers:read' },
   { href: '/products', icon: Box, label: 'Productos', permission: 'products:read' },
   { href: '/catalog', icon: Box, label: 'Catálogo', permission: 'products:read' },
+  { href: '/suppliers', icon: Truck, label: 'Proveedores', permission: 'suppliers:read' },
   { href: '/users', icon: Home, label: 'Usuarios', permission: 'users:read' },
   { href: '/reports', icon: BarChart3, label: 'Informes', permission: 'reports:read' },
 ];

@@ -62,5 +62,15 @@
 
     { "key": "variants:read" },
     { "key": "variants:create" }
+  ,
+  { "key": "customers:read" },
+  { "key": "customers:create" },
+  { "key": "customers:edit" },
+  { "key": "customers:delete" },
+
+  { "key": "suppliers:read" },
+  { "key": "suppliers:create" },
+  { "key": "suppliers:edit" },
+  { "key": "suppliers:delete" }
   ]
 }

@@ -548,6 +548,7 @@ __turbopack_context__.s({
     "createAttribute": (()=>createAttribute),
     "createAttributeValue": (()=>createAttributeValue),
     "createBrand": (()=>createBrand),
+    "createCustomer": (()=>createCustomer),
     "createDepartment": (()=>createDepartment),
     "createInventoryMovement": (()=>createInventoryMovement),
     "createInventorySnapshot": (()=>createInventorySnapshot),
@@ -557,20 +558,27 @@ __turbopack_context__.s({
     "createSale": (()=>createSale),
     "createStore": (()=>createStore),
     "createSubdepartment": (()=>createSubdepartment),
+    "createSupplier": (()=>createSupplier),
     "createUser": (()=>createUser),
     "deleteAttribute": (()=>deleteAttribute),
     "deleteAttributeValue": (()=>deleteAttributeValue),
     "deleteBrand": (()=>deleteBrand),
+    "deleteCustomer": (()=>deleteCustomer),
     "deleteDepartment": (()=>deleteDepartment),
     "deleteProduct": (()=>deleteProduct),
     "deleteStore": (()=>deleteStore),
     "deleteSubdepartment": (()=>deleteSubdepartment),
+    "deleteSupplier": (()=>deleteSupplier),
     "deleteUser": (()=>deleteUser),
     "exportInventoryToExcel": (()=>exportInventoryToExcel),
+    "fetchAPI": (()=>fetchAPI),
     "getAttributeValues": (()=>getAttributeValues),
     "getAttributes": (()=>getAttributes),
     "getBrands": (()=>getBrands),
     "getCurrentUser": (()=>getCurrentUser),
+    "getCustomer": (()=>getCustomer),
+    "getCustomerHistory": (()=>getCustomerHistory),
+    "getCustomers": (()=>getCustomers),
     "getDashboardSummary": (()=>getDashboardSummary),
     "getDepartments": (()=>getDepartments),
     "getHistoricalSummary": (()=>getHistoricalSummary),
@@ -590,6 +598,9 @@ __turbopack_context__.s({
     "getStoreSettings": (()=>getStoreSettings),
     "getStores": (()=>getStores),
     "getSubdepartments": (()=>getSubdepartments),
+    "getSupplier": (()=>getSupplier),
+    "getSupplierHistory": (()=>getSupplierHistory),
+    "getSuppliers": (()=>getSuppliers),
     "getUser": (()=>getUser),
     "getUserPermissions": (()=>getUserPermissions),
     "getUsers": (()=>getUsers),
@@ -602,6 +613,7 @@ __turbopack_context__.s({
     "updateAttribute": (()=>updateAttribute),
     "updateAttributeValue": (()=>updateAttributeValue),
     "updateBrand": (()=>updateBrand),
+    "updateCustomer": (()=>updateCustomer),
     "updateDepartment": (()=>updateDepartment),
     "updateProduct": (()=>updateProduct),
     "updatePurchase": (()=>updatePurchase),
@@ -609,6 +621,7 @@ __turbopack_context__.s({
     "updateStoreDetails": (()=>updateStoreDetails),
     "updateStoreSettings": (()=>updateStoreSettings),
     "updateSubdepartment": (()=>updateSubdepartment),
+    "updateSupplier": (()=>updateSupplier),
     "updateUser": (()=>updateUser),
     "updateUserPermissions": (()=>updateUserPermissions)
 });
@@ -678,6 +691,7 @@ async function fetchAPI(endpoint, options = {}) {
         throw error; // Lo lanzamos para que la lógica de la aplicación pueda reaccionar.
     }
 }
+;
 const login = (username, password)=>fetchAPI('/auth/login', {
         method: 'POST',
         body: JSON.stringify({
@@ -886,6 +900,76 @@ const createInventoryMovement = (movement)=>{
     return fetchAPI('/inventory/movements', {
         method: 'POST',
         body: JSON.stringify(movement)
+    });
+};
+const getCustomers = (q)=>{
+    const endpoint = q ? `/customers?q=${encodeURIComponent(q)}` : '/customers';
+    console.log('[frontend api] getCustomers -> requesting', endpoint);
+    return fetchAPI(endpoint).then((res)=>{
+        console.log('[frontend api] getCustomers -> response shape:', Array.isArray(res) ? `array(${res.length})` : typeof res);
+        return res;
+    });
+};
+const getCustomer = (id)=>{
+    const endpoint = `/customers/${id}`;
+    console.log('[frontend api] getCustomer -> requesting', endpoint);
+    return fetchAPI(endpoint).then((res)=>{
+        console.log('[frontend api] getCustomer -> response:', res);
+        return res;
+    });
+};
+const createCustomer = (payload)=>fetchAPI('/customers', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+    });
+const updateCustomer = (id, payload)=>fetchAPI(`/customers/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(payload)
+    });
+const deleteCustomer = (id)=>fetchAPI(`/customers/${id}`, {
+        method: 'DELETE'
+    });
+const getCustomerHistory = (id)=>{
+    const endpoint = `/customers/${id}/history`;
+    console.log('[frontend api] getCustomerHistory -> requesting', endpoint);
+    return fetchAPI(endpoint).then((res)=>{
+        console.log('[frontend api] getCustomerHistory -> response shape:', Array.isArray(res) ? `array(${res.length})` : typeof res);
+        return res;
+    });
+};
+const getSuppliers = (q)=>{
+    const endpoint = q ? `/suppliers?q=${encodeURIComponent(q)}` : '/suppliers';
+    console.log('[frontend api] getSuppliers -> requesting', endpoint);
+    return fetchAPI(endpoint).then((res)=>{
+        console.log('[frontend api] getSuppliers -> response shape:', Array.isArray(res) ? `array(${res.length})` : typeof res);
+        return res;
+    });
+};
+const getSupplier = (id)=>{
+    const endpoint = `/suppliers/${id}`;
+    console.log('[frontend api] getSupplier -> requesting', endpoint);
+    return fetchAPI(endpoint).then((res)=>{
+        console.log('[frontend api] getSupplier -> response:', res);
+        return res;
+    });
+};
+const createSupplier = (payload)=>fetchAPI('/suppliers', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+    });
+const updateSupplier = (id, payload)=>fetchAPI(`/suppliers/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(payload)
+    });
+const deleteSupplier = (id)=>fetchAPI(`/suppliers/${id}`, {
+        method: 'DELETE'
+    });
+const getSupplierHistory = (id)=>{
+    const endpoint = `/suppliers/${id}/history`;
+    console.log('[frontend api] getSupplierHistory -> requesting', endpoint);
+    return fetchAPI(endpoint).then((res)=>{
+        console.log('[frontend api] getSupplierHistory -> response shape:', Array.isArray(res) ? `array(${res.length})` : typeof res);
+        return res;
     });
 };
 const getLatestSnapshot = ()=>{

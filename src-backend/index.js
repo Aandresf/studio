@@ -67,6 +67,10 @@ app.use('/api/transactions', require('./routes/transactions'));
 // --- PENDING TRANSACTIONS (ventas/compras en espera) ---
 app.use('/api/pending-transactions', require('./routes/pending-transactions'));
 
+// Customers & Suppliers
+app.use('/api/customers', require('./routes/customers'));
+app.use('/api/suppliers', require('./routes/suppliers'));
+
 // PURCHASES (BATCH)
 // purchases routes migrated to routes/purchases.js
 

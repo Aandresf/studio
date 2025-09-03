@@ -7313,11 +7313,11 @@ class Router {
                     });
                     return new Promise(()=>{});
                 }
-                const routerFilterSValue = ("TURBOPACK compile-time value", JSON.parse('{"numItems":9,"errorRate":0.0001,"numBits":173,"numHashes":14,"bitArray":[0,1,1,1,1,0,0,0,0,1,1,0,1,0,0,0,1,0,1,0,1,1,1,1,0,0,1,1,0,1,1,0,1,1,0,0,1,1,0,1,0,0,1,1,0,0,1,1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1,1,0,0,1,1,1,1,1,1,1,0,1,0,0,0,0,1,1,1,1,1,0,1,0,0,1,1,1,0,1,0,0,1,1,0,1,1,1,1,1,0,0,0,1,1,0,0,1,0,1,0,0,1,1,1,1,0,0,0,1,1,0,1,0,1,1,0,0,0,0,0,1,0,1,0,1,1,1,1,1,0,0,0,0,1,0,1,1,0,0,0,0,1,1,0,1,1,0,0,1,1,1,0,1,1,1,1,1,1,0]}'));
+                const routerFilterSValue = ("TURBOPACK compile-time value", JSON.parse('{"numItems":13,"errorRate":0.0001,"numBits":250,"numHashes":14,"bitArray":[1,0,0,0,1,1,1,0,0,1,0,0,0,0,1,0,1,1,0,1,0,1,0,0,1,1,1,1,1,1,0,1,0,0,0,0,0,1,1,0,1,0,1,0,1,1,0,1,1,0,1,0,1,0,1,0,1,0,0,0,1,1,0,1,0,1,1,0,0,0,1,1,0,1,0,1,0,0,0,1,1,0,0,0,1,0,1,1,0,1,0,1,1,0,1,1,0,0,1,0,0,0,1,1,0,1,1,0,1,0,1,1,1,0,1,0,1,1,0,0,0,1,0,0,1,1,1,0,0,1,1,0,1,0,0,1,0,1,1,0,1,0,1,1,0,0,0,1,0,0,0,0,0,1,1,0,1,0,0,1,1,1,1,0,1,0,0,1,1,0,0,1,0,0,1,1,0,1,1,0,1,1,0,0,0,0,1,1,1,0,0,1,0,1,0,1,0,1,0,1,1,0,1,1,1,0,1,0,0,0,1,0,1,1,0,0,0,1,1,1,1,0,0,1,1,0,1,1,1,0,1,0,0,0,0,1,0,1,0,0,1,1,0,1,0,1,0,1,0,0]}'));
                 if (!staticFilterData && routerFilterSValue) {
                     staticFilterData = routerFilterSValue ? routerFilterSValue : undefined;
                 }
-                const routerFilterDValue = ("TURBOPACK compile-time value", JSON.parse('{"numItems":0,"errorRate":0.0001,"numBits":0,"numHashes":null,"bitArray":[]}'));
+                const routerFilterDValue = ("TURBOPACK compile-time value", JSON.parse('{"numItems":2,"errorRate":0.0001,"numBits":39,"numHashes":14,"bitArray":[0,1,0,0,0,1,0,1,1,1,0,1,0,1,0,1,0,0,0,1,1,1,1,0,1,1,0,1,1,0,0,0,1,1,0,1,1,0,1]}'));
                 if (!dynamicFilterData && routerFilterDValue) {
                     dynamicFilterData = routerFilterDValue ? routerFilterDValue : undefined;
                 }

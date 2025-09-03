@@ -21,6 +21,9 @@ import { Separator } from '@/components/ui/separator';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { AdvancedCombobox } from '@/components/ui/AdvancedCombobox';
+import { useAsyncOptions } from '@/hooks/use-async-options';
+import { getSuppliers } from '@/lib/api';
+import SupplierQuickCreator from '@/components/suppliers/SupplierQuickCreator';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { PurchaseHistoryDialog } from '@/components/dialogs/PurchaseHistoryDialog';
 import { PurchaseReceiptDialog } from '@/components/dialogs/PurchaseReceiptDialog';
@@ -57,6 +60,7 @@ export default function PurchasesPage() {
     const [date, setDate] = React.useState<Date>(new Date());
     const [supplier, setSupplier] = React.useState('');
     const [supplierRif, setSupplierRif] = React.useState('');
+    const [selectedSupplier, setSelectedSupplier] = React.useState<any | null>(null);
     const [invoiceNumber, setInvoiceNumber] = React.useState('');
 
     const [products, setProducts] = React.useState<Product[]>([]);
@@ -97,6 +101,26 @@ export default function PurchasesPage() {
     React.useEffect(() => {
         fetchInitialData();
     }, [fetchInitialData, refetchKey]);
+
+    const { options: supplierOptions, load: loadSuppliers, loading: loadingSuppliers } = useAsyncOptions(getSuppliers);
+    React.useEffect(() => { loadSuppliers(); }, [refetchKey]);
+
+    // Prefill from query param ?supplierId=
+    const searchParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+    React.useEffect(() => {
+        const supplierId = searchParams.get('supplierId');
+        if (supplierId) {
+            (async () => {
+                try {
+                    const s = await (await import('@/lib/api')).getSupplier(supplierId);
+                    setSelectedSupplier(s);
+                    setSupplier(s?.name || '');
+                    setSupplierRif(s?.document || '');
+                } catch (e) {}
+            })();
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     // Debug: imprimir usuario y permisos al montar / actualizar
     React.useEffect(() => {
@@ -391,6 +415,45 @@ export default function PurchasesPage() {
     return (
         <TooltipProvider>
             <div className="flex flex-col gap-6">
+                <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                        <Label>Proveedor</Label>
+                        <div className="flex gap-2 items-center">
+                            <div className="flex-1">
+                                <AdvancedCombobox<any>
+                                    options={supplierOptions}
+                                    value={selectedSupplier ? String(selectedSupplier.id) : ''}
+                                    onChange={async (v) => {
+                                        try {
+                                            const s = await (await import('@/lib/api')).getSupplier(v);
+                                            setSelectedSupplier(s);
+                                            setSupplier(s?.name || '');
+                                            setSupplierRif(s?.document || '');
+                                        } catch (e) {}
+                                    }}
+                                    valueAccessor={(o:any) => String(o.id)}
+                                    filterFn={(opts: any[], search: string) => {
+                                        if (!search) return opts;
+                                        return opts.filter(o => (o.name || '').toLowerCase().includes(search.toLowerCase()) || (o.document || '').toLowerCase().includes(search.toLowerCase()));
+                                    }}
+                                    renderOption={(o:any) => (<div className="flex items-center justify-between"><div><div className="font-semibold">{o.name}</div><div className="text-xs text-muted-foreground">{o.document}</div></div><div className="text-sm">{o.email || ''}</div></div>)}
+                                    displayValue={(val) => selectedSupplier?.name || supplier}
+                                    placeholder={isLoadingProducts ? 'Cargando...' : 'Buscar proveedor...'}
+                                    searchPlaceholder="Buscar proveedor..."
+                                    emptyMessage="No se encontraron proveedores."
+                                    disabled={false}
+                                />
+                            </div>
+                            <div>
+                                <Button onClick={async () => { window.open('/suppliers', '_blank'); }}>Buscar</Button>
+                            </div>
+                            <div>
+                                <SupplierQuickCreator onCreated={(s:any) => { setSelectedSupplier(s); setSupplier(s?.name || ''); setSupplierRif(s?.document || ''); loadSuppliers(); }} />
+                            </div>
+                        </div>
+                        {selectedSupplier && <div className="text-sm text-muted-foreground">Seleccionado: {selectedSupplier.name}</div>}
+                    </div>
+                </div>
                 <div className="flex items-center justify-between">
                     <div className="flex-1">
                         <h1 className="font-semibold text-lg md:text-2xl">Compras</h1>
