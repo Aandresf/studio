@@ -18,6 +18,33 @@ function groupByCategory(list: PermissionMeta[]) {
   return map;
 }
 
+const TAB_ORDER = ['catalogo','productos','ventas','compras','configuracion','usuarios','general'];
+
+function sortPermissions(list: PermissionMeta[], category: string) {
+  if (category !== 'catalogo') {
+    return list.sort((a,b) => a.label.localeCompare(b.label));
+  }
+  // custom ordering for catalog: departments CRUD, subdepartments, brands CRUD, attributes CRUD, attribute values, variants
+  const orderKeys = [
+    'departments:create','departments:edit','departments:delete',
+    'departments:subdepartments', 'departments:subdepartments:create', 'departments:subdepartments:edit','departments:subdepartments:delete',
+    'brands:create','brands:edit','brands:delete',
+    'attributes:create','attributes:edit','attributes:delete',
+    'attributes:create_value','attributes:edit_value','attributes:delete_value',
+    'variants:create','variants:read'
+  ];
+  const indexOf = (k:string) => {
+    const idx = orderKeys.indexOf(k);
+    return idx === -1 ? 9999 : idx;
+  };
+  return list.sort((a,b) => {
+    const ia = indexOf(a.key);
+    const ib = indexOf(b.key);
+    if (ia !== ib) return ia - ib;
+    return a.label.localeCompare(b.label);
+  });
+}
+
 export function PermissionsEditor({ user, onClose, onSave }: { user: any; onClose: () => void; onSave: (userId: number, perms: string[]) => Promise<void> }) {
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -26,8 +53,13 @@ export function PermissionsEditor({ user, onClose, onSave }: { user: any; onClos
   const [roleName, setRoleName] = React.useState<string | null>(null);
   const currentUser = useCurrentUser();
 
-  const grouped = groupByCategory(PERMISSIONS_META);
-  const categories = Object.keys(grouped);
+  const groupedRaw = groupByCategory(PERMISSIONS_META);
+  // order categories according to TAB_ORDER; include any missing ones at the end
+  const ordered = TAB_ORDER.filter(t => !!groupedRaw[t]);
+  const others = Object.keys(groupedRaw).filter(k => !ordered.includes(k));
+  const categories = [...ordered, ...others];
+  const grouped: Record<string, PermissionMeta[]> = {};
+  for (const k of Object.keys(groupedRaw)) grouped[k] = sortPermissions(groupedRaw[k], k);
   const [currentTab, setCurrentTab] = React.useState<string>(categories[0] || 'general');
 
   React.useEffect(() => {
@@ -107,7 +139,7 @@ export function PermissionsEditor({ user, onClose, onSave }: { user: any; onClos
 
   return (
     <Dialog open={true} onOpenChange={() => onClose()}>
-      <DialogContent>
+      <DialogContent className="max-w-4xl w-full">
         <DialogHeader>
           <DialogTitle>Permisos de {user?.username || ''}</DialogTitle>
         </DialogHeader>
@@ -125,15 +157,15 @@ export function PermissionsEditor({ user, onClose, onSave }: { user: any; onClos
             <div className="text-destructive">{error}</div>
           ) : (
             <Tabs value={currentTab} onValueChange={(value) => setCurrentTab(value as string)} className="w-full">
-              <TabsList className="grid w-full grid-cols-3 mb-4">
+              <TabsList className="grid w-full grid-cols-3 mb-8">
                 {categories.map(cat => (
                   <TabsTrigger key={cat} value={cat} className="text-sm bg-muted text-muted-foreground">{CATEGORIES_DISPLAY[cat as any as keyof typeof CATEGORIES_DISPLAY] || cat}</TabsTrigger>
                 ))}
               </TabsList>
 
               {categories.map(cat => (
-                <TabsContent key={cat} value={cat} className="py-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <TabsContent key={cat} value={cat} className="py-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {grouped[cat].map((perm) => {
                       const inherited = !!inheritedFromRole[perm.key];
                       return (

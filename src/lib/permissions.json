@@ -1,0 +1,66 @@
+{
+  "permissions": [
+    { "key": "*" },
+    { "key": "sales:create" },
+    { "key": "sales:read" },
+    { "key": "sales:edit" },
+    { "key": "sales:annul" },
+    { "key": "sales:delete" },
+
+    { "key": "purchases:read" },
+    { "key": "purchases:create" },
+    { "key": "purchases:edit" },
+    { "key": "purchases:annul" },
+    { "key": "purchases:delete" },
+
+    { "key": "products:read" },
+    { "key": "products:create", "requires": ["brands:read","departments:read","attributes:read","variants:read","brands:create","departments:create","attributes:create","variants:create"] },
+    { "key": "products:edit" },
+    { "key": "products:delete" },
+    { "key": "products:read_prices_sale" },
+    { "key": "products:read_costs" },
+    { "key": "products:read_costs_disabled" },
+    { "key": "products:manual_sku" },
+
+    { "key": "reports:read" },
+    { "key": "dashboard:read" },
+    { "key": "reports:create_snapshot" },
+
+    { "key": "settings:edit" },
+    { "key": "settings:advanced" },
+    { "key": "catalog:manage" },
+    { "key": "stores:create" },
+    { "key": "stores:delete" },
+    { "key": "stores:set_active" },
+
+    { "key": "users:create" },
+    { "key": "users:edit" },
+    { "key": "users:delete" },
+    { "key": "users:permissions" },
+
+    { "key": "inventory:write" },
+    { "key": "pending:create" },
+    { "key": "pending:delete" },
+
+    { "key": "admin:backup" },
+    { "key": "admin:restore" },
+
+    { "key": "departments:create" },
+    { "key": "departments:edit" },
+    { "key": "departments:delete" },
+
+    { "key": "brands:create" },
+    { "key": "brands:edit" },
+    { "key": "brands:delete" },
+
+    { "key": "attributes:create" },
+    { "key": "attributes:edit" },
+    { "key": "attributes:delete" },
+    { "key": "attributes:create_value" },
+    { "key": "attributes:edit_value" },
+    { "key": "attributes:delete_value" },
+
+    { "key": "variants:read" },
+    { "key": "variants:create" }
+  ]
+}

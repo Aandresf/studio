@@ -388,15 +388,478 @@ function UserForm({ user, roles, onClose, onSave, isAdmin }) {
     }, this);
 }
 }}),
-"[project]/src/lib/permissionsMeta.ts [app-ssr] (ecmascript)": (function(__turbopack_context__) {
+"[project]/src/lib/permissions.json (json)": ((__turbopack_context__) => {
 
-var { g: global, __dirname, m: module, e: exports } = __turbopack_context__;
+var { g: global, __dirname } = __turbopack_context__;
 {
-const e = new Error(`Could not parse module '[project]/src/lib/permissionsMeta.ts'
+__turbopack_context__.v(JSON.parse("{\"permissions\":[{\"key\":\"*\"},{\"key\":\"sales:create\"},{\"key\":\"sales:read\"},{\"key\":\"sales:edit\"},{\"key\":\"sales:annul\"},{\"key\":\"sales:delete\"},{\"key\":\"purchases:read\"},{\"key\":\"purchases:create\"},{\"key\":\"purchases:edit\"},{\"key\":\"purchases:annul\"},{\"key\":\"purchases:delete\"},{\"key\":\"products:read\"},{\"key\":\"products:create\",\"requires\":[\"brands:read\",\"departments:read\",\"attributes:read\",\"variants:read\",\"brands:create\",\"departments:create\",\"attributes:create\",\"variants:create\"]},{\"key\":\"products:edit\"},{\"key\":\"products:delete\"},{\"key\":\"products:read_prices_sale\"},{\"key\":\"products:read_costs\"},{\"key\":\"products:read_costs_disabled\"},{\"key\":\"products:manual_sku\"},{\"key\":\"reports:read\"},{\"key\":\"dashboard:read\"},{\"key\":\"reports:create_snapshot\"},{\"key\":\"settings:edit\"},{\"key\":\"settings:advanced\"},{\"key\":\"catalog:manage\"},{\"key\":\"stores:create\"},{\"key\":\"stores:delete\"},{\"key\":\"stores:set_active\"},{\"key\":\"users:create\"},{\"key\":\"users:edit\"},{\"key\":\"users:delete\"},{\"key\":\"users:permissions\"},{\"key\":\"inventory:write\"},{\"key\":\"pending:create\"},{\"key\":\"pending:delete\"},{\"key\":\"admin:backup\"},{\"key\":\"admin:restore\"},{\"key\":\"departments:create\"},{\"key\":\"departments:edit\"},{\"key\":\"departments:delete\"},{\"key\":\"brands:create\"},{\"key\":\"brands:edit\"},{\"key\":\"brands:delete\"},{\"key\":\"attributes:create\"},{\"key\":\"attributes:edit\"},{\"key\":\"attributes:delete\"},{\"key\":\"attributes:create_value\"},{\"key\":\"attributes:edit_value\"},{\"key\":\"attributes:delete_value\"},{\"key\":\"variants:read\"},{\"key\":\"variants:create\"}]}"));}}),
+"[project]/src/lib/permissionsMeta.ts [app-ssr] (ecmascript)": ((__turbopack_context__) => {
+"use strict";
 
-Unexpected token `{`. Expected identifier, string literal, numeric literal or [ for the computed key`);
-e.code = 'MODULE_UNPARSEABLE';
-throw e;}}),
+var { g: global, __dirname } = __turbopack_context__;
+{
+__turbopack_context__.s({
+    "CATEGORIES_DISPLAY": (()=>CATEGORIES_DISPLAY),
+    "PERMISSIONS_META": (()=>PERMISSIONS_META)
+});
+var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$permissions$2e$json__$28$json$29$__ = __turbopack_context__.i("[project]/src/lib/permissions.json (json)");
+;
+// Mapeo manual de metadatos descriptivos por clave. Solo contenido legible (labels, descriptions, affected, category)
+const METADATA_MAP = {
+    '*': {
+        label: 'Acceso total',
+        description: 'Permite todas las operaciones en la aplicación.',
+        category: 'general',
+        affected: [
+            'Todos'
+        ]
+    },
+    'sales:create': {
+        label: 'Crear ventas',
+        description: 'Permite crear/registrar nuevas ventas.',
+        category: 'ventas',
+        affected: [
+            'Registrar Venta',
+            'Guardar Cambios'
+        ]
+    },
+    'sales:read': {
+        label: 'Ver ventas',
+        description: 'Permite ver el historial y recibos de ventas.',
+        category: 'ventas',
+        affected: [
+            'Historial',
+            'Ver Recibo'
+        ]
+    },
+    'sales:edit': {
+        label: 'Editar ventas',
+        description: 'Permite editar ventas activas.',
+        category: 'ventas',
+        affected: [
+            'Editar Venta',
+            'Guardar Cambios'
+        ]
+    },
+    'sales:annul': {
+        label: 'Anular ventas',
+        description: 'Permite anular/invalidar ventas y revertir stock.',
+        category: 'ventas',
+        affected: [
+            'Anular Venta'
+        ]
+    },
+    'sales:delete': {
+        label: 'Eliminar ventas (pendientes)',
+        description: 'Permite eliminar ventas pendientes guardadas.',
+        category: 'ventas',
+        affected: [
+            'Eliminar (pendiente)'
+        ]
+    },
+    'purchases:read': {
+        label: 'Ver compras',
+        description: 'Permite ver el historial y recibos de compras.',
+        category: 'compras',
+        affected: [
+            'Historial',
+            'Ver Recibo'
+        ]
+    },
+    'purchases:create': {
+        label: 'Crear compras',
+        description: 'Permite registrar nuevas compras.',
+        category: 'compras',
+        affected: [
+            'Registrar Compra',
+            'Guardar Cambios'
+        ]
+    },
+    'purchases:edit': {
+        label: 'Editar compras',
+        description: 'Permite editar compras activas.',
+        category: 'compras',
+        affected: [
+            'Editar Compra'
+        ]
+    },
+    'purchases:annul': {
+        label: 'Anular compras',
+        description: 'Permite anular compras y revertir stock.',
+        category: 'compras',
+        affected: [
+            'Anular Compra'
+        ]
+    },
+    'purchases:delete': {
+        label: 'Eliminar compras (pendientes)',
+        description: 'Permite eliminar compras pendientes guardadas.',
+        category: 'compras',
+        affected: [
+            'Eliminar (pendiente)'
+        ]
+    },
+    'products:read': {
+        label: 'Ver productos',
+        description: 'Permite ver la lista de productos y detalles.',
+        category: 'productos',
+        affected: [
+            'Listado Productos',
+            'Detalle Producto'
+        ]
+    },
+    'products:create': {
+        label: 'Crear productos',
+        description: 'Permite crear nuevos productos y variantes.',
+        category: 'productos',
+        affected: [
+            'Crear Producto',
+            'Guardar Producto'
+        ]
+    },
+    'products:edit': {
+        label: 'Editar productos',
+        description: 'Permite editar productos y variantes.',
+        category: 'productos',
+        affected: [
+            'Editar Producto',
+            'Guardar Producto'
+        ]
+    },
+    'products:delete': {
+        label: 'Eliminar productos',
+        description: 'Permite borrar productos.',
+        category: 'productos',
+        affected: [
+            'Eliminar Producto'
+        ]
+    },
+    'products:read_prices_sale': {
+        label: 'Ver precios de venta',
+        description: 'Permite ver los precios de venta en la interfaz.',
+        category: 'productos',
+        affected: [
+            'Precio de Venta'
+        ]
+    },
+    'products:read_costs': {
+        label: 'Ver costes',
+        description: 'Permite ver los costes de producto en vistas autorizadas.',
+        category: 'productos',
+        affected: [
+            'Coste Unitario',
+            'Detalle Producto'
+        ]
+    },
+    'products:read_costs_disabled': {
+        label: 'Ver costes (desactivado)',
+        description: 'Versión restringida para costes (no editable).',
+        category: 'productos',
+        affected: [
+            'Coste Unitario'
+        ]
+    },
+    'products:manual_sku': {
+        label: 'Editar SKU manualmente',
+        description: 'Permite editar manualmente el SKU base del producto desde el formulario de producto.',
+        category: 'productos',
+        affected: [
+            'Editar SKU',
+            'Formulario Producto'
+        ]
+    },
+    // Admin
+    'admin:backup': {
+        label: 'Generar backup',
+        description: 'Permite generar una copia de seguridad del sistema.',
+        category: 'general',
+        affected: [
+            'Backup'
+        ]
+    },
+    'admin:restore': {
+        label: 'Restaurar backup',
+        description: 'Permite restaurar la base de datos desde una copia de seguridad.',
+        category: 'general',
+        affected: [
+            'Restaurar'
+        ]
+    },
+    // Reports / Dashboard
+    'reports:read': {
+        label: 'Ver reportes',
+        description: 'Permite acceder y visualizar reportes e informes del sistema.',
+        category: 'general',
+        affected: [
+            'Panel de Reportes'
+        ]
+    },
+    'reports:create_snapshot': {
+        label: 'Crear snapshot',
+        description: 'Permite generar una instantánea (snapshot) del inventario actual.',
+        category: 'general',
+        affected: [
+            'Crear Snapshot'
+        ]
+    },
+    'dashboard:read': {
+        label: 'Ver panel',
+        description: 'Permite ver el panel principal (dashboard) con métricas y widgets.',
+        category: 'general',
+        affected: [
+            'Dashboard'
+        ]
+    },
+    // Settings / Configuración
+    'settings:edit': {
+        label: 'Editar configuración',
+        description: 'Permite modificar ajustes generales de la aplicación.',
+        category: 'configuracion',
+        affected: [
+            'Ajustes'
+        ]
+    },
+    'settings:advanced': {
+        label: 'Acceder configuración avanzada',
+        description: 'Permite acceder y modificar opciones avanzadas del sistema (riesgo alto).',
+        category: 'configuracion',
+        affected: [
+            'Configuración Avanzada'
+        ]
+    },
+    'catalog:manage': {
+        label: 'Gestionar catálogo',
+        description: 'Permite realizar operaciones avanzadas sobre catálogo: departamentos, marcas y atributos.',
+        category: 'configuracion',
+        affected: [
+            'Catálogo',
+            'Departamentos',
+            'Marcas',
+            'Atributos'
+        ]
+    },
+    // Stores
+    'stores:create': {
+        label: 'Crear sucursales',
+        description: 'Permite añadir nuevas sucursales/tiendas al sistema.',
+        category: 'configuracion',
+        affected: [
+            'Crear Tienda'
+        ]
+    },
+    'stores:delete': {
+        label: 'Eliminar sucursales',
+        description: 'Permite eliminar sucursales/tiendas y sus configuraciones asociadas.',
+        category: 'configuracion',
+        affected: [
+            'Eliminar Tienda'
+        ]
+    },
+    'stores:set_active': {
+        label: 'Seleccionar tienda activa',
+        description: 'Permite cambiar la tienda/sucursal activa en la sesión.',
+        category: 'configuracion',
+        affected: [
+            'Seleccionar Tienda'
+        ]
+    },
+    // Departments
+    'departments:create': {
+        label: 'Crear departamentos',
+        description: 'Permite crear nuevos departamentos para clasificar productos.',
+        category: 'catalogo',
+        affected: [
+            'Nuevo Departamento'
+        ]
+    },
+    'departments:edit': {
+        label: 'Editar departamentos',
+        description: 'Permite modificar departamentos existentes.',
+        category: 'catalogo',
+        affected: [
+            'Editar Departamento'
+        ]
+    },
+    'departments:delete': {
+        label: 'Eliminar departamentos',
+        description: 'Permite eliminar departamentos del catálogo.',
+        category: 'catalogo',
+        affected: [
+            'Eliminar Departamento'
+        ]
+    },
+    // Brands
+    'brands:create': {
+        label: 'Crear marcas',
+        description: 'Permite añadir nuevas marcas al catálogo.',
+        category: 'catalogo',
+        affected: [
+            'Añadir Marca'
+        ]
+    },
+    'brands:edit': {
+        label: 'Editar marcas',
+        description: 'Permite modificar datos de marcas existentes.',
+        category: 'catalogo',
+        affected: [
+            'Editar Marca'
+        ]
+    },
+    'brands:delete': {
+        label: 'Eliminar marcas',
+        description: 'Permite eliminar marcas del catálogo.',
+        category: 'catalogo',
+        affected: [
+            'Eliminar Marca'
+        ]
+    },
+    // Attributes
+    'attributes:create': {
+        label: 'Crear atributos',
+        description: 'Permite crear atributos (ej. talla, color) usados por productos.',
+        category: 'catalogo',
+        affected: [
+            'Añadir Atributo'
+        ]
+    },
+    'attributes:edit': {
+        label: 'Editar atributos',
+        description: 'Permite editar atributos existentes.',
+        category: 'catalogo',
+        affected: [
+            'Editar Atributo'
+        ]
+    },
+    'attributes:delete': {
+        label: 'Eliminar atributos',
+        description: 'Permite eliminar atributos del sistema.',
+        category: 'catalogo',
+        affected: [
+            'Eliminar Atributo'
+        ]
+    },
+    'attributes:create_value': {
+        label: 'Crear valor de atributo',
+        description: 'Permite añadir valores a un atributo (ej. Color: Rojo).',
+        category: 'catalogo',
+        affected: [
+            'Añadir Valor'
+        ]
+    },
+    'attributes:edit_value': {
+        label: 'Editar valor de atributo',
+        description: 'Permite editar valores de atributos.',
+        category: 'catalogo',
+        affected: [
+            'Editar Valor'
+        ]
+    },
+    'attributes:delete_value': {
+        label: 'Eliminar valor de atributo',
+        description: 'Permite eliminar valores de atributos.',
+        category: 'catalogo',
+        affected: [
+            'Eliminar Valor'
+        ]
+    },
+    // Variants
+    'variants:read': {
+        label: 'Ver variantes',
+        description: 'Permite ver variantes asociadas a productos.',
+        category: 'catalogo',
+        affected: [
+            'Listado Variantes',
+            'Detalle Producto'
+        ]
+    },
+    'variants:create': {
+        label: 'Crear variantes',
+        description: 'Permite crear nuevas variantes para un producto (tallas, colores).',
+        category: 'catalogo',
+        affected: [
+            'Añadir Variante'
+        ]
+    },
+    // Inventory / pending
+    'inventory:write': {
+        label: 'Modificar inventario',
+        description: 'Permite realizar ajustes manuales en inventario.',
+        category: 'general',
+        affected: [
+            'Ajustar Stock'
+        ]
+    },
+    'pending:create': {
+        label: 'Guardar pendientes',
+        description: 'Permite guardar transacciones en estado pendiente.',
+        category: 'general',
+        affected: [
+            'Poner en Espera'
+        ]
+    },
+    'pending:delete': {
+        label: 'Eliminar pendientes',
+        description: 'Permite eliminar transacciones pendientes.',
+        category: 'general',
+        affected: [
+            'Eliminar (pendiente)'
+        ]
+    },
+    // Users
+    'users:create': {
+        label: 'Crear usuarios',
+        description: 'Permite crear nuevas cuentas de usuario en el sistema.',
+        category: 'usuarios',
+        affected: [
+            'Crear Usuario'
+        ]
+    },
+    'users:edit': {
+        label: 'Editar usuarios',
+        description: 'Permite editar información de usuarios existentes.',
+        category: 'usuarios',
+        affected: [
+            'Editar Usuario'
+        ]
+    },
+    'users:delete': {
+        label: 'Eliminar usuarios',
+        description: 'Permite eliminar usuarios del sistema.',
+        category: 'usuarios',
+        affected: [
+            'Eliminar Usuario'
+        ]
+    },
+    'users:permissions': {
+        label: 'Gestionar permisos',
+        description: 'Permite asignar y modificar permisos de otros usuarios.',
+        category: 'usuarios',
+        affected: [
+            'Editor de Permisos'
+        ]
+    }
+};
+const PERMISSIONS_META = (__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$permissions$2e$json__$28$json$29$__["default"].permissions || []).map((p)=>{
+    const meta = METADATA_MAP[p.key] || {};
+    return {
+        key: p.key,
+        label: meta.label || p.key,
+        description: meta.description || '',
+        category: meta.category || 'general',
+        affected: meta.affected || [],
+        requires: p.requires || undefined
+    };
+});
+const CATEGORIES_DISPLAY = {
+    ventas: 'Ventas',
+    compras: 'Compras',
+    productos: 'Productos',
+    configuracion: 'Configuración',
+    catalogo: 'Catálogo',
+    usuarios: 'Usuarios',
+    general: 'General'
+};
+}}),
 "[project]/src/components/ui/tabs.tsx [app-ssr] (ecmascript)": ((__turbopack_context__) => {
 "use strict";
 
@@ -450,389 +913,15 @@ const TabsContent = /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project
 TabsContent.displayName = __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f40$radix$2d$ui$2f$react$2d$tabs$2f$dist$2f$index$2e$mjs__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Content"].displayName;
 ;
 }}),
-"[project]/src/components/users/PermissionsEditor.tsx [app-ssr] (ecmascript)": ((__turbopack_context__) => {
-"use strict";
+"[project]/src/components/users/PermissionsEditor.tsx [app-ssr] (ecmascript)": (function(__turbopack_context__) {
 
-var { g: global, __dirname } = __turbopack_context__;
+var { g: global, __dirname, m: module, e: exports } = __turbopack_context__;
 {
-__turbopack_context__.s({
-    "PermissionsEditor": (()=>PermissionsEditor)
-});
-var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/next/dist/server/route-modules/app-page/vendored/ssr/react-jsx-dev-runtime.js [app-ssr] (ecmascript)");
-var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/next/dist/server/route-modules/app-page/vendored/ssr/react.js [app-ssr] (ecmascript)");
-var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/components/ui/dialog.tsx [app-ssr] (ecmascript)");
-var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/components/ui/button.tsx [app-ssr] (ecmascript)");
-var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$api$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/lib/api.ts [app-ssr] (ecmascript)");
-var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$permissionsMeta$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/lib/permissionsMeta.ts [app-ssr] (ecmascript)");
-var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$tooltip$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/components/ui/tooltip.tsx [app-ssr] (ecmascript)");
-var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$tabs$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/components/ui/tabs.tsx [app-ssr] (ecmascript)");
-var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$use$2d$current$2d$user$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/hooks/use-current-user.tsx [app-ssr] (ecmascript)");
-"use client";
-;
-;
-;
-;
-;
-;
-;
-;
-;
-function groupByCategory(list) {
-    const map = {};
-    list.forEach((p)=>{
-        if (!map[p.category]) map[p.category] = [];
-        map[p.category].push(p);
-    });
-    return map;
-}
-function PermissionsEditor({ user, onClose, onSave }) {
-    const [loading, setLoading] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(false);
-    const [error, setError] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(null);
-    const [checked, setChecked] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])({});
-    const [inheritedFromRole, setInheritedFromRole] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])({});
-    const [roleName, setRoleName] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(null);
-    const currentUser = (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$use$2d$current$2d$user$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useCurrentUser"])();
-    const grouped = groupByCategory(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$permissionsMeta$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["PERMISSIONS_META"]);
-    const categories = Object.keys(grouped);
-    const [currentTab, setCurrentTab] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(categories[0] || 'general');
-    (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useEffect"])(()=>{
-        if (!user || !user.id) return;
-        setLoading(true);
-        setError(null);
-        (async ()=>{
-            try {
-                // obtener permisos efectivos del usuario y la definición del rol para marcar heredados
-                const [body, all] = await Promise.all([
-                    (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$api$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["getUserPermissions"])(user.id),
-                    (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$api$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["getUsers"])()
-                ]);
-                const list = body?.permissions || [];
-                const roles = all?.roles || [];
-                const role = roles.find((r)=>r.id === user.roleId);
-                const rolePerms = role?.permissions || [];
-                setRoleName(role?.name || null);
-                const map = {};
-                const inheritedMap = {};
-                __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$permissionsMeta$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["PERMISSIONS_META"].forEach((meta)=>{
-                    map[meta.key] = list.includes('*') || list.includes(meta.key);
-                    inheritedMap[meta.key] = rolePerms.includes(meta.key);
-                });
-                setChecked(map);
-                setInheritedFromRole(inheritedMap);
-            } catch (e) {
-                console.error('Error cargando permisos:', e?.message || e);
-                setError(e?.message || 'Error al cargar permisos');
-                setChecked({});
-            } finally{
-                setLoading(false);
-            }
-        })();
-    }, [
-        user
-    ]);
-    const handleToggle = (key, value)=>{
-        // Si activamos un permiso, también activamos sus requisitos (si existen)
-        const meta = __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$permissionsMeta$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["PERMISSIONS_META"].find((m)=>m.key === key);
-        setChecked((s)=>{
-            const next = {
-                ...s,
-                [key]: value
-            };
-            if (value && meta?.requires && meta.requires.length) {
-                for (const req of meta.requires)next[req] = true;
-            }
-            // Si desactivamos, intentamos desactivar sólo si ningún otro permiso activo lo requiere
-            if (!value) {
-                const requiredByOther = __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$permissionsMeta$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["PERMISSIONS_META"].some((m)=>{
-                    if (!next[m.key]) return false; // permiso no activo
-                    if (!m.requires) return false;
-                    return m.requires.includes(key) && m.key !== key;
-                });
-                if (requiredByOther) {
-                    // no permitir desactivar si todavía es requerido
-                    return s; // no cambiar
-                }
-            // seguro desactivar
-            }
-            return next;
-        });
-    };
-    const handleSave = async ()=>{
-        setLoading(true);
-        try {
-            const perms = Object.entries(checked).filter(([k, v])=>v).map(([k])=>k);
-            await onSave(user.id, perms);
-            // si estamos editando al usuario actualmente seleccionado, refrescar sus permisos
-            if (currentUser?.userId === user.id && typeof currentUser?.refresh === 'function') {
-                currentUser.refresh();
-            }
-        } finally{
-            setLoading(false);
-        }
-    };
-    const hasInherited = Object.values(inheritedFromRole).some(Boolean);
-    return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Dialog"], {
-        open: true,
-        onOpenChange: ()=>onClose(),
-        children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["DialogContent"], {
-            children: [
-                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["DialogHeader"], {
-                    children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["DialogTitle"], {
-                        children: [
-                            "Permisos de ",
-                            user?.username || ''
-                        ]
-                    }, void 0, true, {
-                        fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-                        lineNumber: 112,
-                        columnNumber: 11
-                    }, this)
-                }, void 0, false, {
-                    fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-                    lineNumber: 111,
-                    columnNumber: 9
-                }, this),
-                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                    className: "py-4 overflow-hidden",
-                    children: [
-                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
-                            className: "text-sm text-muted-foreground mb-2",
-                            children: "Selecciona permisos por categoría. Pasa el cursor sobre el permiso para ver su descripción y los botones afectados."
-                        }, void 0, false, {
-                            fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-                            lineNumber: 115,
-                            columnNumber: 11
-                        }, this),
-                        hasInherited && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                            className: "text-sm text-muted-foreground mb-3",
-                            children: "Los roles funcionan como plantillas/categorías: los permisos provistos por el rol se copian al crear el usuario, pero puedes editar todos los permisos para este usuario."
-                        }, void 0, false, {
-                            fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-                            lineNumber: 117,
-                            columnNumber: 13
-                        }, this),
-                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$tooltip$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TooltipProvider"], {
-                            children: loading ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                children: "Cargando permisos..."
-                            }, void 0, false, {
-                                fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-                                lineNumber: 123,
-                                columnNumber: 13
-                            }, this) : error ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                className: "text-destructive",
-                                children: error
-                            }, void 0, false, {
-                                fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-                                lineNumber: 125,
-                                columnNumber: 13
-                            }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$tabs$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Tabs"], {
-                                value: currentTab,
-                                onValueChange: (value)=>setCurrentTab(value),
-                                className: "w-full",
-                                children: [
-                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$tabs$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TabsList"], {
-                                        className: "grid w-full grid-cols-3 mb-4",
-                                        children: categories.map((cat)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$tabs$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TabsTrigger"], {
-                                                value: cat,
-                                                className: "text-sm bg-muted text-muted-foreground",
-                                                children: __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$permissionsMeta$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["CATEGORIES_DISPLAY"][cat] || cat
-                                            }, cat, false, {
-                                                fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-                                                lineNumber: 130,
-                                                columnNumber: 19
-                                            }, this))
-                                    }, void 0, false, {
-                                        fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-                                        lineNumber: 128,
-                                        columnNumber: 15
-                                    }, this),
-                                    categories.map((cat)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$tabs$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TabsContent"], {
-                                            value: cat,
-                                            className: "py-4",
-                                            children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                                className: "grid grid-cols-1 sm:grid-cols-2 gap-2",
-                                                children: grouped[cat].map((perm)=>{
-                                                    const inherited = !!inheritedFromRole[perm.key];
-                                                    return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("label", {
-                                                        className: "flex items-center gap-2",
-                                                        children: [
-                                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("input", {
-                                                                type: "checkbox",
-                                                                checked: !!checked[perm.key],
-                                                                onChange: (e)=>handleToggle(perm.key, e.target.checked)
-                                                            }, void 0, false, {
-                                                                fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-                                                                lineNumber: 141,
-                                                                columnNumber: 27
-                                                            }, this),
-                                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$tooltip$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Tooltip"], {
-                                                                children: [
-                                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$tooltip$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TooltipTrigger"], {
-                                                                        asChild: true,
-                                                                        children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                                                            className: "text-sm cursor-help underline-offset-2",
-                                                                            children: perm.label
-                                                                        }, void 0, false, {
-                                                                            fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-                                                                            lineNumber: 144,
-                                                                            columnNumber: 31
-                                                                        }, this)
-                                                                    }, void 0, false, {
-                                                                        fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-                                                                        lineNumber: 143,
-                                                                        columnNumber: 29
-                                                                    }, this),
-                                                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$tooltip$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TooltipContent"], {
-                                                                        children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                                                            className: "max-w-xs",
-                                                                            children: [
-                                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
-                                                                                    className: "font-semibold",
-                                                                                    children: perm.label
-                                                                                }, void 0, false, {
-                                                                                    fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-                                                                                    lineNumber: 148,
-                                                                                    columnNumber: 33
-                                                                                }, this),
-                                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
-                                                                                    className: "text-sm text-muted-foreground",
-                                                                                    children: perm.description
-                                                                                }, void 0, false, {
-                                                                                    fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-                                                                                    lineNumber: 149,
-                                                                                    columnNumber: 33
-                                                                                }, this),
-                                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
-                                                                                    className: "text-xs mt-2 font-medium",
-                                                                                    children: "Botones / áreas afectadas:"
-                                                                                }, void 0, false, {
-                                                                                    fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-                                                                                    lineNumber: 150,
-                                                                                    columnNumber: 33
-                                                                                }, this),
-                                                                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("ul", {
-                                                                                    className: "text-xs list-disc ml-4",
-                                                                                    children: perm.affected.map((a)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("li", {
-                                                                                            children: a
-                                                                                        }, a, false, {
-                                                                                            fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-                                                                                            lineNumber: 152,
-                                                                                            columnNumber: 59
-                                                                                        }, this))
-                                                                                }, void 0, false, {
-                                                                                    fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-                                                                                    lineNumber: 151,
-                                                                                    columnNumber: 33
-                                                                                }, this),
-                                                                                inherited && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
-                                                                                    className: "text-xs mt-2 text-muted-foreground",
-                                                                                    children: [
-                                                                                        "Heredado del rol: ",
-                                                                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
-                                                                                            className: "font-medium",
-                                                                                            children: roleName || user.roleId
-                                                                                        }, void 0, false, {
-                                                                                            fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-                                                                                            lineNumber: 155,
-                                                                                            columnNumber: 103
-                                                                                        }, this),
-                                                                                        "."
-                                                                                    ]
-                                                                                }, void 0, true, {
-                                                                                    fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-                                                                                    lineNumber: 155,
-                                                                                    columnNumber: 35
-                                                                                }, this)
-                                                                            ]
-                                                                        }, void 0, true, {
-                                                                            fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-                                                                            lineNumber: 147,
-                                                                            columnNumber: 31
-                                                                        }, this)
-                                                                    }, void 0, false, {
-                                                                        fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-                                                                        lineNumber: 146,
-                                                                        columnNumber: 29
-                                                                    }, this)
-                                                                ]
-                                                            }, void 0, true, {
-                                                                fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-                                                                lineNumber: 142,
-                                                                columnNumber: 27
-                                                            }, this)
-                                                        ]
-                                                    }, perm.key, true, {
-                                                        fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-                                                        lineNumber: 140,
-                                                        columnNumber: 25
-                                                    }, this);
-                                                })
-                                            }, void 0, false, {
-                                                fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-                                                lineNumber: 136,
-                                                columnNumber: 19
-                                            }, this)
-                                        }, cat, false, {
-                                            fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-                                            lineNumber: 135,
-                                            columnNumber: 17
-                                        }, this))
-                                ]
-                            }, void 0, true, {
-                                fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-                                lineNumber: 127,
-                                columnNumber: 13
-                            }, this)
-                        }, void 0, false, {
-                            fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-                            lineNumber: 121,
-                            columnNumber: 11
-                        }, this)
-                    ]
-                }, void 0, true, {
-                    fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-                    lineNumber: 114,
-                    columnNumber: 3
-                }, this),
-                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["DialogFooter"], {
-                    children: [
-                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Button"], {
-                            variant: "outline",
-                            onClick: ()=>onClose(),
-                            children: "Cerrar"
-                        }, void 0, false, {
-                            fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-                            lineNumber: 173,
-                            columnNumber: 11
-                        }, this),
-                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Button"], {
-                            onClick: handleSave,
-                            disabled: loading,
-                            children: "Guardar permisos"
-                        }, void 0, false, {
-                            fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-                            lineNumber: 174,
-                            columnNumber: 11
-                        }, this)
-                    ]
-                }, void 0, true, {
-                    fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-                    lineNumber: 172,
-                    columnNumber: 9
-                }, this)
-            ]
-        }, void 0, true, {
-            fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-            lineNumber: 110,
-            columnNumber: 7
-        }, this)
-    }, void 0, false, {
-        fileName: "[project]/src/components/users/PermissionsEditor.tsx",
-        lineNumber: 109,
-        columnNumber: 5
-    }, this);
-}
-}}),
+const e = new Error(`Could not parse module '[project]/src/components/users/PermissionsEditor.tsx'
+
+Expected ',', got ']'`);
+e.code = 'MODULE_UNPARSEABLE';
+throw e;}}),
 "[project]/src/components/ProtectedRedirect.tsx [app-ssr] (ecmascript)": ((__turbopack_context__) => {
 "use strict";
 
@@ -2996,4 +3085,4 @@ var Content = TabsContent;
 
 };
 
-//# sourceMappingURL=_715b397f._.js.map
+//# sourceMappingURL=_a8797336._.js.map

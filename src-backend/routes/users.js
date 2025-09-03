@@ -48,11 +48,21 @@ async function ensurePermissionIds(db, keys) {
   return map;
 }
 
-// Mapa local de dependencias de permisos. Mantener en sync con src/lib/permissionsMeta.ts
-const PERMISSION_REQUIRES = {
-  'products:create': ['brands:read','departments:read','attributes:read','variants:read'],
-  // si se añaden más reglas, listarlas aquí
-};
+// Leer dependencias desde JSON compartido para evitar duplicación
+const path = require('path');
+const fs = require('fs');
+let PERMISSION_REQUIRES = {};
+try {
+  const pj = require(path.join(__dirname, '..', '..', 'src', 'lib', 'permissions.json'));
+  if (pj && Array.isArray(pj.permissions)) {
+    for (const p of pj.permissions) {
+      if (p.requires && Array.isArray(p.requires)) PERMISSION_REQUIRES[p.key] = p.requires;
+    }
+  }
+} catch (e) {
+  // fallback: keep empty map
+  PERMISSION_REQUIRES = {};
+}
 
 function expandWithRequirements(keys) {
   const set = new Set(keys || []);

@@ -43,6 +43,7 @@ interface StoreDetails {
     allowSellBelowCost?: boolean;
     showOutOfStockProducts?: boolean;
     showInactiveProducts?: boolean;
+    enableGlobalAttributes?: boolean;
   }
 }
 
@@ -499,6 +500,20 @@ export default function SettingsPage() {
                             id="showInactiveProducts"
                             checked={storeDetails.advanced?.showInactiveProducts || false}
                             onCheckedChange={(checked) => handleAdvancedChange('showInactiveProducts' as any, checked)}
+                            disabled={!canManageAdvanced}
+                        />
+                    </div>
+                    <div className="flex items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                            <Label htmlFor="enableGlobalAttributes" className="text-base">Habilitar gestión global de Marcas y Atributos</Label>
+                            <p className="text-sm text-muted-foreground">
+                                Cuando está activo, se muestran las secciones para administrar Marcas y Atributos a nivel global.
+                            </p>
+                        </div>
+                        <Switch
+                            id="enableGlobalAttributes"
+                            checked={storeDetails.advanced?.enableGlobalAttributes || false}
+                            onCheckedChange={(checked) => handleAdvancedChange('enableGlobalAttributes' as any, checked)}
                             disabled={!canManageAdvanced}
                         />
                     </div>
