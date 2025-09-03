@@ -37,21 +37,25 @@ export default function CustomersPage() {
 
   useEffect(() => { load(); }, []);
 
-  const handleCreate = () => { setSelected(null); setOpenDialog(true); };
-  const handleEdit = (c: any) => { setSelected(c); setOpenDialog(true); };
+  const canCreate = !!(currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('customers:create'));
+  const handleCreate = () => { if (!canCreate) return; setSelected(null); setOpenDialog(true); };
+  const canEdit = !!(currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('customers:edit'));
+  const handleEdit = (c: any) => { if (!canEdit) return; setSelected(c); setOpenDialog(true); };
   const handleDetail = (c: any) => { setSelected(c); setOpenDetail(true); };
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center">
+        <div className="flex items-center">
         <div className="flex-1">
           <h1 className="font-semibold text-lg md:text-2xl">Clientes</h1>
           <p className="text-sm text-muted-foreground">Gestiona los clientes.</p>
         </div>
-        <Button size="sm" className="gap-1" onClick={handleCreate}>
-          <PlusCircle className="h-3.5 w-3.5" />
-          <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">Crear Cliente</span>
-        </Button>
+        {canCreate && (
+          <Button size="sm" className="gap-1" onClick={handleCreate}>
+            <PlusCircle className="h-3.5 w-3.5" />
+            <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">Crear Cliente</span>
+          </Button>
+        )}
       </div>
 
       <Card>
@@ -99,8 +103,8 @@ export default function CustomersPage() {
         </CardContent>
       </Card>
 
-      <CustomerDialog open={openDialog} onOpenChange={setOpenDialog} customer={selected} onCustomerSaved={() => { load(); }} />
-      <CustomerDetailDialog open={openDetail} onOpenChange={setOpenDetail} customer={selected} onEdit={() => { setOpenDialog(true); }} />
+  <CustomerDialog open={openDialog} onOpenChange={setOpenDialog} customer={selected} onCustomerSaved={() => { load(); }} />
+  <CustomerDetailDialog open={openDetail} onOpenChange={setOpenDetail} customer={selected} onEdit={() => { if (!canEdit) return; setOpenDialog(true); }} />
     </div>
   );
 }

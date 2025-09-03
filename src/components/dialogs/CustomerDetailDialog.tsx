@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { getCustomerHistory } from '@/lib/api';
 import { SalesReceiptDialog } from '@/components/dialogs/SalesReceiptDialog';
+import { useCurrentUser } from '@/hooks/use-current-user';
 
 interface CustomerDetailDialogProps {
   open: boolean;
@@ -65,8 +66,8 @@ export function CustomerDetailDialog({ open, onOpenChange, customer, onEdit }: C
                     className="p-2 rounded bg-white/50 cursor-pointer"
                     role="button"
                     tabIndex={0}
-                    onClick={() => { setSelectedTransactionId(tx.transaction_id); setOpenReceipt(true); }}
-                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { setSelectedTransactionId(tx.transaction_id); setOpenReceipt(true); } }}
+                    onClick={() => { const current = useCurrentUser(); if (!(current?.permissions?.includes('*') || current?.permissions?.includes('sales:read'))) return; setSelectedTransactionId(tx.transaction_id); setOpenReceipt(true); }}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { const current = useCurrentUser(); if (!(current?.permissions?.includes('*') || current?.permissions?.includes('sales:read'))) return; setSelectedTransactionId(tx.transaction_id); setOpenReceipt(true); } }}
                   >
                     <div className="flex justify-between items-center">
                       <div className="text-sm">
@@ -87,7 +88,16 @@ export function CustomerDetailDialog({ open, onOpenChange, customer, onEdit }: C
 
         <div className="flex justify-end gap-2 mt-4">
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cerrar</Button>
-          <Button onClick={() => { onOpenChange(false); onEdit(); }}>Editar</Button>
+          {/* Only show Edit if user has permission */}
+          {(() => {
+            try {
+              const current = useCurrentUser();
+              const canEdit = current?.permissions?.includes('*') || current?.permissions?.includes('customers:edit');
+              return canEdit ? <Button onClick={() => { onOpenChange(false); onEdit(); }}>Editar</Button> : null;
+            } catch (e) {
+              return null;
+            }
+          })()}
         </div>
   <SalesReceiptDialog open={openReceipt} onOpenChange={setOpenReceipt} transactionId={selectedTransactionId} />
       </DialogContent>

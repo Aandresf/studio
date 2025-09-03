@@ -1018,6 +1018,7 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$d
 var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/components/ui/button.tsx [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$api$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/lib/api.ts [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$dialogs$2f$SalesReceiptDialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/components/dialogs/SalesReceiptDialog.tsx [app-client] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$use$2d$current$2d$user$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/hooks/use-current-user.tsx [app-client] (ecmascript)");
 ;
 var _s = __turbopack_context__.k.signature();
 "use client";
@@ -1026,8 +1027,10 @@ var _s = __turbopack_context__.k.signature();
 ;
 ;
 ;
+;
 function CustomerDetailDialog({ open, onOpenChange, customer, onEdit }) {
     _s();
+    var _s1 = __turbopack_context__.k.signature();
     const [history, setHistory] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])([]);
     const [openReceipt, setOpenReceipt] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(false);
     const [selectedTransactionId, setSelectedTransactionId] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(null);
@@ -1064,20 +1067,20 @@ function CustomerDetailDialog({ open, onOpenChange, customer, onEdit }) {
                             children: "Kardex de Cliente"
                         }, void 0, false, {
                             fileName: "[project]/src/components/dialogs/CustomerDetailDialog.tsx",
-                            lineNumber: 40,
+                            lineNumber: 41,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["DialogDescription"], {
                             children: "Datos del cliente y historial de movimientos."
                         }, void 0, false, {
                             fileName: "[project]/src/components/dialogs/CustomerDetailDialog.tsx",
-                            lineNumber: 41,
+                            lineNumber: 42,
                             columnNumber: 11
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/dialogs/CustomerDetailDialog.tsx",
-                    lineNumber: 39,
+                    lineNumber: 40,
                     columnNumber: 9
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1093,29 +1096,11 @@ function CustomerDetailDialog({ open, onOpenChange, customer, onEdit }) {
                                             children: "Nombre:"
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/dialogs/CustomerDetailDialog.tsx",
-                                            lineNumber: 47,
-                                            columnNumber: 35
-                                        }, this),
-                                        " ",
-                                        customer?.name
-                                    ]
-                                }, void 0, true, {
-                                    fileName: "[project]/src/components/dialogs/CustomerDetailDialog.tsx",
-                                    lineNumber: 47,
-                                    columnNumber: 13
-                                }, this),
-                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                                    className: "mb-2",
-                                    children: [
-                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("strong", {
-                                            children: "Documento:"
-                                        }, void 0, false, {
-                                            fileName: "[project]/src/components/dialogs/CustomerDetailDialog.tsx",
                                             lineNumber: 48,
                                             columnNumber: 35
                                         }, this),
                                         " ",
-                                        customer?.document ?? customer?.base_sku
+                                        customer?.name
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/dialogs/CustomerDetailDialog.tsx",
@@ -1126,14 +1111,14 @@ function CustomerDetailDialog({ open, onOpenChange, customer, onEdit }) {
                                     className: "mb-2",
                                     children: [
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("strong", {
-                                            children: "Email:"
+                                            children: "Documento:"
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/dialogs/CustomerDetailDialog.tsx",
                                             lineNumber: 49,
                                             columnNumber: 35
                                         }, this),
                                         " ",
-                                        customer?.email ?? ''
+                                        customer?.document ?? customer?.base_sku
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/dialogs/CustomerDetailDialog.tsx",
@@ -1144,14 +1129,14 @@ function CustomerDetailDialog({ open, onOpenChange, customer, onEdit }) {
                                     className: "mb-2",
                                     children: [
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("strong", {
-                                            children: "Teléfono:"
+                                            children: "Email:"
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/dialogs/CustomerDetailDialog.tsx",
                                             lineNumber: 50,
                                             columnNumber: 35
                                         }, this),
                                         " ",
-                                        customer?.phone ?? ''
+                                        customer?.email ?? ''
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/dialogs/CustomerDetailDialog.tsx",
@@ -1162,14 +1147,14 @@ function CustomerDetailDialog({ open, onOpenChange, customer, onEdit }) {
                                     className: "mb-2",
                                     children: [
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("strong", {
-                                            children: "Dirección:"
+                                            children: "Teléfono:"
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/dialogs/CustomerDetailDialog.tsx",
                                             lineNumber: 51,
                                             columnNumber: 35
                                         }, this),
                                         " ",
-                                        customer?.address ?? ''
+                                        customer?.phone ?? ''
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/dialogs/CustomerDetailDialog.tsx",
@@ -1180,10 +1165,28 @@ function CustomerDetailDialog({ open, onOpenChange, customer, onEdit }) {
                                     className: "mb-2",
                                     children: [
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("strong", {
-                                            children: "Notas:"
+                                            children: "Dirección:"
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/dialogs/CustomerDetailDialog.tsx",
                                             lineNumber: 52,
+                                            columnNumber: 35
+                                        }, this),
+                                        " ",
+                                        customer?.address ?? ''
+                                    ]
+                                }, void 0, true, {
+                                    fileName: "[project]/src/components/dialogs/CustomerDetailDialog.tsx",
+                                    lineNumber: 52,
+                                    columnNumber: 13
+                                }, this),
+                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                    className: "mb-2",
+                                    children: [
+                                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("strong", {
+                                            children: "Notas:"
+                                        }, void 0, false, {
+                                            fileName: "[project]/src/components/dialogs/CustomerDetailDialog.tsx",
+                                            lineNumber: 53,
                                             columnNumber: 35
                                         }, this),
                                         " ",
@@ -1191,13 +1194,13 @@ function CustomerDetailDialog({ open, onOpenChange, customer, onEdit }) {
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/dialogs/CustomerDetailDialog.tsx",
-                                    lineNumber: 52,
+                                    lineNumber: 53,
                                     columnNumber: 13
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/dialogs/CustomerDetailDialog.tsx",
-                            lineNumber: 46,
+                            lineNumber: 47,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1208,7 +1211,7 @@ function CustomerDetailDialog({ open, onOpenChange, customer, onEdit }) {
                                     children: "Historial"
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/dialogs/CustomerDetailDialog.tsx",
-                                    lineNumber: 57,
+                                    lineNumber: 58,
                                     columnNumber: 13
                                 }, this),
                                 history.length === 0 ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1216,7 +1219,7 @@ function CustomerDetailDialog({ open, onOpenChange, customer, onEdit }) {
                                     children: "Sin movimientos"
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/dialogs/CustomerDetailDialog.tsx",
-                                    lineNumber: 59,
+                                    lineNumber: 60,
                                     columnNumber: 15
                                 }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                     className: "space-y-3",
@@ -1224,12 +1227,21 @@ function CustomerDetailDialog({ open, onOpenChange, customer, onEdit }) {
                                             className: "p-2 rounded bg-white/50 cursor-pointer",
                                             role: "button",
                                             tabIndex: 0,
-                                            onClick: ()=>{
+                                            onClick: _s1(()=>{
+                                                _s1();
+                                                const current = (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$use$2d$current$2d$user$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useCurrentUser"])();
+                                                if (!(current?.permissions?.includes('*') || current?.permissions?.includes('sales:read'))) return;
                                                 setSelectedTransactionId(tx.transaction_id);
                                                 setOpenReceipt(true);
-                                            },
+                                            }, "k+b7I01blKucFsYN89EvffVmspY=", false, function() {
+                                                return [
+                                                    __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$use$2d$current$2d$user$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useCurrentUser"]
+                                                ];
+                                            }),
                                             onKeyDown: (e)=>{
                                                 if (e.key === 'Enter' || e.key === ' ') {
+                                                    const current = (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$use$2d$current$2d$user$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useCurrentUser"])();
+                                                    if (!(current?.permissions?.includes('*') || current?.permissions?.includes('sales:read'))) return;
                                                     setSelectedTransactionId(tx.transaction_id);
                                                     setOpenReceipt(true);
                                                 }
@@ -1245,12 +1257,12 @@ function CustomerDetailDialog({ open, onOpenChange, customer, onEdit }) {
                                                                     children: tx.transaction_date
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/components/dialogs/CustomerDetailDialog.tsx",
-                                                                    lineNumber: 73,
+                                                                    lineNumber: 74,
                                                                     columnNumber: 30
                                                                 }, this)
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/components/dialogs/CustomerDetailDialog.tsx",
-                                                                lineNumber: 73,
+                                                                lineNumber: 74,
                                                                 columnNumber: 25
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1262,13 +1274,13 @@ function CustomerDetailDialog({ open, onOpenChange, customer, onEdit }) {
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/src/components/dialogs/CustomerDetailDialog.tsx",
-                                                                lineNumber: 74,
+                                                                lineNumber: 75,
                                                                 columnNumber: 25
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/src/components/dialogs/CustomerDetailDialog.tsx",
-                                                        lineNumber: 72,
+                                                        lineNumber: 73,
                                                         columnNumber: 23
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1279,7 +1291,7 @@ function CustomerDetailDialog({ open, onOpenChange, customer, onEdit }) {
                                                                 children: tx.total?.toFixed ? tx.total.toFixed(2) : tx.total
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/components/dialogs/CustomerDetailDialog.tsx",
-                                                                lineNumber: 77,
+                                                                lineNumber: 78,
                                                                 columnNumber: 25
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1287,41 +1299,41 @@ function CustomerDetailDialog({ open, onOpenChange, customer, onEdit }) {
                                                                 children: tx.status
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/components/dialogs/CustomerDetailDialog.tsx",
-                                                                lineNumber: 78,
+                                                                lineNumber: 79,
                                                                 columnNumber: 25
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/src/components/dialogs/CustomerDetailDialog.tsx",
-                                                        lineNumber: 76,
+                                                        lineNumber: 77,
                                                         columnNumber: 23
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/components/dialogs/CustomerDetailDialog.tsx",
-                                                lineNumber: 71,
+                                                lineNumber: 72,
                                                 columnNumber: 21
                                             }, this)
                                         }, tx.transaction_id, false, {
                                             fileName: "[project]/src/components/dialogs/CustomerDetailDialog.tsx",
-                                            lineNumber: 63,
+                                            lineNumber: 64,
                                             columnNumber: 19
                                         }, this))
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/dialogs/CustomerDetailDialog.tsx",
-                                    lineNumber: 61,
+                                    lineNumber: 62,
                                     columnNumber: 15
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/dialogs/CustomerDetailDialog.tsx",
-                            lineNumber: 56,
+                            lineNumber: 57,
                             columnNumber: 11
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/dialogs/CustomerDetailDialog.tsx",
-                    lineNumber: 44,
+                    lineNumber: 45,
                     columnNumber: 9
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1333,24 +1345,32 @@ function CustomerDetailDialog({ open, onOpenChange, customer, onEdit }) {
                             children: "Cerrar"
                         }, void 0, false, {
                             fileName: "[project]/src/components/dialogs/CustomerDetailDialog.tsx",
-                            lineNumber: 89,
-                            columnNumber: 11
-                        }, this),
-                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Button"], {
-                            onClick: ()=>{
-                                onOpenChange(false);
-                                onEdit();
-                            },
-                            children: "Editar"
-                        }, void 0, false, {
-                            fileName: "[project]/src/components/dialogs/CustomerDetailDialog.tsx",
                             lineNumber: 90,
                             columnNumber: 11
-                        }, this)
+                        }, this),
+                        (()=>{
+                            try {
+                                const current = (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$use$2d$current$2d$user$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useCurrentUser"])();
+                                const canEdit = current?.permissions?.includes('*') || current?.permissions?.includes('customers:edit');
+                                return canEdit ? /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Button"], {
+                                    onClick: ()=>{
+                                        onOpenChange(false);
+                                        onEdit();
+                                    },
+                                    children: "Editar"
+                                }, void 0, false, {
+                                    fileName: "[project]/src/components/dialogs/CustomerDetailDialog.tsx",
+                                    lineNumber: 96,
+                                    columnNumber: 32
+                                }, this) : null;
+                            } catch (e) {
+                                return null;
+                            }
+                        })()
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/dialogs/CustomerDetailDialog.tsx",
-                    lineNumber: 88,
+                    lineNumber: 89,
                     columnNumber: 9
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$dialogs$2f$SalesReceiptDialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["SalesReceiptDialog"], {
@@ -1359,18 +1379,18 @@ function CustomerDetailDialog({ open, onOpenChange, customer, onEdit }) {
                     transactionId: selectedTransactionId
                 }, void 0, false, {
                     fileName: "[project]/src/components/dialogs/CustomerDetailDialog.tsx",
-                    lineNumber: 92,
+                    lineNumber: 102,
                     columnNumber: 3
                 }, this)
             ]
         }, void 0, true, {
             fileName: "[project]/src/components/dialogs/CustomerDetailDialog.tsx",
-            lineNumber: 38,
+            lineNumber: 39,
             columnNumber: 7
         }, this)
     }, void 0, false, {
         fileName: "[project]/src/components/dialogs/CustomerDetailDialog.tsx",
-        lineNumber: 37,
+        lineNumber: 38,
         columnNumber: 5
     }, this);
 }
@@ -1450,11 +1470,15 @@ function CustomersPage() {
             load();
         }
     }["CustomersPage.useEffect"], []);
+    const canCreate = !!(currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('customers:create'));
     const handleCreate = ()=>{
+        if (!canCreate) return;
         setSelected(null);
         setOpenDialog(true);
     };
+    const canEdit = !!(currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('customers:edit'));
     const handleEdit = (c)=>{
+        if (!canEdit) return;
         setSelected(c);
         setOpenDialog(true);
     };
@@ -1476,7 +1500,7 @@ function CustomersPage() {
                                 children: "Clientes"
                             }, void 0, false, {
                                 fileName: "[project]/src/app/(app)/customers/page.tsx",
-                                lineNumber: 48,
+                                lineNumber: 50,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1484,16 +1508,16 @@ function CustomersPage() {
                                 children: "Gestiona los clientes."
                             }, void 0, false, {
                                 fileName: "[project]/src/app/(app)/customers/page.tsx",
-                                lineNumber: 49,
+                                lineNumber: 51,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/app/(app)/customers/page.tsx",
-                        lineNumber: 47,
+                        lineNumber: 49,
                         columnNumber: 9
                     }, this),
-                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Button"], {
+                    canCreate && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Button"], {
                         size: "sm",
                         className: "gap-1",
                         onClick: handleCreate,
@@ -1502,28 +1526,28 @@ function CustomersPage() {
                                 className: "h-3.5 w-3.5"
                             }, void 0, false, {
                                 fileName: "[project]/src/app/(app)/customers/page.tsx",
-                                lineNumber: 52,
-                                columnNumber: 11
+                                lineNumber: 55,
+                                columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                 className: "sr-only sm:not-sr-only sm:whitespace-nowrap",
                                 children: "Crear Cliente"
                             }, void 0, false, {
                                 fileName: "[project]/src/app/(app)/customers/page.tsx",
-                                lineNumber: 53,
-                                columnNumber: 11
+                                lineNumber: 56,
+                                columnNumber: 13
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/app/(app)/customers/page.tsx",
-                        lineNumber: 51,
-                        columnNumber: 9
+                        lineNumber: 54,
+                        columnNumber: 11
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/app/(app)/customers/page.tsx",
-                lineNumber: 46,
-                columnNumber: 7
+                lineNumber: 48,
+                columnNumber: 9
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Card"], {
                 children: [
@@ -1535,7 +1559,7 @@ function CustomersPage() {
                                     className: "absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground"
                                 }, void 0, false, {
                                     fileName: "[project]/src/app/(app)/customers/page.tsx",
-                                    lineNumber: 60,
+                                    lineNumber: 64,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Input"], {
@@ -1546,18 +1570,18 @@ function CustomersPage() {
                                     onChange: (e)=>setSearchQuery(e.target.value)
                                 }, void 0, false, {
                                     fileName: "[project]/src/app/(app)/customers/page.tsx",
-                                    lineNumber: 61,
+                                    lineNumber: 65,
                                     columnNumber: 13
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/app/(app)/customers/page.tsx",
-                            lineNumber: 59,
+                            lineNumber: 63,
                             columnNumber: 11
                         }, this)
                     }, void 0, false, {
                         fileName: "[project]/src/app/(app)/customers/page.tsx",
-                        lineNumber: 58,
+                        lineNumber: 62,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["CardContent"], {
@@ -1565,7 +1589,7 @@ function CustomersPage() {
                             children: "Cargando clientes..."
                         }, void 0, false, {
                             fileName: "[project]/src/app/(app)/customers/page.tsx",
-                            lineNumber: 72,
+                            lineNumber: 76,
                             columnNumber: 13
                         }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Table"], {
                             children: [
@@ -1576,39 +1600,39 @@ function CustomersPage() {
                                                 children: "Nombre"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/app/(app)/customers/page.tsx",
-                                                lineNumber: 77,
+                                                lineNumber: 81,
                                                 columnNumber: 19
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableHead"], {
                                                 children: "Documento"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/app/(app)/customers/page.tsx",
-                                                lineNumber: 78,
+                                                lineNumber: 82,
                                                 columnNumber: 19
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableHead"], {
                                                 children: "Email"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/app/(app)/customers/page.tsx",
-                                                lineNumber: 79,
+                                                lineNumber: 83,
                                                 columnNumber: 19
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableHead"], {
                                                 children: "Teléfono"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/app/(app)/customers/page.tsx",
-                                                lineNumber: 80,
+                                                lineNumber: 84,
                                                 columnNumber: 19
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/app/(app)/customers/page.tsx",
-                                        lineNumber: 76,
+                                        lineNumber: 80,
                                         columnNumber: 17
                                     }, this)
                                 }, void 0, false, {
                                     fileName: "[project]/src/app/(app)/customers/page.tsx",
-                                    lineNumber: 75,
+                                    lineNumber: 79,
                                     columnNumber: 15
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableBody"], {
@@ -1630,56 +1654,56 @@ function CustomersPage() {
                                                     children: c.name
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/app/(app)/customers/page.tsx",
-                                                    lineNumber: 90,
+                                                    lineNumber: 94,
                                                     columnNumber: 21
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableCell"], {
                                                     children: c.document ?? c.base_sku ?? ''
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/app/(app)/customers/page.tsx",
-                                                    lineNumber: 91,
+                                                    lineNumber: 95,
                                                     columnNumber: 21
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableCell"], {
                                                     children: c.email ?? ''
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/app/(app)/customers/page.tsx",
-                                                    lineNumber: 92,
+                                                    lineNumber: 96,
                                                     columnNumber: 21
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TableCell"], {
                                                     children: c.phone ?? ''
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/app/(app)/customers/page.tsx",
-                                                    lineNumber: 93,
+                                                    lineNumber: 97,
                                                     columnNumber: 21
                                                 }, this)
                                             ]
                                         }, c.id, true, {
                                             fileName: "[project]/src/app/(app)/customers/page.tsx",
-                                            lineNumber: 89,
+                                            lineNumber: 93,
                                             columnNumber: 19
                                         }, this))
                                 }, void 0, false, {
                                     fileName: "[project]/src/app/(app)/customers/page.tsx",
-                                    lineNumber: 83,
+                                    lineNumber: 87,
                                     columnNumber: 15
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/app/(app)/customers/page.tsx",
-                            lineNumber: 74,
+                            lineNumber: 78,
                             columnNumber: 13
                         }, this)
                     }, void 0, false, {
                         fileName: "[project]/src/app/(app)/customers/page.tsx",
-                        lineNumber: 70,
+                        lineNumber: 74,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/app/(app)/customers/page.tsx",
-                lineNumber: 57,
+                lineNumber: 61,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$dialogs$2f$CustomerDialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["CustomerDialog"], {
@@ -1691,25 +1715,26 @@ function CustomersPage() {
                 }
             }, void 0, false, {
                 fileName: "[project]/src/app/(app)/customers/page.tsx",
-                lineNumber: 102,
-                columnNumber: 7
+                lineNumber: 106,
+                columnNumber: 3
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$dialogs$2f$CustomerDetailDialog$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["CustomerDetailDialog"], {
                 open: openDetail,
                 onOpenChange: setOpenDetail,
                 customer: selected,
                 onEdit: ()=>{
+                    if (!canEdit) return;
                     setOpenDialog(true);
                 }
             }, void 0, false, {
                 fileName: "[project]/src/app/(app)/customers/page.tsx",
-                lineNumber: 103,
-                columnNumber: 7
+                lineNumber: 107,
+                columnNumber: 3
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/src/app/(app)/customers/page.tsx",
-        lineNumber: 45,
+        lineNumber: 47,
         columnNumber: 5
     }, this);
 }

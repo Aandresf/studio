@@ -53,12 +53,14 @@ export function BrandsManagementCard({ subdepartmentId, includeGlobal = false }:
     }, [fetchBrands]);
 
     const handleAddNew = () => {
+        if (isReadOnly) return;
         setEditingBrand(null);
         setBrandName('');
         setIsDialogOpen(true);
     };
 
     const handleEdit = (brand: Brand) => {
+        if (isReadOnly) return;
         setEditingBrand(brand);
         setBrandName(brand.name);
         setIsDialogOpen(true);

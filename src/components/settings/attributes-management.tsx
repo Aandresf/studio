@@ -231,15 +231,17 @@ export function AttributesManagementCard({ subdepartmentId, includeGlobal = fals
     const isReadOnly = !canManageAttributes;
 
     const handleAddNew = () => {
-        setEditingAttribute(null);
-        setAttributeName('');
-        setIsDialogOpen(true);
+    if (isReadOnly) return;
+    setEditingAttribute(null);
+    setAttributeName('');
+    setIsDialogOpen(true);
     };
 
     const handleEdit = (attribute: Attribute) => {
-        setEditingAttribute(attribute);
-        setAttributeName(attribute.name);
-        setIsDialogOpen(true);
+    if (isReadOnly) return;
+    setEditingAttribute(attribute);
+    setAttributeName(attribute.name);
+    setIsDialogOpen(true);
     };
 
     const handleDelete = async (id: number) => {
@@ -253,8 +255,9 @@ export function AttributesManagementCard({ subdepartmentId, includeGlobal = fals
     };
 
     const handleManageValues = (attribute: Attribute) => {
-        setSelectedAttribute(attribute);
-        setIsValuesDialogOpen(true);
+    if (isReadOnly) return;
+    setSelectedAttribute(attribute);
+    setIsValuesDialogOpen(true);
     };
 
     const handleSave = async () => {

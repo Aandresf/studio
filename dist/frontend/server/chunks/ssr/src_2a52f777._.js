@@ -379,11 +379,13 @@ function BrandsManagementCard({ subdepartmentId, includeGlobal = false }) {
         fetchBrands
     ]);
     const handleAddNew = ()=>{
+        if (isReadOnly) return;
         setEditingBrand(null);
         setBrandName('');
         setIsDialogOpen(true);
     };
     const handleEdit = (brand)=>{
+        if (isReadOnly) return;
         setEditingBrand(brand);
         setBrandName(brand.name);
         setIsDialogOpen(true);
@@ -433,20 +435,20 @@ function BrandsManagementCard({ subdepartmentId, includeGlobal = false }) {
                                 children: "Gestión de Marcas"
                             }, void 0, false, {
                                 fileName: "[project]/src/components/settings/brands-management.tsx",
-                                lineNumber: 107,
+                                lineNumber: 109,
                                 columnNumber: 21
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["CardDescription"], {
                                 children: "Añade, edita o elimina las marcas de tus productos."
                             }, void 0, false, {
                                 fileName: "[project]/src/components/settings/brands-management.tsx",
-                                lineNumber: 108,
+                                lineNumber: 110,
                                 columnNumber: 21
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/settings/brands-management.tsx",
-                        lineNumber: 106,
+                        lineNumber: 108,
                         columnNumber: 17
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Button"], {
@@ -460,18 +462,18 @@ function BrandsManagementCard({ subdepartmentId, includeGlobal = false }) {
                             className: "h-4 w-4"
                         }, void 0, false, {
                             fileName: "[project]/src/components/settings/brands-management.tsx",
-                            lineNumber: 111,
+                            lineNumber: 113,
                             columnNumber: 21
                         }, this)
                     }, void 0, false, {
                         fileName: "[project]/src/components/settings/brands-management.tsx",
-                        lineNumber: 110,
+                        lineNumber: 112,
                         columnNumber: 17
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/components/settings/brands-management.tsx",
-                lineNumber: 105,
+                lineNumber: 107,
                 columnNumber: 13
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["CardContent"], {
@@ -486,7 +488,7 @@ function BrandsManagementCard({ subdepartmentId, includeGlobal = false }) {
                                             children: "Nombre"
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/settings/brands-management.tsx",
-                                            lineNumber: 119,
+                                            lineNumber: 121,
                                             columnNumber: 33
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TableHead"], {
@@ -494,18 +496,18 @@ function BrandsManagementCard({ subdepartmentId, includeGlobal = false }) {
                                             children: "Acciones"
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/settings/brands-management.tsx",
-                                            lineNumber: 120,
+                                            lineNumber: 122,
                                             columnNumber: 33
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/settings/brands-management.tsx",
-                                    lineNumber: 118,
+                                    lineNumber: 120,
                                     columnNumber: 29
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/src/components/settings/brands-management.tsx",
-                                lineNumber: 117,
+                                lineNumber: 119,
                                 columnNumber: 25
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TableBody"], {
@@ -518,12 +520,12 @@ function BrandsManagementCard({ subdepartmentId, includeGlobal = false }) {
                                                     className: "h-5 w-3/4"
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/components/settings/brands-management.tsx",
-                                                    lineNumber: 127,
+                                                    lineNumber: 129,
                                                     columnNumber: 52
                                                 }, this)
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/settings/brands-management.tsx",
-                                                lineNumber: 127,
+                                                lineNumber: 129,
                                                 columnNumber: 41
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TableCell"], {
@@ -531,18 +533,18 @@ function BrandsManagementCard({ subdepartmentId, includeGlobal = false }) {
                                                     className: "h-5 w-full"
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/components/settings/brands-management.tsx",
-                                                    lineNumber: 128,
+                                                    lineNumber: 130,
                                                     columnNumber: 52
                                                 }, this)
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/settings/brands-management.tsx",
-                                                lineNumber: 128,
+                                                lineNumber: 130,
                                                 columnNumber: 41
                                             }, this)
                                         ]
                                     }, i, true, {
                                         fileName: "[project]/src/components/settings/brands-management.tsx",
-                                        lineNumber: 126,
+                                        lineNumber: 128,
                                         columnNumber: 37
                                     }, this)) : brands.length > 0 ? brands.map((brand)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TableRow"], {
                                         children: [
@@ -551,7 +553,7 @@ function BrandsManagementCard({ subdepartmentId, includeGlobal = false }) {
                                                 children: brand.name
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/settings/brands-management.tsx",
-                                                lineNumber: 134,
+                                                lineNumber: 136,
                                                 columnNumber: 41
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TableCell"], {
@@ -569,25 +571,25 @@ function BrandsManagementCard({ subdepartmentId, includeGlobal = false }) {
                                                                         children: "Abrir menú"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/src/components/settings/brands-management.tsx",
-                                                                        lineNumber: 139,
+                                                                        lineNumber: 141,
                                                                         columnNumber: 57
                                                                     }, this),
                                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$ellipsis$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__MoreHorizontal$3e$__["MoreHorizontal"], {
                                                                         className: "h-4 w-4"
                                                                     }, void 0, false, {
                                                                         fileName: "[project]/src/components/settings/brands-management.tsx",
-                                                                        lineNumber: 140,
+                                                                        lineNumber: 142,
                                                                         columnNumber: 57
                                                                     }, this)
                                                                 ]
                                                             }, void 0, true, {
                                                                 fileName: "[project]/src/components/settings/brands-management.tsx",
-                                                                lineNumber: 138,
+                                                                lineNumber: 140,
                                                                 columnNumber: 53
                                                             }, this)
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/components/settings/brands-management.tsx",
-                                                            lineNumber: 137,
+                                                            lineNumber: 139,
                                                             columnNumber: 49
                                                         }, this),
                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$dropdown$2d$menu$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["DropdownMenuContent"], {
@@ -603,20 +605,20 @@ function BrandsManagementCard({ subdepartmentId, includeGlobal = false }) {
                                                                             className: "mr-2 h-4 w-4"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/components/settings/brands-management.tsx",
-                                                                            lineNumber: 145,
+                                                                            lineNumber: 147,
                                                                             columnNumber: 57
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                                             children: "Editar"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/components/settings/brands-management.tsx",
-                                                                            lineNumber: 146,
+                                                                            lineNumber: 148,
                                                                             columnNumber: 57
                                                                         }, this)
                                                                     ]
                                                                 }, void 0, true, {
                                                                     fileName: "[project]/src/components/settings/brands-management.tsx",
-                                                                    lineNumber: 144,
+                                                                    lineNumber: 146,
                                                                     columnNumber: 53
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$dropdown$2d$menu$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["DropdownMenuItem"], {
@@ -630,43 +632,43 @@ function BrandsManagementCard({ subdepartmentId, includeGlobal = false }) {
                                                                             className: "mr-2 h-4 w-4"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/components/settings/brands-management.tsx",
-                                                                            lineNumber: 149,
+                                                                            lineNumber: 151,
                                                                             columnNumber: 57
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                                             children: "Eliminar"
                                                                         }, void 0, false, {
                                                                             fileName: "[project]/src/components/settings/brands-management.tsx",
-                                                                            lineNumber: 150,
+                                                                            lineNumber: 152,
                                                                             columnNumber: 57
                                                                         }, this)
                                                                     ]
                                                                 }, void 0, true, {
                                                                     fileName: "[project]/src/components/settings/brands-management.tsx",
-                                                                    lineNumber: 148,
+                                                                    lineNumber: 150,
                                                                     columnNumber: 53
                                                                 }, this)
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/src/components/settings/brands-management.tsx",
-                                                            lineNumber: 143,
+                                                            lineNumber: 145,
                                                             columnNumber: 49
                                                         }, this)
                                                     ]
                                                 }, void 0, true, {
                                                     fileName: "[project]/src/components/settings/brands-management.tsx",
-                                                    lineNumber: 136,
+                                                    lineNumber: 138,
                                                     columnNumber: 45
                                                 }, this)
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/settings/brands-management.tsx",
-                                                lineNumber: 135,
+                                                lineNumber: 137,
                                                 columnNumber: 41
                                             }, this)
                                         ]
                                     }, brand.id, true, {
                                         fileName: "[project]/src/components/settings/brands-management.tsx",
-                                        lineNumber: 133,
+                                        lineNumber: 135,
                                         columnNumber: 37
                                     }, this)) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TableRow"], {
                                     children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TableCell"], {
@@ -675,33 +677,33 @@ function BrandsManagementCard({ subdepartmentId, includeGlobal = false }) {
                                         children: "No se encontraron marcas."
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/settings/brands-management.tsx",
-                                        lineNumber: 159,
+                                        lineNumber: 161,
                                         columnNumber: 37
                                     }, this)
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/settings/brands-management.tsx",
-                                    lineNumber: 158,
+                                    lineNumber: 160,
                                     columnNumber: 33
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/src/components/settings/brands-management.tsx",
-                                lineNumber: 123,
+                                lineNumber: 125,
                                 columnNumber: 25
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/settings/brands-management.tsx",
-                        lineNumber: 116,
+                        lineNumber: 118,
                         columnNumber: 21
                     }, this)
                 }, void 0, false, {
                     fileName: "[project]/src/components/settings/brands-management.tsx",
-                    lineNumber: 115,
+                    lineNumber: 117,
                     columnNumber: 17
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/src/components/settings/brands-management.tsx",
-                lineNumber: 114,
+                lineNumber: 116,
                 columnNumber: 13
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Dialog"], {
@@ -715,20 +717,20 @@ function BrandsManagementCard({ subdepartmentId, includeGlobal = false }) {
                                     children: editingBrand ? 'Editar Marca' : 'Añadir Nueva Marca'
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/settings/brands-management.tsx",
-                                    lineNumber: 172,
+                                    lineNumber: 174,
                                     columnNumber: 25
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["DialogDescription"], {
                                     children: editingBrand ? 'Actualiza el nombre de la marca.' : 'Introduce el nombre para la nueva marca.'
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/settings/brands-management.tsx",
-                                    lineNumber: 173,
+                                    lineNumber: 175,
                                     columnNumber: 25
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/settings/brands-management.tsx",
-                            lineNumber: 171,
+                            lineNumber: 173,
                             columnNumber: 21
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -742,7 +744,7 @@ function BrandsManagementCard({ subdepartmentId, includeGlobal = false }) {
                                         children: "Nombre"
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/settings/brands-management.tsx",
-                                        lineNumber: 179,
+                                        lineNumber: 181,
                                         columnNumber: 29
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Input"], {
@@ -753,18 +755,18 @@ function BrandsManagementCard({ subdepartmentId, includeGlobal = false }) {
                                         autoFocus: true
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/settings/brands-management.tsx",
-                                        lineNumber: 182,
+                                        lineNumber: 184,
                                         columnNumber: 29
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/settings/brands-management.tsx",
-                                lineNumber: 178,
+                                lineNumber: 180,
                                 columnNumber: 25
                             }, this)
                         }, void 0, false, {
                             fileName: "[project]/src/components/settings/brands-management.tsx",
-                            lineNumber: 177,
+                            lineNumber: 179,
                             columnNumber: 21
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["DialogFooter"], {
@@ -775,7 +777,7 @@ function BrandsManagementCard({ subdepartmentId, includeGlobal = false }) {
                                     children: "Cancelar"
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/settings/brands-management.tsx",
-                                    lineNumber: 192,
+                                    lineNumber: 194,
                                     columnNumber: 25
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Button"], {
@@ -784,30 +786,30 @@ function BrandsManagementCard({ subdepartmentId, includeGlobal = false }) {
                                     children: isSaving ? 'Guardando...' : 'Guardar'
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/settings/brands-management.tsx",
-                                    lineNumber: 193,
+                                    lineNumber: 195,
                                     columnNumber: 25
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/settings/brands-management.tsx",
-                            lineNumber: 191,
+                            lineNumber: 193,
                             columnNumber: 21
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/settings/brands-management.tsx",
-                    lineNumber: 170,
+                    lineNumber: 172,
                     columnNumber: 17
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/src/components/settings/brands-management.tsx",
-                lineNumber: 169,
+                lineNumber: 171,
                 columnNumber: 13
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/src/components/settings/brands-management.tsx",
-        lineNumber: 104,
+        lineNumber: 106,
         columnNumber: 9
     }, this);
 }
@@ -1308,11 +1310,13 @@ function AttributesManagementCard({ subdepartmentId, includeGlobal = false }) {
     const canManageAttributes = !!(currentUser?.permissions?.includes('*') || currentUser?.permissions?.some((p)=>p.startsWith('attributes:') || p.startsWith('settings:')));
     const isReadOnly = !canManageAttributes;
     const handleAddNew = ()=>{
+        if (isReadOnly) return;
         setEditingAttribute(null);
         setAttributeName('');
         setIsDialogOpen(true);
     };
     const handleEdit = (attribute)=>{
+        if (isReadOnly) return;
         setEditingAttribute(attribute);
         setAttributeName(attribute.name);
         setIsDialogOpen(true);
@@ -1327,6 +1331,7 @@ function AttributesManagementCard({ subdepartmentId, includeGlobal = false }) {
         }
     };
     const handleManageValues = (attribute)=>{
+        if (isReadOnly) return;
         setSelectedAttribute(attribute);
         setIsValuesDialogOpen(true);
     };
@@ -1366,20 +1371,20 @@ function AttributesManagementCard({ subdepartmentId, includeGlobal = false }) {
                                         children: "Gestión de Atributos"
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/settings/attributes-management.tsx",
-                                        lineNumber: 289,
+                                        lineNumber: 292,
                                         columnNumber: 25
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["CardDescription"], {
                                         children: "Define atributos (ej. Talla, Color) y sus valores."
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/settings/attributes-management.tsx",
-                                        lineNumber: 290,
+                                        lineNumber: 293,
                                         columnNumber: 25
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/settings/attributes-management.tsx",
-                                lineNumber: 288,
+                                lineNumber: 291,
                                 columnNumber: 21
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Button"], {
@@ -1393,18 +1398,18 @@ function AttributesManagementCard({ subdepartmentId, includeGlobal = false }) {
                                     className: "h-4 w-4"
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/settings/attributes-management.tsx",
-                                    lineNumber: 293,
+                                    lineNumber: 296,
                                     columnNumber: 25
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/src/components/settings/attributes-management.tsx",
-                                lineNumber: 292,
+                                lineNumber: 295,
                                 columnNumber: 21
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/components/settings/attributes-management.tsx",
-                        lineNumber: 287,
+                        lineNumber: 290,
                         columnNumber: 17
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["CardContent"], {
@@ -1419,7 +1424,7 @@ function AttributesManagementCard({ subdepartmentId, includeGlobal = false }) {
                                                     children: "Nombre"
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/components/settings/attributes-management.tsx",
-                                                    lineNumber: 301,
+                                                    lineNumber: 304,
                                                     columnNumber: 37
                                                 }, this),
                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TableHead"], {
@@ -1427,18 +1432,18 @@ function AttributesManagementCard({ subdepartmentId, includeGlobal = false }) {
                                                     children: "Acciones"
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/components/settings/attributes-management.tsx",
-                                                    lineNumber: 302,
+                                                    lineNumber: 305,
                                                     columnNumber: 37
                                                 }, this)
                                             ]
                                         }, void 0, true, {
                                             fileName: "[project]/src/components/settings/attributes-management.tsx",
-                                            lineNumber: 300,
+                                            lineNumber: 303,
                                             columnNumber: 33
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/settings/attributes-management.tsx",
-                                        lineNumber: 299,
+                                        lineNumber: 302,
                                         columnNumber: 29
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TableBody"], {
@@ -1451,12 +1456,12 @@ function AttributesManagementCard({ subdepartmentId, includeGlobal = false }) {
                                                             className: "h-5 w-3/4"
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/components/settings/attributes-management.tsx",
-                                                            lineNumber: 309,
+                                                            lineNumber: 312,
                                                             columnNumber: 56
                                                         }, this)
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/settings/attributes-management.tsx",
-                                                        lineNumber: 309,
+                                                        lineNumber: 312,
                                                         columnNumber: 45
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TableCell"], {
@@ -1464,18 +1469,18 @@ function AttributesManagementCard({ subdepartmentId, includeGlobal = false }) {
                                                             className: "h-5 w-full"
                                                         }, void 0, false, {
                                                             fileName: "[project]/src/components/settings/attributes-management.tsx",
-                                                            lineNumber: 310,
+                                                            lineNumber: 313,
                                                             columnNumber: 56
                                                         }, this)
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/settings/attributes-management.tsx",
-                                                        lineNumber: 310,
+                                                        lineNumber: 313,
                                                         columnNumber: 45
                                                     }, this)
                                                 ]
                                             }, i, true, {
                                                 fileName: "[project]/src/components/settings/attributes-management.tsx",
-                                                lineNumber: 308,
+                                                lineNumber: 311,
                                                 columnNumber: 41
                                             }, this)) : attributes.length > 0 ? attributes.map((attribute)=>/*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TableRow"], {
                                                 children: [
@@ -1484,7 +1489,7 @@ function AttributesManagementCard({ subdepartmentId, includeGlobal = false }) {
                                                         children: attribute.name
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/settings/attributes-management.tsx",
-                                                        lineNumber: 316,
+                                                        lineNumber: 319,
                                                         columnNumber: 45
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TableCell"], {
@@ -1502,25 +1507,25 @@ function AttributesManagementCard({ subdepartmentId, includeGlobal = false }) {
                                                                                 children: "Abrir menú"
                                                                             }, void 0, false, {
                                                                                 fileName: "[project]/src/components/settings/attributes-management.tsx",
-                                                                                lineNumber: 321,
+                                                                                lineNumber: 324,
                                                                                 columnNumber: 61
                                                                             }, this),
                                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$ellipsis$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__$3c$export__default__as__MoreHorizontal$3e$__["MoreHorizontal"], {
                                                                                 className: "h-4 w-4"
                                                                             }, void 0, false, {
                                                                                 fileName: "[project]/src/components/settings/attributes-management.tsx",
-                                                                                lineNumber: 322,
+                                                                                lineNumber: 325,
                                                                                 columnNumber: 61
                                                                             }, this)
                                                                         ]
                                                                     }, void 0, true, {
                                                                         fileName: "[project]/src/components/settings/attributes-management.tsx",
-                                                                        lineNumber: 320,
+                                                                        lineNumber: 323,
                                                                         columnNumber: 57
                                                                     }, this)
                                                                 }, void 0, false, {
                                                                     fileName: "[project]/src/components/settings/attributes-management.tsx",
-                                                                    lineNumber: 319,
+                                                                    lineNumber: 322,
                                                                     columnNumber: 53
                                                                 }, this),
                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$dropdown$2d$menu$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["DropdownMenuContent"], {
@@ -1536,20 +1541,20 @@ function AttributesManagementCard({ subdepartmentId, includeGlobal = false }) {
                                                                                     className: "mr-2 h-4 w-4"
                                                                                 }, void 0, false, {
                                                                                     fileName: "[project]/src/components/settings/attributes-management.tsx",
-                                                                                    lineNumber: 327,
+                                                                                    lineNumber: 330,
                                                                                     columnNumber: 61
                                                                                 }, this),
                                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                                                     children: "Gestionar Valores"
                                                                                 }, void 0, false, {
                                                                                     fileName: "[project]/src/components/settings/attributes-management.tsx",
-                                                                                    lineNumber: 328,
+                                                                                    lineNumber: 331,
                                                                                     columnNumber: 61
                                                                                 }, this)
                                                                             ]
                                                                         }, void 0, true, {
                                                                             fileName: "[project]/src/components/settings/attributes-management.tsx",
-                                                                            lineNumber: 326,
+                                                                            lineNumber: 329,
                                                                             columnNumber: 57
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$dropdown$2d$menu$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["DropdownMenuItem"], {
@@ -1562,20 +1567,20 @@ function AttributesManagementCard({ subdepartmentId, includeGlobal = false }) {
                                                                                     className: "mr-2 h-4 w-4"
                                                                                 }, void 0, false, {
                                                                                     fileName: "[project]/src/components/settings/attributes-management.tsx",
-                                                                                    lineNumber: 331,
+                                                                                    lineNumber: 334,
                                                                                     columnNumber: 61
                                                                                 }, this),
                                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                                                     children: "Editar"
                                                                                 }, void 0, false, {
                                                                                     fileName: "[project]/src/components/settings/attributes-management.tsx",
-                                                                                    lineNumber: 332,
+                                                                                    lineNumber: 335,
                                                                                     columnNumber: 61
                                                                                 }, this)
                                                                             ]
                                                                         }, void 0, true, {
                                                                             fileName: "[project]/src/components/settings/attributes-management.tsx",
-                                                                            lineNumber: 330,
+                                                                            lineNumber: 333,
                                                                             columnNumber: 57
                                                                         }, this),
                                                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$dropdown$2d$menu$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["DropdownMenuItem"], {
@@ -1589,43 +1594,43 @@ function AttributesManagementCard({ subdepartmentId, includeGlobal = false }) {
                                                                                     className: "mr-2 h-4 w-4"
                                                                                 }, void 0, false, {
                                                                                     fileName: "[project]/src/components/settings/attributes-management.tsx",
-                                                                                    lineNumber: 335,
+                                                                                    lineNumber: 338,
                                                                                     columnNumber: 61
                                                                                 }, this),
                                                                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                                                     children: "Eliminar"
                                                                                 }, void 0, false, {
                                                                                     fileName: "[project]/src/components/settings/attributes-management.tsx",
-                                                                                    lineNumber: 336,
+                                                                                    lineNumber: 339,
                                                                                     columnNumber: 61
                                                                                 }, this)
                                                                             ]
                                                                         }, void 0, true, {
                                                                             fileName: "[project]/src/components/settings/attributes-management.tsx",
-                                                                            lineNumber: 334,
+                                                                            lineNumber: 337,
                                                                             columnNumber: 57
                                                                         }, this)
                                                                     ]
                                                                 }, void 0, true, {
                                                                     fileName: "[project]/src/components/settings/attributes-management.tsx",
-                                                                    lineNumber: 325,
+                                                                    lineNumber: 328,
                                                                     columnNumber: 53
                                                                 }, this)
                                                             ]
                                                         }, void 0, true, {
                                                             fileName: "[project]/src/components/settings/attributes-management.tsx",
-                                                            lineNumber: 318,
+                                                            lineNumber: 321,
                                                             columnNumber: 49
                                                         }, this)
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/components/settings/attributes-management.tsx",
-                                                        lineNumber: 317,
+                                                        lineNumber: 320,
                                                         columnNumber: 45
                                                     }, this)
                                                 ]
                                             }, attribute.id, true, {
                                                 fileName: "[project]/src/components/settings/attributes-management.tsx",
-                                                lineNumber: 315,
+                                                lineNumber: 318,
                                                 columnNumber: 41
                                             }, this)) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TableRow"], {
                                             children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$table$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["TableCell"], {
@@ -1634,33 +1639,33 @@ function AttributesManagementCard({ subdepartmentId, includeGlobal = false }) {
                                                 children: "No se encontraron atributos."
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/settings/attributes-management.tsx",
-                                                lineNumber: 345,
+                                                lineNumber: 348,
                                                 columnNumber: 41
                                             }, this)
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/settings/attributes-management.tsx",
-                                            lineNumber: 344,
+                                            lineNumber: 347,
                                             columnNumber: 37
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/src/components/settings/attributes-management.tsx",
-                                        lineNumber: 305,
+                                        lineNumber: 308,
                                         columnNumber: 29
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/components/settings/attributes-management.tsx",
-                                lineNumber: 298,
+                                lineNumber: 301,
                                 columnNumber: 25
                             }, this)
                         }, void 0, false, {
                             fileName: "[project]/src/components/settings/attributes-management.tsx",
-                            lineNumber: 297,
+                            lineNumber: 300,
                             columnNumber: 21
                         }, this)
                     }, void 0, false, {
                         fileName: "[project]/src/components/settings/attributes-management.tsx",
-                        lineNumber: 296,
+                        lineNumber: 299,
                         columnNumber: 17
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Dialog"], {
@@ -1674,20 +1679,20 @@ function AttributesManagementCard({ subdepartmentId, includeGlobal = false }) {
                                             children: editingAttribute ? 'Editar Atributo' : 'Añadir Nuevo Atributo'
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/settings/attributes-management.tsx",
-                                            lineNumber: 358,
+                                            lineNumber: 361,
                                             columnNumber: 29
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["DialogDescription"], {
                                             children: editingAttribute ? 'Actualiza el nombre del atributo.' : 'Introduce el nombre para el nuevo atributo.'
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/settings/attributes-management.tsx",
-                                            lineNumber: 359,
+                                            lineNumber: 362,
                                             columnNumber: 29
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/settings/attributes-management.tsx",
-                                    lineNumber: 357,
+                                    lineNumber: 360,
                                     columnNumber: 25
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1701,7 +1706,7 @@ function AttributesManagementCard({ subdepartmentId, includeGlobal = false }) {
                                                 children: "Nombre"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/settings/attributes-management.tsx",
-                                                lineNumber: 365,
+                                                lineNumber: 368,
                                                 columnNumber: 33
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$input$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Input"], {
@@ -1712,18 +1717,18 @@ function AttributesManagementCard({ subdepartmentId, includeGlobal = false }) {
                                                 autoFocus: true
                                             }, void 0, false, {
                                                 fileName: "[project]/src/components/settings/attributes-management.tsx",
-                                                lineNumber: 368,
+                                                lineNumber: 371,
                                                 columnNumber: 33
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/components/settings/attributes-management.tsx",
-                                        lineNumber: 364,
+                                        lineNumber: 367,
                                         columnNumber: 29
                                     }, this)
                                 }, void 0, false, {
                                     fileName: "[project]/src/components/settings/attributes-management.tsx",
-                                    lineNumber: 363,
+                                    lineNumber: 366,
                                     columnNumber: 25
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$dialog$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["DialogFooter"], {
@@ -1734,7 +1739,7 @@ function AttributesManagementCard({ subdepartmentId, includeGlobal = false }) {
                                             children: "Cancelar"
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/settings/attributes-management.tsx",
-                                            lineNumber: 378,
+                                            lineNumber: 381,
                                             columnNumber: 29
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["Button"], {
@@ -1743,30 +1748,30 @@ function AttributesManagementCard({ subdepartmentId, includeGlobal = false }) {
                                             children: isSaving ? 'Guardando...' : 'Guardar'
                                         }, void 0, false, {
                                             fileName: "[project]/src/components/settings/attributes-management.tsx",
-                                            lineNumber: 379,
+                                            lineNumber: 382,
                                             columnNumber: 29
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/src/components/settings/attributes-management.tsx",
-                                    lineNumber: 377,
+                                    lineNumber: 380,
                                     columnNumber: 25
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/src/components/settings/attributes-management.tsx",
-                            lineNumber: 356,
+                            lineNumber: 359,
                             columnNumber: 21
                         }, this)
                     }, void 0, false, {
                         fileName: "[project]/src/components/settings/attributes-management.tsx",
-                        lineNumber: 355,
+                        lineNumber: 358,
                         columnNumber: 17
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/components/settings/attributes-management.tsx",
-                lineNumber: 286,
+                lineNumber: 289,
                 columnNumber: 13
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(AttributeValuesDialog, {
@@ -1775,7 +1780,7 @@ function AttributesManagementCard({ subdepartmentId, includeGlobal = false }) {
                 onClose: ()=>setIsValuesDialogOpen(false)
             }, void 0, false, {
                 fileName: "[project]/src/components/settings/attributes-management.tsx",
-                lineNumber: 387,
+                lineNumber: 390,
                 columnNumber: 13
             }, this)
         ]
