@@ -83,7 +83,7 @@ export function Combobox({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className={cn("w-full justify-between", className)}
+          className={cn("w-full justify-between text-left min-w-0", className)}
           disabled={disabled}
         >
           <span className="truncate">{value ? selectedLabel : placeholder}</span>
@@ -93,7 +93,7 @@ export function Combobox({
       <PopoverContent 
         sideOffset={sideOffset}
         align={align}
-        className={cn("w-[--radix-popover-trigger-width] max-h-96 p-0 flex flex-col", popoverClassName)}
+        className={cn("min-w-[10rem] w-full sm:w-[--radix-popover-trigger-width] max-h-96 p-0 flex flex-col", popoverClassName)}
       >
         <div className="p-2 flex-shrink-0">
             <Input
@@ -101,7 +101,7 @@ export function Combobox({
                 placeholder={searchPlaceholder}
                 value={searchValue}
                 onChange={(e) => setSearchValue(e.target.value)}
-                className="h-9"
+                className="h-9 w-full"
             />
         </div>
         <div className="flex-grow overflow-y-auto">
@@ -117,7 +117,7 @@ export function Combobox({
                     <Button
                         key={option.value}
                         variant="ghost"
-                        className="w-full justify-start font-normal h-auto"
+                        className="w-full justify-start font-normal h-auto py-2 whitespace-normal break-words text-sm"
                         onClick={() => {
                             onChange(option.value);
                             setOpen(false);

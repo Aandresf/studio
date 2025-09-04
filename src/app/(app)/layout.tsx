@@ -3,7 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, ShoppingCart, Package, Box, BarChart3, Store, Settings, Users, Truck } from 'lucide-react';
+import { Home, ShoppingCart, Package, Box, BarChart3, Store, Settings, Users, Truck, Menu, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getStores } from '@/lib/api';
 import { CurrentUserProvider, useCurrentUser } from '@/hooks/use-current-user';
@@ -146,6 +146,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [isStoreModalOpen, setIsStoreModalOpen] = React.useState(false);
   const [activeStoreName, setActiveStoreName] = React.useState('Mi Cuenta');
   const [refetchKey, setRefetchKey] = React.useState(0);
+  const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
 
   React.useEffect(() => {
     let intervalId: any;
@@ -187,9 +188,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <BackendStatusContext.Provider value={{ isBackendReady, triggerRefetch, refetchKey }}>
       <CurrentUserProvider>
         <TooltipProvider>
-        <div className="grid h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
-          <aside className="hidden border-r bg-card md:block">
+        <div className="grid h-screen w-full md:grid-cols-[16rem_1fr] lg:grid-cols-[16rem_1fr]">
+          {/* Sidebar: use mobile visual style (w-64) also on desktop */}
+          <aside className={cn(
+            isSidebarOpen ? 'fixed inset-y-0 left-0 z-40 w-64 border-r bg-white' : 'hidden',
+            'md:block md:static md:w-64 bg-white border-r'
+          )}>
             <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
+              {/* Close button visible on mobile when sidebar open */}
+              <div className="md:hidden ml-auto">
+                <button className="p-2 rounded hover:bg-muted" onClick={() => setIsSidebarOpen(false)} aria-label="Cerrar menú">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
               <Link href="/" className="flex items-center gap-2 font-semibold text-primary">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
                   <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
@@ -205,6 +216,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </aside>
           <div className="flex flex-col">
             <header className="flex h-14 items-center gap-4 border-b bg-card px-4 lg:h-[60px] lg:px-6 z-30">
+              {/* Hamburger for mobile */}
+              <div className="md:hidden">
+                <button className="p-2 rounded hover:bg-muted" onClick={() => setIsSidebarOpen(true)} aria-label="Abrir menú">
+                  <Menu className="h-5 w-5" />
+                </button>
+              </div>
               <div className="w-full flex-1" />
               <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
                 <Store className="h-5 w-5" />
@@ -225,6 +242,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             />
           </div>
         </div>
+  {/* Overlay behind sidebar on small screens when open */}
+  {isSidebarOpen && <div className="fixed inset-0 z-30 bg-black/40 md:hidden" onClick={() => setIsSidebarOpen(false)} />}
         </TooltipProvider>
       </CurrentUserProvider>
     </BackendStatusContext.Provider>
