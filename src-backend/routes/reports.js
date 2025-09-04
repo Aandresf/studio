@@ -2,7 +2,8 @@ const express = require('express');
 const util = require('util');
 const path = require('path');
 const fs = require('fs');
-const { generateInventoryExcel } = require('../excel-generator.js');
+const { generateInventoryExcel, generateInventoryAsOfExcel } = require('../excel-generator.js');
+const { generateMovementsExcel } = require('../excel-generator.js');
 const databaseManager = require('../database-manager');
 const { dataDir } = require('../config');
 const { requirePermission } = require('../lib/authorize');
@@ -207,7 +208,8 @@ router.post('/inventory-as-of', requirePermission('reports:read'), async (req, r
             ? await buildDetailedInventory(all, get, date, date, filters || {})
             : await buildSummaryInventory(all, get, date, date, filters || {});
 
-        await generateInventoryExcel(res, storeDetails, inventoryData, date, date);
+        // Use a separate generator for the 'as-of' report so it doesn't reuse the movement excel template
+        await generateInventoryAsOfExcel(res, storeDetails, inventoryData, date);
     } catch (err) {
         console.error('Error generating inventory-as-of excel:', err);
         if (!res.headersSent) res.status(500).json({ error: 'Error interno al obtener los datos para el reporte.' });
@@ -292,6 +294,248 @@ router.post('/profits', requirePermission('reports:profit'), async (req, res) =>
     } catch (err) {
         console.error('Error computing profits:', err);
         res.status(500).json({ error: 'Error interno al calcular ganancias.' });
+    }
+});
+
+// Preview report data as JSON (client-side preview before download)
+router.post('/preview', requirePermission('reports:read'), async (req, res) => {
+    const { type, startDate, endDate, filters, mode = 'detailed', groupBy } = req.body || {};
+    if (!type || !startDate || !endDate) return res.status(400).json({ error: 'type, startDate and endDate are required' });
+    try {
+        const db = databaseManager.getActiveDb();
+        const all = util.promisify(db.all.bind(db));
+        const reportType = type.toUpperCase();
+
+        if (reportType === 'SALES') {
+            // Use same logic as sales-excel but return JSON
+            let rows = [];
+            if (groupBy === 'client') {
+                let sql = `SELECT im.entity_document as client_document, im.entity_name as client_name, SUM(im.quantity) as total_qty, SUM(im.price * im.quantity) as total_amount
+                    FROM inventory_movements im
+                    JOIN product_variants pv ON im.variant_id = pv.id
+                    JOIN products p ON pv.product_id = p.id
+                    WHERE im.type = 'SALIDA' AND date(im.transaction_date) BETWEEN ? AND ?`;
+                const params = [startDate, endDate];
+                if (filters?.departmentId) { sql += ' AND p.department_id = ?'; params.push(filters.departmentId); }
+                if (filters?.subdepartmentId) { sql += ' AND p.subdepartment_id = ?'; params.push(filters.subdepartmentId); }
+                sql += ' GROUP BY im.entity_document, im.entity_name ORDER BY total_amount DESC';
+                rows = await all(sql, params);
+                rows = rows.map(r => ({ client_document: r.client_document, client_name: r.client_name, qty: r.total_qty, amount: r.total_amount }));
+                return res.json(rows);
+            }
+
+            if (mode === 'summary') {
+                let sql = `SELECT strftime('%Y-%m-%d', im.transaction_date) as date, im.document_number as invoice_number, im.entity_name as client_name, SUM(im.quantity) as total_qty, SUM(im.price * im.quantity) as total_amount
+                    FROM inventory_movements im
+                    JOIN product_variants pv ON im.variant_id = pv.id
+                    JOIN products p ON pv.product_id = p.id
+                    WHERE im.type = 'SALIDA' AND date(im.transaction_date) BETWEEN ? AND ?`;
+                const params = [startDate, endDate];
+                if (filters?.departmentId) { sql += ' AND p.department_id = ?'; params.push(filters.departmentId); }
+                if (filters?.subdepartmentId) { sql += ' AND p.subdepartment_id = ?'; params.push(filters.subdepartmentId); }
+                sql += ' GROUP BY im.document_number, date ORDER BY date';
+                const summaryRows = await all(sql, params);
+                return res.json(summaryRows.map(r => ({ date: r.date, invoice_number: r.invoice_number, client_name: r.client_name, total_qty: r.total_qty, total_amount: r.total_amount })));
+            }
+
+            // detailed
+            let sql = `SELECT strftime('%Y-%m-%d %H:%M', im.transaction_date) as transaction_date_formatted, p.name as product_name, pv.sku as variant_sku, im.quantity, im.price, im.entity_name, im.entity_document, im.document_number
+                FROM inventory_movements im
+                JOIN product_variants pv ON im.variant_id = pv.id
+                JOIN products p ON pv.product_id = p.id
+                WHERE im.type = 'SALIDA' AND date(im.transaction_date) BETWEEN ? AND ?`;
+            const params = [startDate, endDate];
+            if (filters?.departmentId) { sql += ' AND p.department_id = ?'; params.push(filters.departmentId); }
+            if (filters?.subdepartmentId) { sql += ' AND p.subdepartment_id = ?'; params.push(filters.subdepartmentId); }
+            sql += ' ORDER BY im.transaction_date';
+            const detailedRows = await all(sql, params);
+            return res.json(detailedRows.map(r => ({ transaction_date: r.transaction_date_formatted, product_name: r.product_name, variant_sku: r.variant_sku, quantity: r.quantity, price: r.price, entity_name: r.entity_name, entity_document: r.entity_document, document_number: r.document_number })));
+        }
+
+        if (reportType === 'PURCHASES') {
+            let rows = [];
+            if (groupBy === 'client' || groupBy === 'supplier') {
+                let sql = `SELECT im.entity_document as entity_document, im.entity_name as entity_name, SUM(im.quantity) as total_qty, SUM(im.unit_cost * im.quantity) as total_cost
+                    FROM inventory_movements im
+                    JOIN product_variants pv ON im.variant_id = pv.id
+                    JOIN products p ON pv.product_id = p.id
+                    WHERE im.type = 'ENTRADA' AND date(im.transaction_date) BETWEEN ? AND ?`;
+                const params = [startDate, endDate];
+                if (filters?.departmentId) { sql += ' AND p.department_id = ?'; params.push(filters.departmentId); }
+                if (filters?.subdepartmentId) { sql += ' AND p.subdepartment_id = ?'; params.push(filters.subdepartmentId); }
+                sql += ' GROUP BY im.entity_document, im.entity_name ORDER BY total_cost DESC';
+                rows = await all(sql, params);
+                return res.json(rows.map(r => ({ entity_document: r.entity_document, entity_name: r.entity_name, qty: r.total_qty, total_cost: r.total_cost })));
+            }
+
+            if (mode === 'summary') {
+                let sql = `SELECT strftime('%Y-%m-%d', im.transaction_date) as date, im.document_number as invoice_number, im.entity_name as entity_name, SUM(im.quantity) as total_qty, SUM(im.unit_cost * im.quantity) as total_cost
+                    FROM inventory_movements im
+                    JOIN product_variants pv ON im.variant_id = pv.id
+                    JOIN products p ON pv.product_id = p.id
+                    WHERE im.type = 'ENTRADA' AND date(im.transaction_date) BETWEEN ? AND ?`;
+                const params = [startDate, endDate];
+                if (filters?.departmentId) { sql += ' AND p.department_id = ?'; params.push(filters.departmentId); }
+                if (filters?.subdepartmentId) { sql += ' AND p.subdepartment_id = ?'; params.push(filters.subdepartmentId); }
+                sql += ' GROUP BY im.document_number, date ORDER BY date';
+                const summaryRows = await all(sql, params);
+                return res.json(summaryRows.map(r => ({ date: r.date, invoice_number: r.invoice_number, entity_name: r.entity_name, total_qty: r.total_qty, total_cost: r.total_cost })));
+            }
+
+            // detailed
+            let sql = `SELECT strftime('%Y-%m-%d %H:%M', im.transaction_date) as transaction_date_formatted, p.name as product_name, pv.sku as variant_sku, im.quantity, im.unit_cost, im.entity_name, im.entity_document, im.document_number
+                FROM inventory_movements im
+                JOIN product_variants pv ON im.variant_id = pv.id
+                JOIN products p ON pv.product_id = p.id
+                WHERE im.type = 'ENTRADA' AND date(im.transaction_date) BETWEEN ? AND ?`;
+            const params = [startDate, endDate];
+            if (filters?.departmentId) { sql += ' AND p.department_id = ?'; params.push(filters.departmentId); }
+            if (filters?.subdepartmentId) { sql += ' AND p.subdepartment_id = ?'; params.push(filters.subdepartmentId); }
+            sql += ' ORDER BY im.transaction_date';
+            const detailedRows = await all(sql, params);
+            return res.json(detailedRows.map(r => ({ transaction_date: r.transaction_date_formatted, product_name: r.product_name, variant_sku: r.variant_sku, quantity: r.quantity, unit_cost: r.unit_cost, entity_name: r.entity_name, entity_document: r.entity_document, document_number: r.document_number })));
+        }
+
+        if (reportType === 'INVENTORY') {
+            // Reuse builders
+            const get = util.promisify(db.get.bind(db));
+            const allFn = util.promisify(db.all.bind(db));
+            if (mode === 'detailed') {
+                const data = await buildDetailedInventory(allFn, get, startDate, endDate, filters || {});
+                return res.json(data);
+            } else {
+                const data = await buildSummaryInventory(allFn, get, startDate, endDate, filters || {});
+                return res.json(data);
+            }
+        }
+
+        return res.status(400).json({ error: 'Invalid report type' });
+    } catch (err) {
+        console.error('Error in preview:', err);
+        res.status(500).json({ error: 'Error interno al generar la previsualización.' });
+    }
+});
+
+// Export sales to Excel (supports mode: 'detailed'|'summary' and groupBy: 'client')
+router.post('/sales-excel', requirePermission('reports:read'), async (req, res) => {
+    const { startDate, endDate, filters, mode = 'detailed', groupBy } = req.body || {};
+    if (!startDate || !endDate) return res.status(400).json({ error: 'startDate and endDate are required' });
+    try {
+        const db = databaseManager.getActiveDb();
+        const all = util.promisify(db.all.bind(db));
+        let rows = [];
+
+        if (groupBy === 'client') {
+            // Aggregate by client
+            let sql = `SELECT im.entity_document as client_document, im.entity_name as client_name, SUM(im.quantity) as total_qty, SUM(im.price * im.quantity) as total_amount
+                FROM inventory_movements im
+                JOIN product_variants pv ON im.variant_id = pv.id
+                JOIN products p ON pv.product_id = p.id
+                WHERE im.type = 'SALIDA' AND date(im.transaction_date) BETWEEN ? AND ?`;
+            const params = [startDate, endDate];
+            if (filters?.departmentId) { sql += ' AND p.department_id = ?'; params.push(filters.departmentId); }
+            if (filters?.subdepartmentId) { sql += ' AND p.subdepartment_id = ?'; params.push(filters.subdepartmentId); }
+            sql += ' GROUP BY im.entity_document, im.entity_name ORDER BY total_amount DESC';
+            rows = await all(sql, params);
+            // Map to generator shape: date empty, type empty, product empty, quantity=total_qty, total price=total_amount, entidad=client_name
+            rows = rows.map(r => ({ transaction_date: '', type: '', name: '', base_sku: '', variant_sku: '', quantity: r.total_qty, price: 0, unit_cost: 0, total_price: r.total_amount, total_cost: 0, entity_name: r.client_name, entity_document: r.client_document }));
+        } else if (mode === 'summary') {
+            // Summary by invoice/document_number
+            let sql = `SELECT strftime('%Y-%m-%d', im.transaction_date) as date, im.document_number as invoice_number, im.entity_name as client_name, SUM(im.quantity) as total_qty, SUM(im.price * im.quantity) as total_amount
+                FROM inventory_movements im
+                JOIN product_variants pv ON im.variant_id = pv.id
+                JOIN products p ON pv.product_id = p.id
+                WHERE im.type = 'SALIDA' AND date(im.transaction_date) BETWEEN ? AND ?`;
+            const params = [startDate, endDate];
+            if (filters?.departmentId) { sql += ' AND p.department_id = ?'; params.push(filters.departmentId); }
+            if (filters?.subdepartmentId) { sql += ' AND p.subdepartment_id = ?'; params.push(filters.subdepartmentId); }
+            sql += ' GROUP BY im.document_number, date ORDER BY date';
+            const summaryRows = await all(sql, params);
+            rows = summaryRows.map(r => ({ transaction_date: r.date, type: '', name: '', base_sku: '', variant_sku: '', quantity: r.total_qty, price: 0, unit_cost: 0, total_price: r.total_amount, total_cost: 0, entity_name: r.client_name, document_number: r.invoice_number }));
+        } else {
+            // detailed
+            let sql = `SELECT strftime('%Y-%m-%d %H:%M', im.transaction_date) as transaction_date_formatted, p.name as product_name, pv.sku as variant_sku, im.quantity, im.price, im.entity_name, im.entity_document, im.document_number
+                FROM inventory_movements im
+                JOIN product_variants pv ON im.variant_id = pv.id
+                JOIN products p ON pv.product_id = p.id
+                WHERE im.type = 'SALIDA' AND date(im.transaction_date) BETWEEN ? AND ?`;
+            const params = [startDate, endDate];
+            if (filters?.departmentId) { sql += ' AND p.department_id = ?'; params.push(filters.departmentId); }
+            if (filters?.subdepartmentId) { sql += ' AND p.subdepartment_id = ?'; params.push(filters.subdepartmentId); }
+            sql += ' ORDER BY im.transaction_date';
+            const detailedRows = await all(sql, params);
+            rows = detailedRows.map(r => ({ transaction_date: r.transaction_date_formatted, type: '', name: r.product_name, base_sku: '', variant_sku: r.variant_sku, quantity: r.quantity, price: r.price, unit_cost: null, total_price: (r.price || 0) * (r.quantity || 0), total_cost: 0, entity_name: r.entity_name, entity_document: r.entity_document, document_number: r.document_number }));
+        }
+
+        const activeStoreId = databaseManager.getStoresConfig().activeStoreId;
+        const settingsPath = path.join(dataDir, `database_${activeStoreId}_settings.json`);
+        let storeDetails = { name: 'MI TIENDA', rif: 'J-000000000' };
+        if (fs.existsSync(settingsPath)) storeDetails = { ...storeDetails, ...JSON.parse(fs.readFileSync(settingsPath, 'utf8')) };
+        await generateMovementsExcel(res, storeDetails, rows, startDate, endDate, 'Ventas');
+    } catch (err) {
+        console.error('Error generating sales excel:', err);
+        if (!res.headersSent) res.status(500).json({ error: 'Error interno al generar el archivo.' });
+    }
+});
+
+// Export purchases to Excel (supports mode: 'detailed'|'summary' and groupBy: 'supplier'|'client')
+router.post('/purchases-excel', requirePermission('reports:read'), async (req, res) => {
+    const { startDate, endDate, filters, mode = 'detailed', groupBy } = req.body || {};
+    if (!startDate || !endDate) return res.status(400).json({ error: 'startDate and endDate are required' });
+    try {
+        const db = databaseManager.getActiveDb();
+        const all = util.promisify(db.all.bind(db));
+        let rows = [];
+
+        if (groupBy === 'client' || groupBy === 'supplier') {
+            // Aggregate by entity (for purchases it may be supplier)
+            let sql = `SELECT im.entity_document as entity_document, im.entity_name as entity_name, SUM(im.quantity) as total_qty, SUM(im.unit_cost * im.quantity) as total_cost
+                FROM inventory_movements im
+                JOIN product_variants pv ON im.variant_id = pv.id
+                JOIN products p ON pv.product_id = p.id
+                WHERE im.type = 'ENTRADA' AND date(im.transaction_date) BETWEEN ? AND ?`;
+            const params = [startDate, endDate];
+            if (filters?.departmentId) { sql += ' AND p.department_id = ?'; params.push(filters.departmentId); }
+            if (filters?.subdepartmentId) { sql += ' AND p.subdepartment_id = ?'; params.push(filters.subdepartmentId); }
+            sql += ' GROUP BY im.entity_document, im.entity_name ORDER BY total_cost DESC';
+            rows = await all(sql, params);
+            rows = rows.map(r => ({ transaction_date: '', type: '', name: '', base_sku: '', variant_sku: '', quantity: r.total_qty, price: 0, unit_cost: 0, total_price: 0, total_cost: r.total_cost, entity_name: r.entity_name, entity_document: r.entity_document }));
+        } else if (mode === 'summary') {
+            // Summary by document_number
+            let sql = `SELECT strftime('%Y-%m-%d', im.transaction_date) as date, im.document_number as invoice_number, im.entity_name as entity_name, SUM(im.quantity) as total_qty, SUM(im.unit_cost * im.quantity) as total_cost
+                FROM inventory_movements im
+                JOIN product_variants pv ON im.variant_id = pv.id
+                JOIN products p ON pv.product_id = p.id
+                WHERE im.type = 'ENTRADA' AND date(im.transaction_date) BETWEEN ? AND ?`;
+            const params = [startDate, endDate];
+            if (filters?.departmentId) { sql += ' AND p.department_id = ?'; params.push(filters.departmentId); }
+            if (filters?.subdepartmentId) { sql += ' AND p.subdepartment_id = ?'; params.push(filters.subdepartmentId); }
+            sql += ' GROUP BY im.document_number, date ORDER BY date';
+            const summaryRows = await all(sql, params);
+            rows = summaryRows.map(r => ({ transaction_date: r.date, type: '', name: '', base_sku: '', variant_sku: '', quantity: r.total_qty, price: 0, unit_cost: 0, total_price: 0, total_cost: r.total_cost, entity_name: r.entity_name, document_number: r.invoice_number }));
+        } else {
+            // detailed
+            let sql = `SELECT strftime('%Y-%m-%d %H:%M', im.transaction_date) as transaction_date_formatted, p.name as product_name, pv.sku as variant_sku, im.quantity, im.unit_cost, im.entity_name, im.entity_document, im.document_number
+                FROM inventory_movements im
+                JOIN product_variants pv ON im.variant_id = pv.id
+                JOIN products p ON pv.product_id = p.id
+                WHERE im.type = 'ENTRADA' AND date(im.transaction_date) BETWEEN ? AND ?`;
+            const params = [startDate, endDate];
+            if (filters?.departmentId) { sql += ' AND p.department_id = ?'; params.push(filters.departmentId); }
+            if (filters?.subdepartmentId) { sql += ' AND p.subdepartment_id = ?'; params.push(filters.subdepartmentId); }
+            sql += ' ORDER BY im.transaction_date';
+            const detailedRows = await all(sql, params);
+            rows = detailedRows.map(r => ({ transaction_date: r.transaction_date_formatted, type: '', name: r.product_name, base_sku: '', variant_sku: r.variant_sku, quantity: r.quantity, price: 0, unit_cost: r.unit_cost, total_price: 0, total_cost: (r.unit_cost || 0) * (r.quantity || 0), entity_name: r.entity_name, entity_document: r.entity_document, document_number: r.document_number }));
+        }
+
+        const activeStoreId = databaseManager.getStoresConfig().activeStoreId;
+        const settingsPath = path.join(dataDir, `database_${activeStoreId}_settings.json`);
+        let storeDetails = { name: 'MI TIENDA', rif: 'J-000000000' };
+        if (fs.existsSync(settingsPath)) storeDetails = { ...storeDetails, ...JSON.parse(fs.readFileSync(settingsPath, 'utf8')) };
+        await generateMovementsExcel(res, storeDetails, rows, startDate, endDate, 'Compras');
+    } catch (err) {
+        console.error('Error generating purchases excel:', err);
+        if (!res.headersSent) res.status(500).json({ error: 'Error interno al generar el archivo.' });
     }
 });
 

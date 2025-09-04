@@ -1,5 +1,5 @@
 
-import { toastError, toastInfo } from "@/hooks/use-toast";
+import { toastError } from "@/hooks/use-toast";
 import { Product, DashboardSummary, RecentSale, InventoryMovement, ReportMetadata, FullReport, ReportType, StoreSettings, PurchasePayload, SalePayload, GroupedPurchase, GroupedSale } from './types';
 
 // Use NEXT_PUBLIC_API_URL at build/runtime if provided, otherwise default to localhost:3001
@@ -385,6 +385,14 @@ export const createReport = (type: ReportType, startDate: string, endDate: strin
     });
 };
 
+export const previewReport = (type: string, startDate: string, endDate: string, options?: { mode?: MovementExportMode; groupBy?: string; filters?: Record<string, any> }) => {
+    const body: any = { type, startDate, endDate };
+    if (options?.mode) body.mode = options.mode;
+    if (options?.groupBy) body.groupBy = options.groupBy;
+    if (options?.filters) body.filters = options.filters;
+    return fetchAPI('/reports/preview', { method: 'POST', body: JSON.stringify(body) });
+};
+
 export type InventoryExportMode = 'summary' | 'detailed';
 
 export const exportInventoryToExcel = async (startDate: string, endDate: string, mode: InventoryExportMode = 'summary', filters?: Record<string, any>): Promise<void> => {
@@ -444,6 +452,58 @@ export const exportInventoryToExcel = async (startDate: string, endDate: string,
             const message = error instanceof Error ? error.message : 'Ocurrió un error de exportación.';
             toastError('Error de Exportación', message);
         }
+        throw error;
+    }
+};
+
+// Export inventory 'as of' a specific date (snapshot-like export)
+export const exportInventoryAsOf = async (date: string, mode: InventoryExportMode = 'summary', filters?: Record<string, any>): Promise<void> => {
+    try {
+        const payload: any = { date, mode, filters: filters || {} };
+        const blob: Blob = await fetchAPI('/reports/inventory-as-of', {
+            method: 'POST',
+            body: JSON.stringify(payload),
+            responseType: 'blob',
+            headers: { 'Content-Type': 'application/json' },
+        }) as Blob;
+
+        const downloadUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = `reporte-inventario-as-of-${date}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+        if (error instanceof ApiError) toastError('Error de Exportación', error.message);
+        throw error;
+    }
+};
+
+export type MovementExportMode = 'detailed' | 'summary';
+export const exportSalesToExcel = async (startDate: string, endDate: string, mode: MovementExportMode = 'detailed', groupBy?: string, filters?: Record<string, any>): Promise<void> => {
+    try {
+        const payload: any = { startDate, endDate, filters: filters || {}, mode };
+        if (groupBy) payload.groupBy = groupBy;
+        const blob: Blob = await fetchAPI('/reports/sales-excel', { method: 'POST', body: JSON.stringify(payload), responseType: 'blob', headers: { 'Content-Type': 'application/json' } }) as Blob;
+        const downloadUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = downloadUrl; a.download = `reporte-ventas-${startDate}-a-${endDate}.xlsx`; document.body.appendChild(a); a.click(); a.remove(); window.URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+        if (error instanceof ApiError) toastError('Error de Exportación', error.message);
+        throw error;
+    }
+};
+
+export const exportPurchasesToExcel = async (startDate: string, endDate: string, mode: MovementExportMode = 'detailed', groupBy?: string, filters?: Record<string, any>): Promise<void> => {
+    try {
+        const payload: any = { startDate, endDate, filters: filters || {}, mode };
+        if (groupBy) payload.groupBy = groupBy;
+        const blob: Blob = await fetchAPI('/reports/purchases-excel', { method: 'POST', body: JSON.stringify(payload), responseType: 'blob', headers: { 'Content-Type': 'application/json' } }) as Blob;
+        const downloadUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = downloadUrl; a.download = `reporte-compras-${startDate}-a-${endDate}.xlsx`; document.body.appendChild(a); a.click(); a.remove(); window.URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+        if (error instanceof ApiError) toastError('Error de Exportación', error.message);
         throw error;
     }
 };

@@ -632,7 +632,10 @@ __turbopack_context__.s({
     "deleteSubdepartment": (()=>deleteSubdepartment),
     "deleteSupplier": (()=>deleteSupplier),
     "deleteUser": (()=>deleteUser),
+    "exportInventoryAsOf": (()=>exportInventoryAsOf),
     "exportInventoryToExcel": (()=>exportInventoryToExcel),
+    "exportPurchasesToExcel": (()=>exportPurchasesToExcel),
+    "exportSalesToExcel": (()=>exportSalesToExcel),
     "fetchAPI": (()=>fetchAPI),
     "getAttributeValues": (()=>getAttributeValues),
     "getAttributes": (()=>getAttributes),
@@ -669,6 +672,7 @@ __turbopack_context__.s({
     "getVariantMovements": (()=>getVariantMovements),
     "login": (()=>login),
     "logout": (()=>logout),
+    "previewReport": (()=>previewReport),
     "quitApplication": (()=>quitApplication),
     "removePendingTransaction": (()=>removePendingTransaction),
     "setActiveStore": (()=>setActiveStore),
@@ -1063,6 +1067,20 @@ const createReport = (type, startDate, endDate, filters)=>{
         })
     });
 };
+const previewReport = (type, startDate, endDate, options)=>{
+    const body = {
+        type,
+        startDate,
+        endDate
+    };
+    if (options?.mode) body.mode = options.mode;
+    if (options?.groupBy) body.groupBy = options.groupBy;
+    if (options?.filters) body.filters = options.filters;
+    return fetchAPI('/reports/preview', {
+        method: 'POST',
+        body: JSON.stringify(body)
+    });
+};
 const exportInventoryToExcel = async (startDate, endDate, mode = 'summary', filters)=>{
     try {
         // Usamos fetchAPI para mantener consistencia y enviar cookies de sesión
@@ -1123,6 +1141,94 @@ const exportInventoryToExcel = async (startDate, endDate, mode = 'summary', filt
             const message = error instanceof Error ? error.message : 'Ocurrió un error de exportación.';
             (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$use$2d$toast$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["toastError"])('Error de Exportación', message);
         }
+        throw error;
+    }
+};
+const exportInventoryAsOf = async (date, mode = 'summary', filters)=>{
+    try {
+        const payload = {
+            date,
+            mode,
+            filters: filters || {}
+        };
+        const blob = await fetchAPI('/reports/inventory-as-of', {
+            method: 'POST',
+            body: JSON.stringify(payload),
+            responseType: 'blob',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        const downloadUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = `reporte-inventario-as-of-${date}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+        if (error instanceof ApiError) (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$use$2d$toast$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["toastError"])('Error de Exportación', error.message);
+        throw error;
+    }
+};
+const exportSalesToExcel = async (startDate, endDate, mode = 'detailed', groupBy, filters)=>{
+    try {
+        const payload = {
+            startDate,
+            endDate,
+            filters: filters || {},
+            mode
+        };
+        if (groupBy) payload.groupBy = groupBy;
+        const blob = await fetchAPI('/reports/sales-excel', {
+            method: 'POST',
+            body: JSON.stringify(payload),
+            responseType: 'blob',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        const downloadUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = `reporte-ventas-${startDate}-a-${endDate}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+        if (error instanceof ApiError) (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$use$2d$toast$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["toastError"])('Error de Exportación', error.message);
+        throw error;
+    }
+};
+const exportPurchasesToExcel = async (startDate, endDate, mode = 'detailed', groupBy, filters)=>{
+    try {
+        const payload = {
+            startDate,
+            endDate,
+            filters: filters || {},
+            mode
+        };
+        if (groupBy) payload.groupBy = groupBy;
+        const blob = await fetchAPI('/reports/purchases-excel', {
+            method: 'POST',
+            body: JSON.stringify(payload),
+            responseType: 'blob',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        const downloadUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = `reporte-compras-${startDate}-a-${endDate}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+        if (error instanceof ApiError) (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$use$2d$toast$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["toastError"])('Error de Exportación', error.message);
         throw error;
     }
 };
