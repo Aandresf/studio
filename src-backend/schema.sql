@@ -8,6 +8,9 @@ CREATE TABLE IF NOT EXISTS brands (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,
   subdepartment_id INTEGER,
+  status TEXT NOT NULL DEFAULT 'Activo',
+  deleted_at TEXT,
+  deleted_by TEXT,
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now')),
   updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now')),
   FOREIGN KEY (subdepartment_id) REFERENCES subdepartments (id) ON DELETE CASCADE
@@ -21,6 +24,9 @@ CREATE TABLE IF NOT EXISTS departments (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL UNIQUE,
   abbreviation TEXT NOT NULL UNIQUE,
+  status TEXT NOT NULL DEFAULT 'Activo',
+  deleted_at TEXT,
+  deleted_by TEXT,
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now')),
   updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now'))
 );
@@ -33,6 +39,9 @@ CREATE TABLE IF NOT EXISTS subdepartments (
   name TEXT NOT NULL,
   abbreviation TEXT NOT NULL,
   department_id INTEGER NOT NULL,
+  status TEXT NOT NULL DEFAULT 'Activo',
+  deleted_at TEXT,
+  deleted_by TEXT,
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now')),
   updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now')),
   FOREIGN KEY (department_id) REFERENCES departments (id) ON DELETE CASCADE,
@@ -64,6 +73,8 @@ CREATE TABLE IF NOT EXISTS products (
   subdepartment_id INTEGER,
   brand_id INTEGER,
   status TEXT NOT NULL DEFAULT 'Activo',
+  deleted_at TEXT,
+  deleted_by TEXT,
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now')),
   updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now')),
   FOREIGN KEY (brand_id) REFERENCES brands (id) ON DELETE SET NULL,
@@ -78,6 +89,9 @@ CREATE TABLE IF NOT EXISTS attributes (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,
   subdepartment_id INTEGER,
+  status TEXT NOT NULL DEFAULT 'Activo',
+  deleted_at TEXT,
+  deleted_by TEXT,
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now')),
   updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now')),
   FOREIGN KEY (subdepartment_id) REFERENCES subdepartments (id) ON DELETE CASCADE
@@ -91,6 +105,9 @@ CREATE TABLE IF NOT EXISTS attribute_values (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   attribute_id INTEGER NOT NULL,
   value TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'Activo',
+  deleted_at TEXT,
+  deleted_by TEXT,
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now')),
   updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now')),
   FOREIGN KEY (attribute_id) REFERENCES attributes (id) ON DELETE CASCADE,
@@ -108,6 +125,8 @@ CREATE TABLE IF NOT EXISTS product_variants (
   sale_price REAL NOT NULL DEFAULT 0,
   current_stock REAL NOT NULL DEFAULT 0,
   status TEXT NOT NULL DEFAULT 'Activo',
+  deleted_at TEXT,
+  deleted_by TEXT,
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now')),
   updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now')),
   FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE
@@ -141,6 +160,8 @@ CREATE TABLE IF NOT EXISTS inventory_movements (
   price REAL,
   description TEXT,
   status TEXT NOT NULL DEFAULT 'Activo',
+  deleted_at TEXT,
+  deleted_by TEXT,
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now')),
   FOREIGN KEY (variant_id) REFERENCES product_variants (id) ON DELETE CASCADE
 );
@@ -214,6 +235,9 @@ CREATE TABLE IF NOT EXISTS users (
   email TEXT,
   role_id TEXT,
   password_hash TEXT,
+  status TEXT NOT NULL DEFAULT 'Activo',
+  deleted_at TEXT,
+  deleted_by TEXT,
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now')),
   updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now')),
   FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE SET NULL
@@ -223,6 +247,9 @@ CREATE TABLE IF NOT EXISTS roles (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL UNIQUE,
   description TEXT,
+  status TEXT NOT NULL DEFAULT 'Activo',
+  deleted_at TEXT,
+  deleted_by TEXT,
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now')),
   updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now'))
 );
@@ -232,6 +259,9 @@ CREATE TABLE IF NOT EXISTS permissions (
   key TEXT NOT NULL UNIQUE,
   label TEXT,
   description TEXT,
+  status TEXT NOT NULL DEFAULT 'Activo',
+  deleted_at TEXT,
+  deleted_by TEXT,
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now'))
 );
 
@@ -267,6 +297,9 @@ CREATE TABLE IF NOT EXISTS customers (
   phone TEXT,
   address TEXT,
   notes TEXT,
+  status TEXT NOT NULL DEFAULT 'Activo',
+  deleted_at TEXT,
+  deleted_by TEXT,
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now')),
   updated_at TEXT
 );
@@ -282,6 +315,9 @@ CREATE TABLE IF NOT EXISTS suppliers (
   phone TEXT,
   address TEXT,
   notes TEXT,
+  status TEXT NOT NULL DEFAULT 'Activo',
+  deleted_at TEXT,
+  deleted_by TEXT,
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now')),
   updated_at TEXT
 );

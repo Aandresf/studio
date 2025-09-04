@@ -1,12 +1,1 @@
-{
-  "/(app)/catalog/page": "app/(app)/catalog/page.js",
-  "/(app)/customers/page": "app/(app)/customers/page.js",
-  "/(app)/dashboard/page": "app/(app)/dashboard/page.js",
-  "/(app)/products/page": "app/(app)/products/page.js",
-  "/(app)/purchases/page": "app/(app)/purchases/page.js",
-  "/(app)/suppliers/page": "app/(app)/suppliers/page.js",
-  "/(app)/users/page": "app/(app)/users/page.js",
-  "/favicon.ico/route": "app/favicon.ico/route.js",
-  "/login/page": "app/login/page.js",
-  "/page": "app/page.js"
-}
+{}
