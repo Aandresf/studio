@@ -13,15 +13,16 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { PlusCircle, RefreshCw, Edit } from 'lucide-react';
 import { toastSuccess, toastError, toastInfo } from '@/hooks/use-toast';
 import { 
-    getBrands, createBrand, 
-    getAttributes, createAttribute, 
-    getAttributeValues, createAttributeValue,
+  getBrands, createBrand, 
+  getAttributes, createAttribute, 
+  getAttributeValues, createAttributeValue,
     getDepartments, createDepartment,
     getSubdepartments, createSubdepartment,
     getNextSku,
     createProduct,
     updateProduct
 } from '@/lib/api';
+import { getStores, getStoreDetails } from '@/lib/api';
 import { Product, Brand, Attribute, AttributeValue, ProductVariant, Department, Subdepartment } from '@/lib/types';
 import { QuickAddDialog } from './QuickAddDialog';
 import { useCurrentUser } from '@/hooks/use-current-user';
@@ -61,6 +62,7 @@ export function ProductDialog({ open, onOpenChange, product, onProductSaved }: P
   const [departments, setDepartments] = useState<Department[]>([]);
   const [subdepartments, setSubdepartments] = useState<Subdepartment[]>([]);
   const [attributes, setAttributes] = useState<Attribute[]>([]);
+  const [enableGlobalAttributes, setEnableGlobalAttributes] = useState<boolean>(false);
   
   const [selectedAttributes, setSelectedAttributes] = useState<Record<number, SelectedAttributesData>>({});
   const [selectedValues, setSelectedValues] = useState<Record<string, boolean>>({});
@@ -87,7 +89,22 @@ export function ProductDialog({ open, onOpenChange, product, onProductSaved }: P
       if (open) {
   // Carga siempre los datos maestros
   const subId = (product && (product as any).subdepartment_id) ?? productBase.subdepartment_id ?? null;
-  await Promise.all([fetchBrands(subId), fetchDepartments(), fetchAttributes(subId, false)]);
+  // Obtener configuración de tienda para saber si se deben incluir atributos globales
+  let globalFlag = false;
+  try {
+    const storesRes: any = await getStores();
+    const activeId = storesRes?.activeStoreId;
+    if (activeId) {
+      const details: any = await getStoreDetails(activeId);
+      globalFlag = !!details?.advanced?.enableGlobalAttributes;
+      setEnableGlobalAttributes(globalFlag);
+    }
+  } catch (err) {
+    // fail silently and default to false
+    console.warn('No se pudo obtener configuración de tienda para global attributes', err);
+  }
+
+  await Promise.all([fetchBrands(subId), fetchDepartments(), fetchAttributes(subId, globalFlag)]);
 
         if (product && product.id) { // Asegurarse que es un producto para editar
           setProductBase(product);
@@ -163,8 +180,8 @@ export function ProductDialog({ open, onOpenChange, product, onProductSaved }: P
     const subId = productBase.subdepartment_id ?? null;
     if (subId) {
       // include global attributes as well so user can pick global + scoped
-      fetchBrands(subId);
-      fetchAttributes(subId, true);
+  fetchBrands(subId);
+  fetchAttributes(subId, enableGlobalAttributes);
     } else {
       // if no subdepartment selected, clear brand list and attributes
       setBrands([]);
@@ -172,7 +189,7 @@ export function ProductDialog({ open, onOpenChange, product, onProductSaved }: P
       setSelectedAttributes({});
       setSelectedValues({});
     }
-  }, [productBase.subdepartment_id]);
+  }, [productBase.subdepartment_id, enableGlobalAttributes]);
 
   const handleSubdepartmentChange = async (subId: string) => {
     const subdepartmentId = Number(subId);
@@ -218,7 +235,9 @@ export function ProductDialog({ open, onOpenChange, product, onProductSaved }: P
           break;
         case 'attribute':
           newItem = await createAttribute(values.name, productBase.subdepartment_id || null);
-          await fetchAttributes(productBase.subdepartment_id || null, false);
+          // Después de crear un atributo, recargamos incluyendo también los atributos globales
+          // para mantener consistencia con la carga que ocurre al cambiar subdepartamento.
+          await fetchAttributes(productBase.subdepartment_id || null, true);
           break;
         case 'attributeValue':
           newItem = await createAttributeValue(activeAttributeId!, values.value);
@@ -282,7 +301,13 @@ export function ProductDialog({ open, onOpenChange, product, onProductSaved }: P
       if (existingVariant) {
         newVariants.push(existingVariant);
       } else {
-        const skuSuffix = combo.map(v => (v.value.substring(0,3))).join('-');
+        // Generar un sufijo más robusto: tomar 4 caracteres limpiadas de cada value
+        // y añadir el id del attribute value para asegurar unicidad cuando las primeras letras coinciden.
+        const skuSuffix = combo.map(v => {
+          const raw = String(v.value || '');
+          const clean = raw.replace(/\s+/g, '').replace(/[^a-zA-Z0-9]/g, '').substring(0, 4).toUpperCase();
+          return v.id ? `${clean}${String(v.id)}` : clean;
+        }).join('-');
         newVariants.push({
           sku: `${productBase.base_sku}-${skuSuffix}`,
           sale_price: 0, cost_price: 0, current_stock: 0,

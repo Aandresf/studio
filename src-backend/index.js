@@ -46,6 +46,8 @@ app.use('/api/stores', require('./routes/stores'));
 app.use('/api/subdepartments', require('./routes/subdepartments'));
 // Users and roles management
 app.use('/api/users', require('./routes/users'));
+// Role permissions management (solo API, protegido para master)
+app.use('/api/role-permissions', require('./routes/role-permissions'));
 // Authentication routes (login/logout)
 app.use('/api/auth', require('./routes/auth'));
 // --- INVENTORY (migrado a routes/inventory.js) ---

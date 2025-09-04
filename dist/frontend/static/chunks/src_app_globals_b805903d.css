@@ -998,6 +998,10 @@ body {
   max-width: 20rem;
 }
 
+.max-w-\[90vw\] {
+  max-width: 90vw;
+}
+
 .flex-1 {
   flex: 1;
 }
@@ -2711,6 +2715,10 @@ body {
 
   .sm\:w-3\/4 {
     width: 75%;
+  }
+
+  .sm\:w-64 {
+    width: 16rem;
   }
 
   .sm\:max-w-2xl {

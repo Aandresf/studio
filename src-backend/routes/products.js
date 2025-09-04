@@ -66,41 +66,68 @@ router.post('/', requirePermission('products:create'), async (req, res) => {
     const get = util.promisify(db.get.bind(db));
 
     try {
-        await run('BEGIN TRANSACTION');
+    console.log('[products] BEGIN TRANSACTION');
+    await run('BEGIN TRANSACTION');
 
-        let sequence = await get('SELECT last_number FROM product_sequences WHERE department_id = ? AND subdepartment_id = ?', [department_id, subdepartment_id]);
+    console.log('[products] SELECT last_number FROM product_sequences WHERE department_id = ? AND subdepartment_id = ?', department_id, subdepartment_id);
+    let sequence = await get('SELECT last_number FROM product_sequences WHERE department_id = ? AND subdepartment_id = ?', [department_id, subdepartment_id]);
         if (!sequence) {
-            await run('INSERT INTO product_sequences (department_id, subdepartment_id, last_number) VALUES (?, ?, 0)', [department_id, subdepartment_id]);
+      console.log('[products] INSERT INTO product_sequences (department_id, subdepartment_id, last_number) VALUES (?, ?, 0)', department_id, subdepartment_id);
+      await run('INSERT INTO product_sequences (department_id, subdepartment_id, last_number) VALUES (?, ?, 0)', [department_id, subdepartment_id]);
             sequence = { last_number: 0 };
         }
-        const newNumber = sequence.last_number + 1;
-        await run('UPDATE product_sequences SET last_number = ? WHERE department_id = ? AND subdepartment_id = ?', [newNumber, department_id, subdepartment_id]);
-        const dep = await get('SELECT abbreviation FROM departments WHERE id = ?', [department_id]);
-        const sub = await get('SELECT abbreviation FROM subdepartments WHERE id = ?', [subdepartment_id]);
+    const newNumber = sequence.last_number + 1;
+    console.log('[products] UPDATE product_sequences SET last_number = ? WHERE department_id = ? AND subdepartment_id = ?', newNumber, department_id, subdepartment_id);
+    await run('UPDATE product_sequences SET last_number = ? WHERE department_id = ? AND subdepartment_id = ?', [newNumber, department_id, subdepartment_id]);
+    console.log('[products] SELECT abbreviation FROM departments WHERE id = ?', department_id);
+    const dep = await get('SELECT abbreviation FROM departments WHERE id = ?', [department_id]);
+    console.log('[products] SELECT abbreviation FROM subdepartments WHERE id = ?', subdepartment_id);
+    const sub = await get('SELECT abbreviation FROM subdepartments WHERE id = ?', [subdepartment_id]);
         if (!dep || !sub) throw new Error('Departamento o Subdepartamento no encontrado.');
         const baseSku = `${dep.abbreviation}-${sub.abbreviation}-${String(newNumber).padStart(3, '0')}`;
 
         const productSql = `INSERT INTO products (name, description, brand_id, department_id, subdepartment_id, base_sku, status) VALUES (?, ?, ?, ?, ?, ?, ?)`;
-        const productResult = await new Promise((resolve, reject) => {
-            db.run(productSql, [name, description, brand_id, department_id, subdepartment_id, baseSku, status], function(err) {
-                if (err) reject(err); else resolve({ lastID: this.lastID });
-            });
-        });
+    console.log('[products] About to run product insert:', productSql, { name, description, brand_id, department_id, subdepartment_id, baseSku, status });
+    const productResult = await new Promise((resolve, reject) => {
+      db.run(productSql, [name, description, brand_id, department_id, subdepartment_id, baseSku, status], function(err) {
+        if (err) reject(err); else resolve({ lastID: this.lastID });
+      });
+    });
         const productId = productResult.lastID;
 
         for (const variant of variants) {
             const { sku, cost_price, sale_price, current_stock, attribute_values } = variant;
+            console.log('[products] variants payload entry:', variant);
             const variantSql = `INSERT INTO product_variants (product_id, sku, cost_price, sale_price, current_stock, status) VALUES (?, ?, ?, ?, ?, ?)`;
-            const variantResult = await new Promise((resolve, reject) => {
-                db.run(variantSql, [productId, sku, cost_price, sale_price, current_stock, status], function(err) {
-                    if (err) reject(err); else resolve({ lastID: this.lastID });
-                });
-            });
+      // comprobar si el SKU ya existe y, de ser así, generar un sufijo único para evitar UNIQUE constraint
+      let finalSku = sku;
+      if (finalSku) {
+        const dbGet = util.promisify(db.get.bind(db));
+        try {
+          let exists = await dbGet('SELECT id FROM product_variants WHERE sku = ?', [finalSku]);
+          let suffix = 1;
+          while (exists) {
+            const candidate = `${sku}-${suffix}`;
+            exists = await dbGet('SELECT id FROM product_variants WHERE sku = ?', [candidate]);
+            if (!exists) { finalSku = candidate; break; }
+            suffix++;
+          }
+        } catch (e) {
+          console.error('[products] error checking existing sku:', e && e.message ? e.message : e);
+        }
+      }
+      console.log('[products] About to run variant insert:', variantSql, { productId, finalSku, cost_price, sale_price, current_stock, status });
+      const variantResult = await new Promise((resolve, reject) => {
+        db.run(variantSql, [productId, finalSku, cost_price, sale_price, current_stock, status], function(err) {
+          if (err) reject(err); else resolve({ lastID: this.lastID });
+        });
+      });
             const variantId = variantResult.lastID;
 
             if (attribute_values && Array.isArray(attribute_values)) {
                 for (const attrValue of attribute_values) {
-                    await run(`INSERT INTO variant_attribute_values (variant_id, attribute_value_id) VALUES (?, ?)`, [variantId, attrValue.id]);
+          console.log('[products] About to insert variant_attribute_values', variantId, attrValue.id);
+          await run(`INSERT INTO variant_attribute_values (variant_id, attribute_value_id) VALUES (?, ?)`, [variantId, attrValue.id]);
                 }
             }
         }
@@ -110,9 +137,16 @@ router.post('/', requirePermission('products:create'), async (req, res) => {
         res.status(201).json(createdProduct);
 
     } catch (err) {
-        console.error('Error al crear producto:', err.message);
-        await run('ROLLBACK');
-        res.status(500).json({ error: `Error en la transacción: ${err.message}` });
+    console.error('[products] Error al crear producto:', err && err.stack ? err.stack : err);
+    // intentar inspeccionar sqlite_master para brands_old
+    try {
+      const exists = await get("SELECT name FROM sqlite_master WHERE name = 'brands_old'");
+      console.error('[products] sqlite_master brands_old entry:', exists);
+    } catch (checkErr) {
+      console.error('[products] Error checking sqlite_master for brands_old:', checkErr && checkErr.message ? checkErr.message : checkErr);
+    }
+    try { await run('ROLLBACK'); } catch (e) { console.error('[products] ROLLBACK failed:', e && e.message ? e.message : e); }
+    res.status(500).json({ error: `Error en la transacción: ${err.message}` });
     }
 });
 

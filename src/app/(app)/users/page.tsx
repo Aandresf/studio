@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { getUsers, createUser, updateUser, deleteUser, getUserPermissions, updateUserPermissions } from '@/lib/api';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { UserForm } from '@/components/users/UserForm';
@@ -62,32 +63,22 @@ export default function UsersPage() {
 
       <div>
         {loading ? <div>Cargando...</div> : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Usuario</TableHead>
-                <TableHead>Nombre</TableHead>
-                <TableHead>Rol</TableHead>
-                <TableHead>Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {users.map(u => (
-                <TableRow key={u.id}>
-                  <TableCell>{u.username}</TableCell>
-                  <TableCell>{u.displayName}</TableCell>
-                  <TableCell>{u.roleId || '-'}</TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button size="sm" onClick={() => setEditingUser(u)} disabled={!canManageUsers}>Editar</Button>
-                      <Button size="sm" variant="outline" onClick={() => setShowPermissionsFor(u)} disabled={!canManageUsers}>Permisos</Button>
-                      <Button size="sm" variant="destructive" onClick={() => onDelete(u.id)} disabled={!canDeleteUsers}>Eliminar</Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <div className="grid gap-3">
+            {users.map(u => (
+              <Card key={u.id} className="p-4 flex items-center justify-between">
+                <div>
+                  <div className="font-medium">{u.username}</div>
+                  <div className="text-sm text-muted-foreground">{u.displayName || '-'}</div>
+                  <div className="text-sm text-muted-foreground">Rol: {u.roleId || '-'}</div>
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={() => setEditingUser(u)} disabled={!canManageUsers}>Editar</Button>
+                  <Button size="sm" variant="outline" onClick={() => setShowPermissionsFor(u)} disabled={!canManageUsers}>Permisos</Button>
+                  <Button size="sm" variant="destructive" onClick={() => onDelete(u.id)} disabled={!canDeleteUsers}>Eliminar</Button>
+                </div>
+              </Card>
+            ))}
+          </div>
         )}
       </div>
 

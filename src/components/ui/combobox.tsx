@@ -90,10 +90,14 @@ export function Combobox({
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent 
+      <PopoverContent
         sideOffset={sideOffset}
         align={align}
-        className={cn("min-w-[10rem] w-full sm:w-[--radix-popover-trigger-width] max-h-96 p-0 flex flex-col", popoverClassName)}
+        // Give the combobox its own width independent from the trigger
+        className={cn(
+          "w-64 min-w-[12rem] max-w-[90vw] sm:w-64 max-h-96 p-0 flex flex-col",
+          popoverClassName
+        )}
       >
         <div className="p-2 flex-shrink-0">
             <Input

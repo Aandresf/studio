@@ -1,4 +1,10 @@
 {
-  "stores": [],
-  "activeStoreId": null
+  "stores": [
+    {
+      "id": "disveliz_diaz_studio_848V_new",
+      "name": "Disveliz Diaz Studio (migrated)",
+      "dbPath": "database_disveliz_diaz_studio_848V_new.db"
+    }
+  ],
+  "activeStoreId": "disveliz_diaz_studio_848V_new"
 }
