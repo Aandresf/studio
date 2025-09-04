@@ -95,7 +95,7 @@ async function getPermissionsForRole(db, roleId) {
 router.get('/', requirePermission('users:read'), async (req, res) => {
   try {
     const db = databaseManager.getActiveDb();
-  const users = await allSql(db, 'SELECT id, username as username, display_name as displayName, email, role_id as roleId FROM users');
+  const users = await allSql(db, "SELECT id, username as username, display_name as displayName, email, role_id as roleId FROM users WHERE (status IS NULL OR status <> 'deleted') ORDER BY username ASC");
     const roles = await allSql(db, 'SELECT id, name, description FROM roles');
 
     // Expand permissions for each user and role
@@ -121,6 +121,9 @@ router.get('/:id', requirePermission('users:read'), async (req, res) => {
     const db = databaseManager.getActiveDb();
   const user = await getSql(db, 'SELECT id, username as username, display_name as displayName, email, role_id as roleId FROM users WHERE id = ?', [req.params.id]);
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+    // check status separately to avoid exposing it in the API contract
+    const ustatus = await getSql(db, 'SELECT status FROM users WHERE id = ?', [req.params.id]);
+    if (ustatus && ustatus.status === 'deleted') return res.status(404).json({ error: 'Usuario no encontrado' });
     user.permissions = await getPermissionsForUser(db, user.id);
     res.json(user);
   } catch (err) {
@@ -250,12 +253,29 @@ router.put('/:id', requirePermission('users:edit'), async (req, res) => {
 });
 
 // DELETE /:id - eliminar usuario (marcar o eliminar físicamente)
+// DELETE /:id - soft-delete users by setting a 'deleted' status if possible, but prevent deleting master account
 router.delete('/:id', requirePermission('users:delete'), async (req, res) => {
   try {
     const db = databaseManager.getActiveDb();
-  const user = await getSql(db, 'SELECT id, username FROM users WHERE id = ?', [req.params.id]);
+    const user = await getSql(db, 'SELECT id, username FROM users WHERE id = ?', [req.params.id]);
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
-  if (user.username === 'master' || user.username === 'Administrador' || user.username === 'admin') return res.status(400).json({ error: 'No se puede eliminar el usuario master' });
+    if (user.username === 'master' || user.username === 'Administrador' || user.username === 'admin') return res.status(400).json({ error: 'No se puede eliminar el usuario master' });
+
+    try {
+      // try soft-delete by updating username and setting deleted metadata; users table may not have status but we store deleted_at/deleted_by if available
+      const deleter = (req.currentUser && req.currentUser.id) ? req.currentUser.id : ((req.currentUser && req.currentUser.username) ? req.currentUser.username : 'system');
+      try {
+        const resUpdate = await runSql(db, "UPDATE users SET username = username || '_deleted', deleted_at = datetime('now'), deleted_by = ?, updated_at = datetime('now') WHERE id = ?", [deleter, req.params.id]);
+        if (resUpdate && resUpdate.changes && resUpdate.changes > 0) return res.json({ message: 'Usuario marcado/eliminado (soft-delete)' });
+      } catch (inner) {
+        // If columns don't exist, fall back to username-suffix-only
+        const resUpdate2 = await runSql(db, "UPDATE users SET username = username || '_deleted', updated_at = datetime('now') WHERE id = ?", [req.params.id]);
+        if (resUpdate2 && resUpdate2.changes && resUpdate2.changes > 0) return res.json({ message: 'Usuario marcado/eliminado (soft-delete)' });
+      }
+    } catch (e) {
+      // fallback to physical delete if update not possible
+    }
+
     await runSql(db, 'DELETE FROM users WHERE id = ?', [req.params.id]);
     res.json({ message: 'Usuario eliminado' });
   } catch (err) {

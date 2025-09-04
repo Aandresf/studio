@@ -62,15 +62,21 @@ router.put('/:id', requirePermission('departments:edit'), (req, res) => {
     }
 });
 
-// DELETE /:id - delete
+// DELETE /:id - try soft-delete by status, fallback to physical delete
 router.delete('/:id', requirePermission('departments:delete'), (req, res) => {
     const { id } = req.params;
     try {
         const db = databaseManager.getActiveDb();
-        db.run('DELETE FROM subdepartments WHERE id = ?', [id], function(err) {
-            if (err) return res.status(500).json({ error: err.message });
-            if (this.changes === 0) return res.status(404).json({ error: 'Subdepartment not found' });
-            res.status(204).send();
+        // try soft-delete
+        const deleter = (req.currentUser && req.currentUser.id) ? req.currentUser.id : ((req.currentUser && req.currentUser.username) ? req.currentUser.username : 'system');
+        db.run("UPDATE subdepartments SET row_status = 'deleted', deleted_at = datetime('now'), deleted_by = ?, updated_at = datetime('now') WHERE id = ?", [deleter, id], function(err) {
+            if (!err && this.changes && this.changes > 0) return res.status(204).send();
+            // fallback to delete
+            db.run('DELETE FROM subdepartments WHERE id = ?', [id], function(err2) {
+                if (err2) return res.status(500).json({ error: err2.message });
+                if (this.changes === 0) return res.status(404).json({ error: 'Subdepartment not found' });
+                res.status(204).send();
+            });
         });
     } catch (err) {
         res.status(500).json({ error: err.message });

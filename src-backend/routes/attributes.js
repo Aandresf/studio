@@ -38,13 +38,13 @@ router.get('/', requirePermission('attributes:read'), async (req, res) => {
         let rows;
         if (subdepartmentId) {
             if (includeGlobal === 'true' || includeGlobal === '1') {
-                rows = await allSql(db, 'SELECT id, name, subdepartment_id as subdepartmentId, created_at FROM attributes WHERE subdepartment_id = ? OR subdepartment_id IS NULL ORDER BY name ASC', [subdepartmentId]);
+                rows = await allSql(db, 'SELECT id, name, subdepartment_id as subdepartmentId, created_at FROM attributes WHERE (status IS NULL OR status <> \'deleted\') AND (subdepartment_id = ? OR subdepartment_id IS NULL) ORDER BY name ASC', [subdepartmentId]);
             } else {
-                rows = await allSql(db, 'SELECT id, name, subdepartment_id as subdepartmentId, created_at FROM attributes WHERE subdepartment_id = ? ORDER BY name ASC', [subdepartmentId]);
+                rows = await allSql(db, 'SELECT id, name, subdepartment_id as subdepartmentId, created_at FROM attributes WHERE (status IS NULL OR status <> \'deleted\') AND subdepartment_id = ? ORDER BY name ASC', [subdepartmentId]);
             }
         } else {
             // no subdepartmentId -> return global attributes only
-            rows = await allSql(db, 'SELECT id, name, subdepartment_id as subdepartmentId, created_at FROM attributes WHERE subdepartment_id IS NULL ORDER BY name ASC', []);
+            rows = await allSql(db, 'SELECT id, name, subdepartment_id as subdepartmentId, created_at FROM attributes WHERE (status IS NULL OR status <> \'deleted\') AND subdepartment_id IS NULL ORDER BY name ASC', []);
         }
         res.json(rows);
     } catch (error) {
@@ -86,11 +86,18 @@ router.put('/:id', requireAnyPermission('attributes:edit', 'catalog:manage'), as
     }
 });
 
-// DELETE /:id - delete attribute
+// DELETE /:id - try soft-delete (status='deleted') then fallback to physical delete
 router.delete('/:id', requireAnyPermission('attributes:delete', 'catalog:manage'), async (req, res) => {
     const { id } = req.params;
     try {
         const db = databaseManager.getActiveDb();
+        try {
+            const deleter = (req.currentUser && req.currentUser.id) ? req.currentUser.id : ((req.currentUser && req.currentUser.username) ? req.currentUser.username : 'system');
+            const r = await runSql(db, "UPDATE attributes SET status = 'deleted', deleted_at = datetime('now'), deleted_by = ?, updated_at = datetime('now') WHERE id = ?", [deleter, id]);
+            if (r && r.changes && r.changes > 0) return res.status(204).send();
+        } catch (e) {
+            if (!(e && e.message && e.message.includes('no such column'))) throw e;
+        }
         const result = await runSql(db, 'DELETE FROM attributes WHERE id = ?', [id]);
         if (result.changes === 0) return res.status(404).json({ error: 'Attribute not found' });
         res.status(204).send();
@@ -105,7 +112,7 @@ router.get('/:attributeId/values', requirePermission('attributes:read'), async (
     const { attributeId } = req.params;
     try {
         const db = databaseManager.getActiveDb();
-        const rows = await allSql(db, 'SELECT id, attribute_id as attributeId, value, created_at FROM attribute_values WHERE attribute_id = ? ORDER BY value ASC', [attributeId]);
+    const rows = await allSql(db, 'SELECT id, attribute_id as attributeId, value, created_at FROM attribute_values WHERE attribute_id = ? AND (status IS NULL OR status <> \'deleted\') ORDER BY value ASC', [attributeId]);
         res.json(rows);
     } catch (error) {
         res.status(500).json({ error: `Failed to fetch attribute values: ${error.message}` });
@@ -143,11 +150,18 @@ router.put('/:attributeId/values/:valueId', requireAnyPermission('attributes:edi
     }
 });
 
-// DELETE /:attributeId/values/:valueId
+// DELETE /:attributeId/values/:valueId - try soft-delete then fallback
 router.delete('/:attributeId/values/:valueId', requireAnyPermission('attributes:delete_value', 'catalog:manage'), async (req, res) => {
     const { attributeId, valueId } = req.params;
     try {
         const db = databaseManager.getActiveDb();
+        try {
+            const deleter = (req.currentUser && req.currentUser.id) ? req.currentUser.id : ((req.currentUser && req.currentUser.username) ? req.currentUser.username : 'system');
+            const r = await runSql(db, "UPDATE attribute_values SET status = 'deleted', deleted_at = datetime('now'), deleted_by = ?, updated_at = datetime('now') WHERE id = ? AND attribute_id = ?", [deleter, valueId, attributeId]);
+            if (r && r.changes && r.changes > 0) return res.status(204).send();
+        } catch (e) {
+            if (!(e && e.message && e.message.includes('no such column'))) throw e;
+        }
         const result = await runSql(db, 'DELETE FROM attribute_values WHERE id = ? AND attribute_id = ?', [valueId, attributeId]);
         if (result.changes === 0) return res.status(404).json({ error: 'Attribute value not found' });
         res.status(204).send();

@@ -126,6 +126,7 @@ router.delete('/:id/permissions/:key', requireMaster, async (req, res) => {
     if (!role) return res.status(404).json({ error: 'Role not found' });
     const perm = await getSql(db, 'SELECT id FROM permissions WHERE key = ?', [req.params.key]);
     if (!perm) return res.status(404).json({ error: 'Permission key not found' });
+    // role_permissions is a pivot table; physical delete is expected here
     await runSql(db, 'DELETE FROM role_permissions WHERE role_id = ? AND permission_id = ?', [req.params.id, perm.id]);
     res.json({ message: 'deleted' });
   } catch (e) {

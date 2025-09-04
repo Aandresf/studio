@@ -59,7 +59,7 @@ router.get('/', requireAnyPermission('suppliers:read', '*'), async (req, res) =>
   try {
     console.log('[suppliers] GET / - query:', req.query);
     const db = databaseManager.getActiveDb();
-    const rows = await allSql(db, `SELECT * FROM suppliers WHERE name LIKE ? OR document LIKE ? ORDER BY name LIMIT 200`, [q, q]);
+  const rows = await allSql(db, `SELECT * FROM suppliers WHERE (status IS NULL OR status <> 'deleted') AND (name LIKE ? OR document LIKE ?) ORDER BY name LIMIT 200`, [q, q]);
     console.log('[suppliers] GET / - returned rows:', Array.isArray(rows) ? rows.length : 0);
     res.json((rows || []).map(mapSupplierToProductShape));
   } catch (err) {
@@ -75,7 +75,7 @@ router.get('/:id', requireAnyPermission('suppliers:read', '*'), async (req, res)
     const db = databaseManager.getActiveDb();
   const row = await getSql(db, `SELECT * FROM suppliers WHERE id = ?`, [id]);
   console.log('[suppliers] GET /:id - row:', row);
-  if (!row) return res.status(404).json({ error: 'not_found' });
+  if (!row || (row.status && row.status === 'deleted')) return res.status(404).json({ error: 'not_found' });
   res.json(mapSupplierToProductShape(row));
   } catch (err) {
     console.error(err);
@@ -115,8 +115,16 @@ router.delete('/:id', requireAnyPermission('suppliers:delete', '*'), async (req,
   const id = req.params.id;
   try {
     const db = databaseManager.getActiveDb();
-  await runSql(db, `DELETE FROM suppliers WHERE id = ?`, [id]);
-  res.status(204).send();
+    try {
+      const deleter = (req.currentUser && req.currentUser.id) ? req.currentUser.id : ((req.currentUser && req.currentUser.username) ? req.currentUser.username : 'system');
+      const result = await runSql(db, "UPDATE suppliers SET status = 'deleted', deleted_at = datetime('now'), deleted_by = ?, updated_at = datetime('now') WHERE id = ?", [deleter, id]);
+      if (result && result.changes && result.changes > 0) return res.status(204).send();
+    } catch (e) {
+      if (!(e && e.message && e.message.includes('no such column'))) throw e;
+    }
+
+    await runSql(db, `DELETE FROM suppliers WHERE id = ?`, [id]);
+    res.status(204).send();
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'db_error' });

@@ -27,14 +27,14 @@ router.get('/', requirePermission('brands:read'), async (req, res) => {
         const db = databaseManager.getActiveDb();
         const { subdepartmentId, includeGlobal } = req.query;
         let rows;
-        if (subdepartmentId) {
+    if (subdepartmentId) {
             if (includeGlobal === 'true' || includeGlobal === '1') {
-                rows = await allSql(db, 'SELECT id, name, subdepartment_id as subdepartmentId, created_at FROM brands WHERE subdepartment_id = ? OR subdepartment_id IS NULL ORDER BY name ASC', [subdepartmentId]);
+                rows = await allSql(db, `SELECT id, name, subdepartment_id as subdepartmentId, created_at FROM brands WHERE (status IS NULL OR status <> 'deleted') AND (subdepartment_id = ? OR subdepartment_id IS NULL) ORDER BY name ASC`, [subdepartmentId]);
             } else {
-                rows = await allSql(db, 'SELECT id, name, subdepartment_id as subdepartmentId, created_at FROM brands WHERE subdepartment_id = ? ORDER BY name ASC', [subdepartmentId]);
+                rows = await allSql(db, `SELECT id, name, subdepartment_id as subdepartmentId, created_at FROM brands WHERE (status IS NULL OR status <> 'deleted') AND subdepartment_id = ? ORDER BY name ASC`, [subdepartmentId]);
             }
         } else {
-            rows = await allSql(db, 'SELECT id, name, subdepartment_id as subdepartmentId, created_at FROM brands WHERE subdepartment_id IS NULL ORDER BY name ASC', []);
+            rows = await allSql(db, `SELECT id, name, subdepartment_id as subdepartmentId, created_at FROM brands WHERE (status IS NULL OR status <> 'deleted') AND subdepartment_id IS NULL ORDER BY name ASC`, []);
         }
         res.json(rows);
     } catch (error) {
@@ -72,11 +72,18 @@ router.put('/:id', requireAnyPermission('brands:edit', 'catalog:manage'), async 
     }
 });
 
-// DELETE /:id - delete brand
+// DELETE /:id - try soft-delete via status column then fallback to physical delete
 router.delete('/:id', requireAnyPermission('brands:delete', 'catalog:manage'), async (req, res) => {
     const { id } = req.params;
     try {
         const db = databaseManager.getActiveDb();
+        try {
+            const deleter = (req.currentUser && req.currentUser.id) ? req.currentUser.id : ((req.currentUser && req.currentUser.username) ? req.currentUser.username : 'system');
+            const r = await runSql(db, "UPDATE brands SET status = 'deleted', deleted_at = datetime('now'), deleted_by = ?, updated_at = datetime('now') WHERE id = ?", [deleter, id]);
+            if (r && r.changes && r.changes > 0) return res.status(204).send();
+        } catch (e) {
+            if (!(e && e.message && e.message.includes('no such column'))) throw e;
+        }
         const result = await runSql(db, 'DELETE FROM brands WHERE id = ?', [id]);
         if (result.changes === 0) return res.status(404).json({ error: 'Brand not found' });
         res.status(204).send();

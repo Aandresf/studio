@@ -13,10 +13,11 @@ router.get('/', requirePermission('products:read'), async (req, res) => {
       SELECT p.*, b.name as brand_name 
       FROM products p
       LEFT JOIN brands b ON p.brand_id = b.id
+      WHERE (p.status IS NULL OR p.status <> 'deleted')
       ORDER BY p.id DESC
     `;
     const products = await dbAll(productsSql, []);
-    const variantsSql = `SELECT * FROM product_variants`;
+  const variantsSql = `SELECT * FROM product_variants WHERE (status IS NULL OR status <> 'deleted')`;
     const allVariants = await dbAll(variantsSql, []);
     const variantAttrsSql = `
       SELECT 
@@ -164,7 +165,7 @@ router.get('/:id', requirePermission('products:read'), async (req, res) => {
       WHERE id = ?
     `;
     const row = await dbGet(sql, [req.params.id]);
-    if (!row) return res.status(404).json({ error: 'Product not found' });
+    if (!row || (row.status && row.status === 'deleted')) return res.status(404).json({ error: 'Product not found' });
     res.json(row);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -265,10 +266,23 @@ router.put('/:id', requirePermission('products:edit'), async (req, res) => {
     }
 });
 
-// DELETE /:id
-router.delete('/:id', requirePermission('products:delete'), (req, res) => {
+// DELETE /:id - try soft-delete by setting status='deleted', fallback to physical DELETE if needed
+router.delete('/:id', requirePermission('products:delete'), async (req, res) => {
   try {
     const db = databaseManager.getActiveDb();
+    const run = util.promisify(db.run.bind(db));
+
+    try {
+      const deleter = (req.currentUser && req.currentUser.id) ? req.currentUser.id : ((req.currentUser && req.currentUser.username) ? req.currentUser.username : 'system');
+      const result = await run("UPDATE products SET status = 'deleted', deleted_at = datetime('now'), deleted_by = ?, updated_at = datetime('now') WHERE id = ?", [deleter, req.params.id]);
+      if (result && result.changes && result.changes > 0) return res.status(204).send();
+      // no rows updated -> try physical delete as fallback
+    } catch (e) {
+      // if the table doesn't have 'status' or deleted_by/deleted_at columns, SQLite will error - fall back to delete
+      if (!(e && e.message && e.message.includes('no such column'))) throw e;
+    }
+
+    // Fallback: physical delete
     db.run('DELETE FROM products WHERE id = ?', [req.params.id], function(err) {
       if (err) return res.status(500).json({ error: err.message });
       if (this.changes === 0) return res.status(404).json({ error: 'Product not found' });

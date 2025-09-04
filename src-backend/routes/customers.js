@@ -32,7 +32,7 @@ router.get('/', requirePermission('customers:read'), async (req, res) => {
     const q = req.query.q ? `%${req.query.q}%` : '%';
     const db = databaseManager.getActiveDb();
     const dbAll = util.promisify(db.all.bind(db));
-    const rows = await dbAll(`SELECT * FROM customers WHERE name LIKE ? OR document LIKE ? ORDER BY name LIMIT 200`, [q, q]);
+  const rows = await dbAll(`SELECT * FROM customers WHERE (status IS NULL OR status <> 'deleted') AND (name LIKE ? OR document LIKE ?) ORDER BY name LIMIT 200`, [q, q]);
     const mapped = (rows || []).map(mapCustomerToProductShape);
     res.json(mapped);
   } catch (err) {
@@ -70,9 +70,9 @@ router.get('/:id', requirePermission('customers:read'), async (req, res) => {
   try {
     const db = databaseManager.getActiveDb();
     const dbGet = util.promisify(db.get.bind(db));
-    const row = await dbGet(`SELECT * FROM customers WHERE id = ?`, [req.params.id]);
-    if (!row) return res.status(404).json({ error: 'Customer not found' });
-    res.json(mapCustomerToProductShape(row));
+  const row = await dbGet(`SELECT * FROM customers WHERE id = ?`, [req.params.id]);
+  if (!row || (row.status && row.status === 'deleted')) return res.status(404).json({ error: 'Customer not found' });
+  res.json(mapCustomerToProductShape(row));
   } catch (err) {
     console.error('[customers] GET /:id error', err && err.message);
     res.status(500).json({ error: err.message || 'db_error' });
@@ -96,13 +96,25 @@ router.put('/:id', requirePermission('customers:edit'), async (req, res) => {
   }
 });
 
-// DELETE /:id - delete and return 204 like products
+// DELETE /:id - try soft-delete by setting status='deleted' if column exists, else physical delete
 router.delete('/:id', requirePermission('customers:delete'), async (req, res) => {
   try {
     const db = databaseManager.getActiveDb();
-    const dbRun = util.promisify(db.run.bind(db));
-    const result = await dbRun(`DELETE FROM customers WHERE id = ?`, [req.params.id]);
-    // SQLite's run does not return affected rows via promisify; we assume success
+    const run = util.promisify(db.run.bind(db));
+    try {
+      const deleter = (req.currentUser && req.currentUser.id) ? req.currentUser.id : ((req.currentUser && req.currentUser.username) ? req.currentUser.username : 'system');
+      try {
+        const r = await run("UPDATE customers SET status = 'deleted', deleted_at = datetime('now'), deleted_by = ?, updated_at = datetime('now') WHERE id = ?", [deleter, req.params.id]);
+        if (r && r.changes && r.changes > 0) return res.status(204).send();
+      } catch (inner) {
+        if (!(inner && inner.message && inner.message.includes('no such column'))) throw inner;
+      }
+    } catch (e) {
+      if (!(e && e.message && e.message.includes('no such column'))) throw e;
+    }
+
+    // fallback to delete
+    const result = await run(`DELETE FROM customers WHERE id = ?`, [req.params.id]);
     res.status(204).send();
   } catch (err) {
     console.error('[customers] DELETE /:id error', err && err.message);
