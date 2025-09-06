@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Home, ShoppingCart, Package, Box, BarChart3, Store, Settings, Users, Truck, Menu, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { getStores } from '@/lib/api';
+import { getStores, setApiBase, getApiBaseCurrent } from '@/lib/api';
 import { CurrentUserProvider, useCurrentUser } from '@/hooks/use-current-user';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { StoreSelectionModal } from '@/components/dialogs/StoreSelectionModal';
@@ -15,6 +15,10 @@ interface BackendStatusContextType {
   isBackendReady: boolean;
   triggerRefetch: () => void;
   refetchKey: number;
+  // scanning state
+  scanning: boolean;
+  scanMessage?: string;
+  scanProgress?: { done: number; total: number } | null;
 }
 
 const BackendStatusContext = React.createContext<BackendStatusContextType | null>(null);
@@ -147,22 +151,153 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [activeStoreName, setActiveStoreName] = React.useState('Mi Cuenta');
   const [refetchKey, setRefetchKey] = React.useState(0);
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
+  const [scanning, setScanning] = React.useState(false);
+  const [scanMessage, setScanMessage] = React.useState<string | undefined>(undefined);
+  const [scanProgress, setScanProgress] = React.useState<{ done: number; total: number } | null>(null);
 
   React.useEffect(() => {
     let intervalId: any;
-    const check = async () => {
-      try {
-        const r = await fetch('http://localhost:3001/api/health');
-        if (r.ok) {
-          setIsBackendReady(true);
-          clearInterval(intervalId);
+    const detectAndCheck = async () => {
+      // Try: NEXT_PUBLIC_API_URL, same-origin /api/server-info, inferred host:3001
+      const env = typeof process !== 'undefined' ? (process.env.NEXT_PUBLIC_API_URL || '') : '';
+      const attempts: string[] = [];
+      if (env) attempts.push(env.replace(/\/$/, ''));
+      attempts.push(''); // relative
+      if (typeof window !== 'undefined' && window.location && window.location.hostname) attempts.push(`http://${window.location.hostname}:3001`);
+
+      let foundBase: string | null = null;
+      for (const a of attempts) {
+        try {
+          const base = a ? `${a.replace(/\/$/, '')}` : '';
+          const url = base ? `${base}/api/server-info` : `/api/server-info`;
+          const res = await fetch(url, { credentials: 'include' });
+          if (!res.ok) continue;
+          const info = await res.json();
+          // prefer frontendOrigin (where front is served) or preferredIp
+          if (info && (info.frontendOrigin || info.preferredIp)) {
+            if (info.frontendOrigin) {
+              setApiBase(info.frontendOrigin);
+              foundBase = getApiBaseCurrent();
+            } else if (info.preferredIp) {
+              setApiBase(`http://${info.preferredIp}:` + (info.port || '3001'));
+              foundBase = getApiBaseCurrent();
+            }
+            break;
+          }
+        } catch (e) {
+          // ignore and continue
         }
-      } catch (err) {
-        // ignore
+      }
+
+      // If we didn't find a base above, perform a small network scan of likely IPs on common subnets.
+      const scanForBackend = async () => {
+        if (typeof window === 'undefined') return null;
+        const host = window.location.hostname || 'localhost';
+        // build candidate list from current host prefix
+        const candidates: string[] = [];
+        const seen = new Set<string>();
+
+        const pushCandidate = (ip: string) => {
+          if (!ip) return;
+          if (seen.has(ip)) return;
+          seen.add(ip);
+          candidates.push(ip);
+        };
+
+        const isIpv4 = (s: string) => /^\d+\.\d+\.\d+\.\d+$/.test(s);
+        if (isIpv4(host)) {
+          const parts = host.split('.');
+          const prefix3 = `${parts[0]}.${parts[1]}.${parts[2]}`;
+          // common addresses to try in the same /24
+          ['1','2','3','4','10','50','100','254'].forEach(p => pushCandidate(`${prefix3}.${p}`));
+          // also try .1 of the /16 (e.g., 192.168.x.1 variations like VirtualBox 192.168.56.1)
+          pushCandidate(`${parts[0]}.${parts[1]}.56.1`);
+          pushCandidate(`${parts[0]}.${parts[1]}.1.1`);
+          // try same machine localhost addresses
+          pushCandidate('127.0.0.1');
+          pushCandidate('localhost');
+        } else {
+          // not IPv4: try common local addresses
+          ['192.168.0.1','192.168.1.1','192.168.56.1','10.0.2.2','10.0.0.1'].forEach(pushCandidate);
+        }
+
+        // include previously known base if stored
+        try { const last = window.localStorage.getItem('LAST_API_BASE'); if (last) pushCandidate(last.replace(/https?:\/\//,'').replace(/\/api$/,'')); } catch(e) {/* ignore */}
+
+        // helper to attempt health endpoint with timeout
+        const tryHealth = async (addr: string) => {
+          const urlBase = addr.startsWith('http') ? addr : `http://${addr}:3001`;
+          const url = `${urlBase.replace(/\/$/, '')}/api/health`;
+          try {
+            console.debug(`[Network Scan] probing ${url}`);
+            const controller = new AbortController();
+            const id = setTimeout(() => controller.abort(), 1200);
+            const res = await fetch(url, { method: 'GET', credentials: 'include', signal: controller.signal });
+            clearTimeout(id);
+            if (res.ok) {
+              console.info(`[Network Scan] backend found at ${urlBase}`);
+              return urlBase;
+            } else {
+              console.debug(`[Network Scan] probe failed ${url} status=${res.status}`);
+            }
+          } catch (e) {
+            console.debug(`[Network Scan] probe error ${url}: ${String(e)}`);
+          }
+          return null;
+        };
+
+        // Concurrency-limited runner
+        const concurrency = 6;
+        const queue = candidates.slice();
+        console.info('[Network Scan] candidates to probe:', candidates);
+        const workers: Promise<string | null>[] = [];
+        const runWorker = async () => {
+          while (queue.length) {
+            const ip = queue.shift();
+            if (!ip) break;
+            console.debug(`[Network Scan] worker probing ${ip}`);
+            const found = await tryHealth(ip);
+            if (found) {
+              console.info(`[Network Scan] discovered backend via worker at ${found}`);
+              return found;
+            }
+          }
+          return null;
+        };
+        for (let i=0;i<concurrency;i++) workers.push(runWorker());
+        const results = await Promise.all(workers);
+        const ok = results.find(r => r !== null && r !== undefined) as string | undefined;
+        return ok || null;
+      };
+
+      if (!isBackendReady) {
+        const found = await scanForBackend();
+        if (found) {
+          // set API base to discovered host
+          try { setApiBase(found); } catch(e) { /* ignore */ }
+        }
+      }
+
+      // If we didn't find a base above, try default health on current API base
+      const checkHealth = async () => {
+        try {
+          const base = getApiBaseCurrent();
+          const r = await fetch(`${base.replace(/\/$/, '')}/health`, { credentials: 'include' });
+          if (r.ok) {
+            setIsBackendReady(true);
+            return true;
+          }
+        } catch (e) { /* ignore */ }
+        return false;
+      };
+
+      intervalId = setInterval(checkHealth, 2000);
+      // immediate check
+      if (await checkHealth()) {
+        clearInterval(intervalId);
       }
     };
-    intervalId = setInterval(check, 2000);
-    check();
+    detectAndCheck();
     return () => clearInterval(intervalId);
   }, []);
 
@@ -185,7 +320,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   if (!isBackendReady) return <LoadingScreen />;
 
   return (
-    <BackendStatusContext.Provider value={{ isBackendReady, triggerRefetch, refetchKey }}>
+    <BackendStatusContext.Provider value={{ isBackendReady, triggerRefetch, refetchKey, scanning, scanMessage, scanProgress }}>
       <CurrentUserProvider>
         <TooltipProvider>
         <div className="grid h-screen w-full md:grid-cols-[16rem_1fr] lg:grid-cols-[16rem_1fr]">

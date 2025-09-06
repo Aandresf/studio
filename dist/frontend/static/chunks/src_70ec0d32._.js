@@ -1098,9 +1098,22 @@ __turbopack_context__.s({
 });
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/next/dist/compiled/react/jsx-dev-runtime.js [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/components/ui/card.tsx [app-client] (ecmascript)");
+var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$app$2f28$app$292f$layout$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/app/(app)/layout.tsx [app-client] (ecmascript)");
+;
 ;
 ;
 function LoadingScreen() {
+    const { scanning, scanMessage, scanProgress } = (()=>{
+        try {
+            return (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$app$2f28$app$292f$layout$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useBackendStatus"])();
+        } catch (e) {
+            return {
+                scanning: false,
+                scanMessage: undefined,
+                scanProgress: null
+            };
+        }
+    })();
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
         className: "flex min-h-screen w-full items-center justify-center bg-background",
         children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Card"], {
@@ -1114,45 +1127,81 @@ function LoadingScreen() {
                             children: "Inventario Studio"
                         }, void 0, false, {
                             fileName: "[project]/src/components/ui/loading-screen.tsx",
-                            lineNumber: 8,
+                            lineNumber: 13,
                             columnNumber: 11
                         }, this),
                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["CardDescription"], {
-                            children: "Iniciando servicios. Por favor, espere un momento."
+                            children: scanning ? scanMessage || 'Buscando backend en la red...' : 'Iniciando servicios. Por favor, espere un momento.'
                         }, void 0, false, {
                             fileName: "[project]/src/components/ui/loading-screen.tsx",
-                            lineNumber: 9,
+                            lineNumber: 14,
                             columnNumber: 11
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/components/ui/loading-screen.tsx",
-                    lineNumber: 7,
+                    lineNumber: 12,
                     columnNumber: 9
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$card$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["CardContent"], {
-                    className: "flex items-center justify-center",
-                    children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
-                        className: "h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"
-                    }, void 0, false, {
-                        fileName: "[project]/src/components/ui/loading-screen.tsx",
-                        lineNumber: 14,
-                        columnNumber: 11
-                    }, this)
-                }, void 0, false, {
+                    className: "flex flex-col items-center justify-center gap-4",
+                    children: [
+                        /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                            className: "h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"
+                        }, void 0, false, {
+                            fileName: "[project]/src/components/ui/loading-screen.tsx",
+                            lineNumber: 19,
+                            columnNumber: 11
+                        }, this),
+                        scanning && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                            className: "w-full",
+                            children: [
+                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                    className: "text-sm text-muted-foreground text-center",
+                                    children: scanProgress ? `Probing ${scanProgress.done} de ${scanProgress.total}` : 'Escaneando la red...'
+                                }, void 0, false, {
+                                    fileName: "[project]/src/components/ui/loading-screen.tsx",
+                                    lineNumber: 22,
+                                    columnNumber: 15
+                                }, this),
+                                /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                    className: "w-full bg-muted rounded h-2 mt-2",
+                                    children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                        className: "bg-primary h-2 rounded",
+                                        style: {
+                                            width: scanProgress ? `${scanProgress.done / Math.max(1, scanProgress.total) * 100}%` : '10%'
+                                        }
+                                    }, void 0, false, {
+                                        fileName: "[project]/src/components/ui/loading-screen.tsx",
+                                        lineNumber: 26,
+                                        columnNumber: 17
+                                    }, this)
+                                }, void 0, false, {
+                                    fileName: "[project]/src/components/ui/loading-screen.tsx",
+                                    lineNumber: 25,
+                                    columnNumber: 15
+                                }, this)
+                            ]
+                        }, void 0, true, {
+                            fileName: "[project]/src/components/ui/loading-screen.tsx",
+                            lineNumber: 21,
+                            columnNumber: 13
+                        }, this)
+                    ]
+                }, void 0, true, {
                     fileName: "[project]/src/components/ui/loading-screen.tsx",
-                    lineNumber: 13,
+                    lineNumber: 18,
                     columnNumber: 9
                 }, this)
             ]
         }, void 0, true, {
             fileName: "[project]/src/components/ui/loading-screen.tsx",
-            lineNumber: 6,
+            lineNumber: 11,
             columnNumber: 7
         }, this)
     }, void 0, false, {
         fileName: "[project]/src/components/ui/loading-screen.tsx",
-        lineNumber: 5,
+        lineNumber: 10,
         columnNumber: 5
     }, this);
 }
@@ -1172,6 +1221,7 @@ __turbopack_context__.s({
     "default": (()=>AppLayout),
     "useBackendStatus": (()=>useBackendStatus)
 });
+var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$build$2f$polyfills$2f$process$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/next/dist/build/polyfills/process.js [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/next/dist/compiled/react/jsx-dev-runtime.js [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/next/dist/compiled/react/index.js [app-client] (ecmascript)");
 var __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$client$2f$app$2d$dir$2f$link$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/node_modules/next/dist/client/app-dir/link.js [app-client] (ecmascript)");
@@ -1315,19 +1365,19 @@ function SidebarNav() {
                                 className: "h-4 w-4"
                             }, void 0, false, {
                                 fileName: "[project]/src/app/(app)/layout.tsx",
-                                lineNumber: 81,
+                                lineNumber: 85,
                                 columnNumber: 13
                             }, this),
                             item.label
                         ]
                     }, item.label, true, {
                         fileName: "[project]/src/app/(app)/layout.tsx",
-                        lineNumber: 73,
+                        lineNumber: 77,
                         columnNumber: 11
                     }, this))
             }, void 0, false, {
                 fileName: "[project]/src/app/(app)/layout.tsx",
-                lineNumber: 71,
+                lineNumber: 75,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1340,25 +1390,25 @@ function SidebarNav() {
                             className: "h-4 w-4"
                         }, void 0, false, {
                             fileName: "[project]/src/app/(app)/layout.tsx",
-                            lineNumber: 97,
+                            lineNumber: 101,
                             columnNumber: 13
                         }, this),
                         "Configuración"
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/app/(app)/layout.tsx",
-                    lineNumber: 90,
+                    lineNumber: 94,
                     columnNumber: 11
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/src/app/(app)/layout.tsx",
-                lineNumber: 88,
+                lineNumber: 92,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/src/app/(app)/layout.tsx",
-        lineNumber: 70,
+        lineNumber: 74,
         columnNumber: 5
     }, this);
 }
@@ -1387,7 +1437,7 @@ function UserMenu() {
                                 children: currentUserInfo ? currentUserInfo.displayName || currentUserInfo.username : 'Invitado'
                             }, void 0, false, {
                                 fileName: "[project]/src/app/(app)/layout.tsx",
-                                lineNumber: 116,
+                                lineNumber: 120,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
@@ -1395,18 +1445,18 @@ function UserMenu() {
                                 children: loading ? 'Cargando...' : ''
                             }, void 0, false, {
                                 fileName: "[project]/src/app/(app)/layout.tsx",
-                                lineNumber: 119,
+                                lineNumber: 123,
                                 columnNumber: 13
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/app/(app)/layout.tsx",
-                        lineNumber: 115,
+                        lineNumber: 119,
                         columnNumber: 11
                     }, this)
                 }, void 0, false, {
                     fileName: "[project]/src/app/(app)/layout.tsx",
-                    lineNumber: 114,
+                    lineNumber: 118,
                     columnNumber: 9
                 }, this),
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1421,7 +1471,7 @@ function UserMenu() {
                                 children: "Cerrar sesión"
                             }, void 0, false, {
                                 fileName: "[project]/src/app/(app)/layout.tsx",
-                                lineNumber: 128,
+                                lineNumber: 132,
                                 columnNumber: 17
                             }, this) : /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$client$2f$app$2d$dir$2f$link$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"], {
                                 href: "/login",
@@ -1429,28 +1479,28 @@ function UserMenu() {
                                 children: "Iniciar sesión"
                             }, void 0, false, {
                                 fileName: "[project]/src/app/(app)/layout.tsx",
-                                lineNumber: 132,
+                                lineNumber: 136,
                                 columnNumber: 17
                             }, this)
                         }, void 0, false, {
                             fileName: "[project]/src/app/(app)/layout.tsx",
-                            lineNumber: 126,
+                            lineNumber: 130,
                             columnNumber: 13
                         }, this)
                     }, void 0, false, {
                         fileName: "[project]/src/app/(app)/layout.tsx",
-                        lineNumber: 125,
+                        lineNumber: 129,
                         columnNumber: 11
                     }, this)
                 }, void 0, false, {
                     fileName: "[project]/src/app/(app)/layout.tsx",
-                    lineNumber: 124,
+                    lineNumber: 128,
                     columnNumber: 9
                 }, this)
             ]
         }, void 0, true, {
             fileName: "[project]/src/app/(app)/layout.tsx",
-            lineNumber: 113,
+            lineNumber: 117,
             columnNumber: 7
         }, this);
     } catch (e) {
@@ -1465,24 +1515,193 @@ function AppLayout({ children }) {
     const [activeStoreName, setActiveStoreName] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])('Mi Cuenta');
     const [refetchKey, setRefetchKey] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(0);
     const [isSidebarOpen, setIsSidebarOpen] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(false);
+    const [scanning, setScanning] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(false);
+    const [scanMessage, setScanMessage] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(undefined);
+    const [scanProgress, setScanProgress] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(null);
     (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useEffect"])({
         "AppLayout.useEffect": ()=>{
             let intervalId;
-            const check = {
-                "AppLayout.useEffect.check": async ()=>{
-                    try {
-                        const r = await fetch('http://localhost:3001/api/health');
-                        if (r.ok) {
-                            setIsBackendReady(true);
-                            clearInterval(intervalId);
+            const detectAndCheck = {
+                "AppLayout.useEffect.detectAndCheck": async ()=>{
+                    // Try: NEXT_PUBLIC_API_URL, same-origin /api/server-info, inferred host:3001
+                    const env = typeof __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$build$2f$polyfills$2f$process$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"] !== 'undefined' ? __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$build$2f$polyfills$2f$process$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"].env.NEXT_PUBLIC_API_URL || '' : '';
+                    const attempts = [];
+                    if (env) attempts.push(env.replace(/\/$/, ''));
+                    attempts.push(''); // relative
+                    if ("object" !== 'undefined' && window.location && window.location.hostname) attempts.push(`http://${window.location.hostname}:3001`);
+                    let foundBase = null;
+                    for (const a of attempts){
+                        try {
+                            const base = a ? `${a.replace(/\/$/, '')}` : '';
+                            const url = base ? `${base}/api/server-info` : `/api/server-info`;
+                            const res = await fetch(url, {
+                                credentials: 'include'
+                            });
+                            if (!res.ok) continue;
+                            const info = await res.json();
+                            // prefer frontendOrigin (where front is served) or preferredIp
+                            if (info && (info.frontendOrigin || info.preferredIp)) {
+                                if (info.frontendOrigin) {
+                                    (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$api$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["setApiBase"])(info.frontendOrigin);
+                                    foundBase = (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$api$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["getApiBaseCurrent"])();
+                                } else if (info.preferredIp) {
+                                    (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$api$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["setApiBase"])(`http://${info.preferredIp}:` + (info.port || '3001'));
+                                    foundBase = (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$api$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["getApiBaseCurrent"])();
+                                }
+                                break;
+                            }
+                        } catch (e) {
+                        // ignore and continue
                         }
-                    } catch (err) {
-                    // ignore
+                    }
+                    // If we didn't find a base above, perform a small network scan of likely IPs on common subnets.
+                    const scanForBackend = {
+                        "AppLayout.useEffect.detectAndCheck.scanForBackend": async ()=>{
+                            if ("TURBOPACK compile-time falsy", 0) {
+                                "TURBOPACK unreachable";
+                            }
+                            const host = window.location.hostname || 'localhost';
+                            // build candidate list from current host prefix
+                            const candidates = [];
+                            const seen = new Set();
+                            const pushCandidate = {
+                                "AppLayout.useEffect.detectAndCheck.scanForBackend.pushCandidate": (ip)=>{
+                                    if (!ip) return;
+                                    if (seen.has(ip)) return;
+                                    seen.add(ip);
+                                    candidates.push(ip);
+                                }
+                            }["AppLayout.useEffect.detectAndCheck.scanForBackend.pushCandidate"];
+                            const isIpv4 = {
+                                "AppLayout.useEffect.detectAndCheck.scanForBackend.isIpv4": (s)=>/^\d+\.\d+\.\d+\.\d+$/.test(s)
+                            }["AppLayout.useEffect.detectAndCheck.scanForBackend.isIpv4"];
+                            if (isIpv4(host)) {
+                                const parts = host.split('.');
+                                const prefix3 = `${parts[0]}.${parts[1]}.${parts[2]}`;
+                                // common addresses to try in the same /24
+                                [
+                                    '1',
+                                    '2',
+                                    '3',
+                                    '4',
+                                    '10',
+                                    '50',
+                                    '100',
+                                    '254'
+                                ].forEach({
+                                    "AppLayout.useEffect.detectAndCheck.scanForBackend": (p)=>pushCandidate(`${prefix3}.${p}`)
+                                }["AppLayout.useEffect.detectAndCheck.scanForBackend"]);
+                                // also try .1 of the /16 (e.g., 192.168.x.1 variations like VirtualBox 192.168.56.1)
+                                pushCandidate(`${parts[0]}.${parts[1]}.56.1`);
+                                pushCandidate(`${parts[0]}.${parts[1]}.1.1`);
+                                // try same machine localhost addresses
+                                pushCandidate('127.0.0.1');
+                                pushCandidate('localhost');
+                            } else {
+                                // not IPv4: try common local addresses
+                                [
+                                    '192.168.0.1',
+                                    '192.168.1.1',
+                                    '192.168.56.1',
+                                    '10.0.2.2',
+                                    '10.0.0.1'
+                                ].forEach(pushCandidate);
+                            }
+                            // include previously known base if stored
+                            try {
+                                const last = window.localStorage.getItem('LAST_API_BASE');
+                                if (last) pushCandidate(last.replace(/https?:\/\//, '').replace(/\/api$/, ''));
+                            } catch (e) {}
+                            // helper to attempt health endpoint with timeout
+                            const tryHealth = {
+                                "AppLayout.useEffect.detectAndCheck.scanForBackend.tryHealth": async (addr)=>{
+                                    const urlBase = addr.startsWith('http') ? addr : `http://${addr}:3001`;
+                                    const url = `${urlBase.replace(/\/$/, '')}/api/health`;
+                                    try {
+                                        console.debug(`[Network Scan] probing ${url}`);
+                                        const controller = new AbortController();
+                                        const id = setTimeout({
+                                            "AppLayout.useEffect.detectAndCheck.scanForBackend.tryHealth.id": ()=>controller.abort()
+                                        }["AppLayout.useEffect.detectAndCheck.scanForBackend.tryHealth.id"], 1200);
+                                        const res = await fetch(url, {
+                                            method: 'GET',
+                                            credentials: 'include',
+                                            signal: controller.signal
+                                        });
+                                        clearTimeout(id);
+                                        if (res.ok) {
+                                            console.info(`[Network Scan] backend found at ${urlBase}`);
+                                            return urlBase;
+                                        } else {
+                                            console.debug(`[Network Scan] probe failed ${url} status=${res.status}`);
+                                        }
+                                    } catch (e) {
+                                        console.debug(`[Network Scan] probe error ${url}: ${String(e)}`);
+                                    }
+                                    return null;
+                                }
+                            }["AppLayout.useEffect.detectAndCheck.scanForBackend.tryHealth"];
+                            // Concurrency-limited runner
+                            const concurrency = 6;
+                            const queue = candidates.slice();
+                            console.info('[Network Scan] candidates to probe:', candidates);
+                            const workers = [];
+                            const runWorker = {
+                                "AppLayout.useEffect.detectAndCheck.scanForBackend.runWorker": async ()=>{
+                                    while(queue.length){
+                                        const ip = queue.shift();
+                                        if (!ip) break;
+                                        console.debug(`[Network Scan] worker probing ${ip}`);
+                                        const found = await tryHealth(ip);
+                                        if (found) {
+                                            console.info(`[Network Scan] discovered backend via worker at ${found}`);
+                                            return found;
+                                        }
+                                    }
+                                    return null;
+                                }
+                            }["AppLayout.useEffect.detectAndCheck.scanForBackend.runWorker"];
+                            for(let i = 0; i < concurrency; i++)workers.push(runWorker());
+                            const results = await Promise.all(workers);
+                            const ok = results.find({
+                                "AppLayout.useEffect.detectAndCheck.scanForBackend.ok": (r)=>r !== null && r !== undefined
+                            }["AppLayout.useEffect.detectAndCheck.scanForBackend.ok"]);
+                            return ok || null;
+                        }
+                    }["AppLayout.useEffect.detectAndCheck.scanForBackend"];
+                    if (!isBackendReady) {
+                        const found = await scanForBackend();
+                        if (found) {
+                            // set API base to discovered host
+                            try {
+                                (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$api$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["setApiBase"])(found);
+                            } catch (e) {}
+                        }
+                    }
+                    // If we didn't find a base above, try default health on current API base
+                    const checkHealth = {
+                        "AppLayout.useEffect.detectAndCheck.checkHealth": async ()=>{
+                            try {
+                                const base = (0, __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$api$2e$ts__$5b$app$2d$client$5d$__$28$ecmascript$29$__["getApiBaseCurrent"])();
+                                const r = await fetch(`${base.replace(/\/$/, '')}/health`, {
+                                    credentials: 'include'
+                                });
+                                if (r.ok) {
+                                    setIsBackendReady(true);
+                                    return true;
+                                }
+                            } catch (e) {}
+                            return false;
+                        }
+                    }["AppLayout.useEffect.detectAndCheck.checkHealth"];
+                    intervalId = setInterval(checkHealth, 2000);
+                    // immediate check
+                    if (await checkHealth()) {
+                        clearInterval(intervalId);
                     }
                 }
-            }["AppLayout.useEffect.check"];
-            intervalId = setInterval(check, 2000);
-            check();
+            }["AppLayout.useEffect.detectAndCheck"];
+            detectAndCheck();
             return ({
                 "AppLayout.useEffect": ()=>clearInterval(intervalId)
             })["AppLayout.useEffect"];
@@ -1513,14 +1732,17 @@ function AppLayout({ children }) {
     const triggerRefetch = ()=>setRefetchKey((p)=>p + 1);
     if (!isBackendReady) return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$loading$2d$screen$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["LoadingScreen"], {}, void 0, false, {
         fileName: "[project]/src/app/(app)/layout.tsx",
-        lineNumber: 185,
+        lineNumber: 320,
         columnNumber: 31
     }, this);
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(BackendStatusContext.Provider, {
         value: {
             isBackendReady,
             triggerRefetch,
-            refetchKey
+            refetchKey,
+            scanning,
+            scanMessage,
+            scanProgress
         },
         children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$use$2d$current$2d$user$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["CurrentUserProvider"], {
             children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$ui$2f$tooltip$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["TooltipProvider"], {
@@ -1544,17 +1766,17 @@ function AppLayout({ children }) {
                                                         className: "h-5 w-5"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/app/(app)/layout.tsx",
-                                                        lineNumber: 201,
+                                                        lineNumber: 336,
                                                         columnNumber: 19
                                                     }, this)
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/app/(app)/layout.tsx",
-                                                    lineNumber: 200,
+                                                    lineNumber: 335,
                                                     columnNumber: 17
                                                 }, this)
                                             }, void 0, false, {
                                                 fileName: "[project]/src/app/(app)/layout.tsx",
-                                                lineNumber: 199,
+                                                lineNumber: 334,
                                                 columnNumber: 15
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$client$2f$app$2d$dir$2f$link$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"], {
@@ -1575,64 +1797,64 @@ function AppLayout({ children }) {
                                                                 d: "M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/app/(app)/layout.tsx",
-                                                                lineNumber: 206,
+                                                                lineNumber: 341,
                                                                 columnNumber: 19
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("path", {
                                                                 d: "m3.3 7 8.7 5 8.7-5"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/app/(app)/layout.tsx",
-                                                                lineNumber: 207,
+                                                                lineNumber: 342,
                                                                 columnNumber: 19
                                                             }, this),
                                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("path", {
                                                                 d: "M12 22V12"
                                                             }, void 0, false, {
                                                                 fileName: "[project]/src/app/(app)/layout.tsx",
-                                                                lineNumber: 208,
+                                                                lineNumber: 343,
                                                                 columnNumber: 19
                                                             }, this)
                                                         ]
                                                     }, void 0, true, {
                                                         fileName: "[project]/src/app/(app)/layout.tsx",
-                                                        lineNumber: 205,
+                                                        lineNumber: 340,
                                                         columnNumber: 17
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                         children: "InventarioSimple"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/app/(app)/layout.tsx",
-                                                        lineNumber: 210,
+                                                        lineNumber: 345,
                                                         columnNumber: 17
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/app/(app)/layout.tsx",
-                                                lineNumber: 204,
+                                                lineNumber: 339,
                                                 columnNumber: 15
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/app/(app)/layout.tsx",
-                                        lineNumber: 197,
+                                        lineNumber: 332,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                         className: "flex-1 overflow-auto py-2",
                                         children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(SidebarNav, {}, void 0, false, {
                                             fileName: "[project]/src/app/(app)/layout.tsx",
-                                            lineNumber: 214,
+                                            lineNumber: 349,
                                             columnNumber: 15
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/(app)/layout.tsx",
-                                        lineNumber: 213,
+                                        lineNumber: 348,
                                         columnNumber: 13
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/app/(app)/layout.tsx",
-                                lineNumber: 193,
+                                lineNumber: 328,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1651,24 +1873,24 @@ function AppLayout({ children }) {
                                                         className: "h-5 w-5"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/app/(app)/layout.tsx",
-                                                        lineNumber: 222,
+                                                        lineNumber: 357,
                                                         columnNumber: 19
                                                     }, this)
                                                 }, void 0, false, {
                                                     fileName: "[project]/src/app/(app)/layout.tsx",
-                                                    lineNumber: 221,
+                                                    lineNumber: 356,
                                                     columnNumber: 17
                                                 }, this)
                                             }, void 0, false, {
                                                 fileName: "[project]/src/app/(app)/layout.tsx",
-                                                lineNumber: 220,
+                                                lineNumber: 355,
                                                 columnNumber: 15
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                                 className: "w-full flex-1"
                                             }, void 0, false, {
                                                 fileName: "[project]/src/app/(app)/layout.tsx",
-                                                lineNumber: 225,
+                                                lineNumber: 360,
                                                 columnNumber: 15
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1678,38 +1900,38 @@ function AppLayout({ children }) {
                                                         className: "h-5 w-5"
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/app/(app)/layout.tsx",
-                                                        lineNumber: 227,
+                                                        lineNumber: 362,
                                                         columnNumber: 17
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                                         children: activeStoreName
                                                     }, void 0, false, {
                                                         fileName: "[project]/src/app/(app)/layout.tsx",
-                                                        lineNumber: 228,
+                                                        lineNumber: 363,
                                                         columnNumber: 17
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/src/app/(app)/layout.tsx",
-                                                lineNumber: 226,
+                                                lineNumber: 361,
                                                 columnNumber: 15
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                                 className: "ml-4",
                                                 children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(UserMenu, {}, void 0, false, {
                                                     fileName: "[project]/src/app/(app)/layout.tsx",
-                                                    lineNumber: 231,
+                                                    lineNumber: 366,
                                                     columnNumber: 17
                                                 }, this)
                                             }, void 0, false, {
                                                 fileName: "[project]/src/app/(app)/layout.tsx",
-                                                lineNumber: 230,
+                                                lineNumber: 365,
                                                 columnNumber: 15
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/src/app/(app)/layout.tsx",
-                                        lineNumber: 218,
+                                        lineNumber: 353,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("main", {
@@ -1717,7 +1939,7 @@ function AppLayout({ children }) {
                                         children: children
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/(app)/layout.tsx",
-                                        lineNumber: 234,
+                                        lineNumber: 369,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$components$2f$dialogs$2f$StoreSelectionModal$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["StoreSelectionModal"], {
@@ -1729,19 +1951,19 @@ function AppLayout({ children }) {
                                         }
                                     }, void 0, false, {
                                         fileName: "[project]/src/app/(app)/layout.tsx",
-                                        lineNumber: 235,
+                                        lineNumber: 370,
                                         columnNumber: 13
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/src/app/(app)/layout.tsx",
-                                lineNumber: 217,
+                                lineNumber: 352,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/src/app/(app)/layout.tsx",
-                        lineNumber: 191,
+                        lineNumber: 326,
                         columnNumber: 9
                     }, this),
                     isSidebarOpen && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1749,27 +1971,27 @@ function AppLayout({ children }) {
                         onClick: ()=>setIsSidebarOpen(false)
                     }, void 0, false, {
                         fileName: "[project]/src/app/(app)/layout.tsx",
-                        lineNumber: 246,
+                        lineNumber: 381,
                         columnNumber: 21
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/src/app/(app)/layout.tsx",
-                lineNumber: 190,
+                lineNumber: 325,
                 columnNumber: 9
             }, this)
         }, void 0, false, {
             fileName: "[project]/src/app/(app)/layout.tsx",
-            lineNumber: 189,
+            lineNumber: 324,
             columnNumber: 7
         }, this)
     }, void 0, false, {
         fileName: "[project]/src/app/(app)/layout.tsx",
-        lineNumber: 188,
+        lineNumber: 323,
         columnNumber: 5
     }, this);
 }
-_s2(AppLayout, "VPiBf5m/FvaKaPrNEFzB4ClzzXM=");
+_s2(AppLayout, "eYQySs6Konm5aGdr8PRYycMbBcM=");
 _c2 = AppLayout;
 var _c, _c1, _c2;
 __turbopack_context__.k.register(_c, "SidebarNav");

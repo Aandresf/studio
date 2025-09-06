@@ -44,6 +44,20 @@ module.exports = async function attachCurrentUser(req, res, next) {
       // ignore invalid cookie
     }
 
+    // Fallback: Authorization Bearer token
+    if (!userId) {
+      try {
+        const auth = req.headers.authorization || req.headers.Authorization || '';
+        if (auth && auth.toLowerCase().startsWith('bearer ')) {
+          const token = auth.split(' ')[1];
+          const payload = jwt.verify(token, JWT_SECRET);
+          if (payload && payload.userId) userId = payload.userId;
+        }
+      } catch (bearerErr) {
+        // ignore
+      }
+    }
+
     // If no session cookie / valid JWT, do not use legacy headers anymore.
     // Previous behavior accepted a legacy `x-user-id` header for migration;
     // that fallback has been removed to enforce authenticated requests.

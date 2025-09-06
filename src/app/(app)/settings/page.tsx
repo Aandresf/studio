@@ -371,6 +371,97 @@ export default function SettingsPage() {
     { value: 'sepia', label: 'Sepia' },
   ];
 
+    // Sync / QR state
+    const [syncUrl, setSyncUrl] = useState<string>('');
+    const [qrDataUrl, setQrDataUrl] = useState<string>('');
+    const [serverInfo, setServerInfo] = useState<{ ip?: string; host?: string; port?: number; url?: string } | null>(null);
+
+    // base URL for backend API (can be set at build time)
+    const apiBaseRaw = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '');
+    const apiPrefix = apiBaseRaw || '';
+    const [resolvedApiPrefix, setResolvedApiPrefix] = useState<string>(apiPrefix);
+
+    const handleCopyLink = async () => {
+        try {
+            await navigator.clipboard.writeText(syncUrl);
+            toastSuccess('Copiado', 'Enlace copiado al portapapeles');
+        } catch (e) {
+            toastError('Error', 'No se pudo copiar al portapapeles');
+        }
+    };
+
+    const handleOpenLink = () => {
+        if (!syncUrl) return;
+        window.open(syncUrl, '_blank');
+    };
+
+    useEffect(() => {
+        let mounted = true;
+        const setup = async () => {
+            const tryFetchServerInfo = async (base: string | null) => {
+                try {
+                    const url = base ? `${base.replace(/\/$/, '')}/api/server-info` : '/api/server-info';
+                    const res = await fetch(url);
+                    if (!res.ok) return null;
+                    const info = await res.json();
+                    return { info, base };
+                } catch (e) {
+                    return null;
+                }
+            };
+
+            // 1) try configured NEXT_PUBLIC_API_URL
+            let found = null;
+            if (apiPrefix) {
+                found = await tryFetchServerInfo(apiPrefix);
+                if (found) setResolvedApiPrefix(apiPrefix);
+            }
+
+            // 2) try same-origin relative endpoint (useful if Next dev proxy or backend served via same host)
+            if (!found) {
+                found = await tryFetchServerInfo(null);
+                if (found) setResolvedApiPrefix('');
+            }
+
+            // 3) try common backend default port on same hostname (http://<host>:3001)
+            if (!found && typeof window !== 'undefined') {
+                const host = window.location.hostname || 'localhost';
+                const candidate = `http://${host}:3001`;
+                found = await tryFetchServerInfo(candidate);
+                if (found) setResolvedApiPrefix(candidate);
+            }
+
+            if (found && mounted) {
+                const info = found.info as any;
+                setServerInfo(info);
+                // Prefer frontendOrigin returned by backend (where the front is served) when present
+                const base = info?.frontendOrigin ? info.frontendOrigin : (info?.ip ? `http://${info.ip}:${info.port}` : (info?.url || (typeof window !== 'undefined' ? window.location.origin : '')));
+                const url = base.endsWith('/') ? base : base + '/';
+                setSyncUrl(url);
+                const qrSrc = (found.base && found.base !== '') ? `${found.base.replace(/\/$/, '')}/api/qr?data=${encodeURIComponent(url)}` : `/api/qr?data=${encodeURIComponent(url)}`;
+                setQrDataUrl(qrSrc);
+                return;
+            }
+
+            // fallback
+            console.warn('No se pudo obtener server-info, usando origin por defecto');
+            const fallback = (typeof window !== 'undefined' ? (window.location?.origin || '') + '/' : '');
+            setSyncUrl(fallback);
+            const qrSrc = (apiPrefix || '') ? `${(apiPrefix || '').replace(/\/$/, '')}/api/qr?data=${encodeURIComponent(fallback)}` : `/api/qr?data=${encodeURIComponent(fallback)}`;
+            setQrDataUrl(qrSrc);
+        };
+        setup();
+        return () => { mounted = false; };
+    }, []);
+
+    // keep qrDataUrl updated when user edits syncUrl
+    useEffect(() => {
+        if (!syncUrl) return;
+        const base = resolvedApiPrefix || '';
+        const qrSrc = base ? `${base.replace(/\/$/, '')}/api/qr?data=${encodeURIComponent(syncUrl)}` : `/api/qr?data=${encodeURIComponent(syncUrl)}`;
+        setQrDataUrl(qrSrc);
+    }, [syncUrl, resolvedApiPrefix]);
+
   return (
     <div className="flex flex-col gap-6">
        <div className="flex-1">
@@ -383,6 +474,7 @@ export default function SettingsPage() {
                     <TabsTrigger value="appearance">Apariencia</TabsTrigger>
                     <TabsTrigger value="advanced">Avanzados</TabsTrigger>
                     <TabsTrigger value="miscellaneous">Misceláneos</TabsTrigger>
+                    <TabsTrigger value="sincronizacion">Sincronización</TabsTrigger>
                 </TabsList>
         <TabsContent value="stores">
            <div className="grid md:grid-cols-2 gap-6">
@@ -592,6 +684,34 @@ export default function SettingsPage() {
             </Card>
            </div>
         </TabsContent>
+                            <TabsContent value="sincronizacion">
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle>Sincronización - Accede desde un móvil</CardTitle>
+                                        <CardDescription>
+                                            Escanea el código QR con tu teléfono para abrir la aplicación web desde la red local.
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="space-y-4">
+                                        <p className="text-sm text-muted-foreground">Enlace generado (editable):</p>
+                                        <div className="flex gap-2 items-center">
+                                            <Input
+                                                value={syncUrl}
+                                                onChange={(e) => setSyncUrl(e.target.value)}
+                                                id="sync-link"
+                                            />
+                                            <div className="flex flex-col sm:flex-row gap-2">
+                                                <Button onClick={handleCopyLink}>Copiar</Button>
+                                                <Button variant="outline" onClick={handleOpenLink}>Abrir</Button>
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-col items-center">
+                                            <img alt="QR para acceder a la app" src={qrDataUrl} className="border p-2 bg-white" />
+                                            <p className="text-xs text-muted-foreground mt-2">Si tu móvil y el equipo están en la misma red local, el QR abrirá la página directamente.</p>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </TabsContent>
       </Tabs>
     </div>
   )

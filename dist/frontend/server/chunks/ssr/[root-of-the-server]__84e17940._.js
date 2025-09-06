@@ -575,6 +575,7 @@ __turbopack_context__.s({
     "exportPurchasesToExcel": (()=>exportPurchasesToExcel),
     "exportSalesToExcel": (()=>exportSalesToExcel),
     "fetchAPI": (()=>fetchAPI),
+    "getApiBaseCurrent": (()=>getApiBaseCurrent),
     "getAttributeValues": (()=>getAttributeValues),
     "getAttributes": (()=>getAttributes),
     "getBrands": (()=>getBrands),
@@ -614,6 +615,8 @@ __turbopack_context__.s({
     "quitApplication": (()=>quitApplication),
     "removePendingTransaction": (()=>removePendingTransaction),
     "setActiveStore": (()=>setActiveStore),
+    "setApiBase": (()=>setApiBase),
+    "setAuthToken": (()=>setAuthToken),
     "updateAttribute": (()=>updateAttribute),
     "updateAttributeValue": (()=>updateAttributeValue),
     "updateBrand": (()=>updateBrand),
@@ -631,8 +634,39 @@ __turbopack_context__.s({
 });
 var __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$hooks$2f$use$2d$toast$2e$tsx__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/src/hooks/use-toast.tsx [app-ssr] (ecmascript)");
 ;
-// Use NEXT_PUBLIC_API_URL at build/runtime if provided, otherwise default to localhost:3001
-const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001') + '/api';
+// Determine API base at runtime:
+// 1) use NEXT_PUBLIC_API_URL if provided (recommended),
+// 2) else, if running in browser, assume backend runs on same host at port 3001 (http://<host>:3001),
+// 3) otherwise fall back to http://localhost:3001
+function getApiBase() {
+    const env = process.env.NEXT_PUBLIC_API_URL;
+    if (env && env.length) return env.replace(/\/$/, '') + '/api';
+    if ("TURBOPACK compile-time falsy", 0) {
+        "TURBOPACK unreachable";
+    }
+    return 'http://localhost:3001/api';
+}
+// Mutable API base value (can be updated at runtime by the app)
+let API_BASE_URL = getApiBase();
+let AUTH_TOKEN = null;
+function setAuthToken(token) {
+    AUTH_TOKEN = token;
+}
+function setApiBase(newBase) {
+    if (!newBase) return;
+    let b = newBase.replace(/\/$/, '');
+    if (!b.endsWith('/api')) b = b + '/api';
+    API_BASE_URL = b;
+    // also store for subsequent loads
+    try {
+        if ("TURBOPACK compile-time falsy", 0) {
+            "TURBOPACK unreachable";
+        }
+    } catch (e) {}
+}
+function getApiBaseCurrent() {
+    return API_BASE_URL;
+}
 // Definimos una clase de error personalizada para manejar errores de la API
 class ApiError extends Error {
     status;
@@ -659,6 +693,10 @@ async function fetchAPI(endpoint, options = {}) {
         // Ensure cookies (HttpOnly session) are sent with requests to the backend
         credentials: 'include'
     };
+    // If we have an explicit AUTH_TOKEN (from login) add Authorization header as fallback
+    if (AUTH_TOKEN) {
+        config.headers['Authorization'] = `Bearer ${AUTH_TOKEN}`;
+    }
     try {
         const response = await fetch(url, config);
         if (!response.ok) {
@@ -694,13 +732,19 @@ async function fetchAPI(endpoint, options = {}) {
     }
 }
 ;
-const login = (username, password)=>fetchAPI('/auth/login', {
+const login = async (username, password)=>{
+    const res = await fetchAPI('/auth/login', {
         method: 'POST',
         body: JSON.stringify({
             username,
             password
         })
     });
+    if (res && res.token) {
+        setAuthToken(res.token);
+    }
+    return res;
+};
 const logout = ()=>fetchAPI('/auth/logout', {
         method: 'POST'
     });

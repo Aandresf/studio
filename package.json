@@ -4,10 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "cross-env NODE_OPTIONS='--inspect' next dev --turbopack -p 9002",
+    "dev-backend": "node src-backend/index.js",
     "genkit:dev": "genkit start -- tsx src/ai/dev.ts",
     "genkit:watch": "genkit start -- tsx --watch src/ai/dev.ts",
     "compile:frontend": "next build",
     "start": "next start",
+  "start-backend": "node src-backend/index.js",
     "lint": "next lint",
     "compile:backend": "node scripts/prepare-installer-files.js",
     "compile:portable": "node scripts/create-portable.js",
@@ -64,7 +66,8 @@
     "recharts": "^2.15.1",
     "tailwind-merge": "^3.0.1",
     "tailwindcss-animate": "^1.0.7",
-    "zod": "^3.24.2"
+    "zod": "^3.24.2",
+    "qrcode": "^1.5.1"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.6.2",

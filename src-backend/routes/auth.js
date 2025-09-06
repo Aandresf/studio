@@ -31,8 +31,8 @@ router.post('/login', async (req, res) => {
     // Set HttpOnly cookie
     res.cookie('session', token, { httpOnly: true, sameSite: 'lax' });
 
-    // Return minimal user info
-    res.json({ id: user.id, username: user.username, displayName: user.displayName, roleId: user.roleId });
+  // Return minimal user info and token (token allows cross-origin clients to authenticate via Authorization header)
+  res.json({ id: user.id, username: user.username, displayName: user.displayName, roleId: user.roleId, token });
   } catch (e) {
     console.error('Login error', e);
     res.status(500).json({ error: 'Internal error' });

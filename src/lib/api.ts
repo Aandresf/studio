@@ -2,8 +2,41 @@
 import { toastError } from "@/hooks/use-toast";
 import { Product, DashboardSummary, RecentSale, InventoryMovement, ReportMetadata, FullReport, ReportType, StoreSettings, PurchasePayload, SalePayload, GroupedPurchase, GroupedSale } from './types';
 
-// Use NEXT_PUBLIC_API_URL at build/runtime if provided, otherwise default to localhost:3001
-const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001') + '/api';
+// Determine API base at runtime:
+// 1) use NEXT_PUBLIC_API_URL if provided (recommended),
+// 2) else, if running in browser, assume backend runs on same host at port 3001 (http://<host>:3001),
+// 3) otherwise fall back to http://localhost:3001
+function getApiBase() {
+    const env = process.env.NEXT_PUBLIC_API_URL;
+    if (env && env.length) return env.replace(/\/$/, '') + '/api';
+    if (typeof window !== 'undefined' && window.location && window.location.hostname) {
+        // assume backend on same host at port 3001
+        return `http://${window.location.hostname}:3001/api`;
+    }
+    return 'http://localhost:3001/api';
+}
+
+// Mutable API base value (can be updated at runtime by the app)
+let API_BASE_URL = getApiBase();
+let AUTH_TOKEN: string | null = null;
+
+export function setAuthToken(token: string | null) {
+    AUTH_TOKEN = token;
+}
+
+// Allow runtime override (accepts either a base like 'http://host:3001' or 'http://host:3001/api')
+export function setApiBase(newBase: string) {
+    if (!newBase) return;
+    let b = newBase.replace(/\/$/, '');
+    if (!b.endsWith('/api')) b = b + '/api';
+    API_BASE_URL = b;
+    // also store for subsequent loads
+    try { if (typeof window !== 'undefined' && window.localStorage) window.localStorage.setItem('LAST_API_BASE', b); } catch (e) { /* ignore */ }
+}
+
+export function getApiBaseCurrent() {
+    return API_BASE_URL;
+}
 
 // Definimos una clase de error personalizada para manejar errores de la API
 class ApiError extends Error {
@@ -33,6 +66,11 @@ async function fetchAPI(endpoint: string, options: RequestInit & { responseType?
         // Ensure cookies (HttpOnly session) are sent with requests to the backend
         credentials: 'include',
     };
+
+    // If we have an explicit AUTH_TOKEN (from login) add Authorization header as fallback
+    if (AUTH_TOKEN) {
+        (config.headers as Record<string,string>)['Authorization'] = `Bearer ${AUTH_TOKEN}`;
+    }
 
     try {
         const response = await fetch(url, config);
@@ -75,10 +113,16 @@ async function fetchAPI(endpoint: string, options: RequestInit & { responseType?
 export { fetchAPI };
 
 // Auth helpers
-export const login = (username: string, password: string) => fetchAPI('/auth/login', {
-    method: 'POST',
-    body: JSON.stringify({ username, password }),
-});
+export const login = async (username: string, password: string) => {
+    const res = await fetchAPI('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ username, password }),
+    });
+    if (res && (res as any).token) {
+        setAuthToken((res as any).token);
+    }
+    return res;
+};
 
 export const logout = () => fetchAPI('/auth/logout', { method: 'POST' });
 
