@@ -10,21 +10,29 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTheme } from "@/components/theme-provider";
 import { Download, Upload, Trash2, Calendar as CalendarIcon, ChevronsUpDown } from "lucide-react";
 import { useBackendStatus } from '@/app/(app)/layout';
+import { useCurrentUser } from '@/hooks/use-current-user';
+import ProtectedRedirect from '@/components/ProtectedRedirect';
 import { getStores, getStoreDetails, updateStoreDetails, deleteStore, getLatestSnapshot, createInventorySnapshot } from '@/lib/api';
 import { toastSuccess, toastError } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
+import { getPermissionsMetaSync, loadPermissionsMeta } from '@/lib/permissionsMeta';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { BrandsManagementCard } from '@/components/settings/brands-management';
+import { AttributesManagementCard } from '@/components/settings/attributes-management';
+import { DepartmentsManagementCard } from '@/components/settings/departments-management';
 
 interface Store {
   id: string;
   name: string;
   dbPath: string;
 }
+
 
 interface StoreDetails {
   name?: string;
@@ -34,6 +42,8 @@ interface StoreDetails {
     allowNegativeStockSales?: boolean;
     allowSellBelowCost?: boolean;
     showOutOfStockProducts?: boolean;
+    showInactiveProducts?: boolean;
+    enableGlobalAttributes?: boolean;
   }
 }
 
@@ -44,6 +54,9 @@ interface SnapshotResult {
 }
 
 function InventorySnapshotCard() {
+    const currentUser = useCurrentUser();
+    const canCreateSnapshot = !!(currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('reports:create_snapshot'));
+    const snapshotPermMeta = getPermissionsMetaSync().find((p: any) => p.key === 'reports:create_snapshot');
     const [latestSnapshotDate, setLatestSnapshotDate] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
@@ -127,9 +140,21 @@ function InventorySnapshotCard() {
                             />
                         </PopoverContent>
                     </Popover>
-                    <Button onClick={handleCreateSnapshot} disabled={isCreating || !selectedDate}>
-                        {isCreating ? 'Generando Cierre...' : 'Generar Cierre'}
-                    </Button>
+                                        <TooltipProvider>
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <Button onClick={handleCreateSnapshot} disabled={isCreating || !selectedDate || !canCreateSnapshot}>
+                                                        {isCreating ? 'Generando Cierre...' : 'Generar Cierre'}
+                                                    </Button>
+                                                </TooltipTrigger>
+                                                {!canCreateSnapshot && (
+                                                    <TooltipContent>
+                                                        <p>{snapshotPermMeta?.label || 'Crear snapshot'}</p>
+                                                        <p className="text-xs text-muted-foreground">{snapshotPermMeta?.description || 'Requiere permiso reports:create_snapshot'}</p>
+                                                    </TooltipContent>
+                                                )}
+                                            </Tooltip>
+                                        </TooltipProvider>
                 </div>
                 {snapshotResult && (
                      <Dialog open={!!snapshotResult} onOpenChange={(isOpen) => !isOpen && setSnapshotResult(null)}>
@@ -169,6 +194,8 @@ function DangerZone({ activeStoreId, stores, onStoreDeleted }: { activeStoreId: 
     const [confirmationText, setConfirmationText] = useState('');
     const [isDeleting, setIsDeleting] = useState(false);
     const activeStore = stores.find(s => s.id === activeStoreId);
+    const currentUserForDanger = useCurrentUser();
+    const canDeleteStore = currentUserForDanger?.permissions?.includes('*') || currentUserForDanger?.permissions?.includes('stores:delete');
 
     const handleDelete = async () => {
         if (confirmationText !== activeStore?.name) {
@@ -197,7 +224,7 @@ function DangerZone({ activeStoreId, stores, onStoreDeleted }: { activeStoreId: 
             <CardContent>
                 <Dialog open={isOpen} onOpenChange={setIsOpen}>
                     <DialogTrigger asChild>
-                        <Button variant="destructive" disabled={stores.length <= 1}>
+                        <Button variant="destructive" disabled={stores.length <= 1 || !canDeleteStore}>
                             <Trash2 className="mr-2 h-4 w-4" />
                             Eliminar Tienda Actual
                         </Button>
@@ -229,8 +256,15 @@ function DangerZone({ activeStoreId, stores, onStoreDeleted }: { activeStoreId: 
     );
 }
 
+
+
+
 export default function SettingsPage() {
   const { setTheme } = useTheme();
+    const currentUserCheck = useCurrentUser();
+    const canEditSettingsCheck = currentUserCheck?.permissions?.includes('*') || currentUserCheck?.permissions?.includes('settings:edit');
+
+    if (!canEditSettingsCheck) return <ProtectedRedirect condition={false} />;
   const { isBackendReady, refetchKey, triggerRefetch } = useBackendStatus();
 
   const [stores, setStores] = useState<Store[]>([]);
@@ -240,6 +274,11 @@ export default function SettingsPage() {
   const [isLoadingStores, setIsLoadingStores] = useState(true);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+        const [subdepartmentsList, setSubdepartmentsList] = useState<any[]>([]);
+    
+    // Modal state for per-subdepartment management
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [activeModal, setActiveModal] = useState<null | { type: 'brands' | 'attributes'; subdepartmentId?: number | string }>(null);
 
   const fetchStores = useCallback(async () => {
     if (!isBackendReady) return;
@@ -272,6 +311,31 @@ export default function SettingsPage() {
   useEffect(() => {
     fetchStores();
   }, [isBackendReady, fetchStores, refetchKey]);
+
+    useEffect(() => {
+        const loadSubs = async () => {
+            try {
+                const subs = await (await import('@/lib/api')).getSubdepartments();
+                setSubdepartmentsList(subs || []);
+            } catch (err) {
+                // handled by API layer
+            }
+        };
+        loadSubs();
+    }, []);
+
+        // Load permissions metadata for labels/descriptions used in tooltips
+        useEffect(() => {
+            let mounted = true;
+                    (async () => {
+                        try {
+                            await loadPermissionsMeta();
+                        } catch (e) {
+                            // ignore - backend might not be accessible during build/dev
+                        }
+                    })();
+            return () => { mounted = false; };
+        }, []);
 
   useEffect(() => {
     if (activeStoreId) {
@@ -308,11 +372,108 @@ export default function SettingsPage() {
     }
   };
 
+    // permisos para edición de configuración (reutilizamos currentUserCheck)
+    const currentUser = currentUserCheck;
+    const canEditSettings = canEditSettingsCheck || false;
+    // permiso específico para los ajustes avanzados (ej. permitir vender bajo costo, stock negativo)
+    const canManageAdvanced = !!(currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('settings:advanced'));
+
   const themes = [
     { value: 'light', label: 'Claro' },
     { value: 'dark', label: 'Gris Oscuro' },
     { value: 'sepia', label: 'Sepia' },
   ];
+
+    // Sync / QR state
+    const [syncUrl, setSyncUrl] = useState<string>('');
+    const [qrDataUrl, setQrDataUrl] = useState<string>('');
+    const [serverInfo, setServerInfo] = useState<{ ip?: string; host?: string; port?: number; url?: string } | null>(null);
+
+    // base URL for backend API (can be set at build time)
+    const apiBaseRaw = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '');
+    const apiPrefix = apiBaseRaw || '';
+    const [resolvedApiPrefix, setResolvedApiPrefix] = useState<string>(apiPrefix);
+
+    const handleCopyLink = async () => {
+        try {
+            await navigator.clipboard.writeText(syncUrl);
+            toastSuccess('Copiado', 'Enlace copiado al portapapeles');
+        } catch (e) {
+            toastError('Error', 'No se pudo copiar al portapapeles');
+        }
+    };
+
+    const handleOpenLink = () => {
+        if (!syncUrl) return;
+        window.open(syncUrl, '_blank');
+    };
+
+    useEffect(() => {
+        let mounted = true;
+        const setup = async () => {
+            const tryFetchServerInfo = async (base: string | null) => {
+                try {
+                    const url = base ? `${base.replace(/\/$/, '')}/api/server-info` : '/api/server-info';
+                    const res = await fetch(url);
+                    if (!res.ok) return null;
+                    const info = await res.json();
+                    return { info, base };
+                } catch (e) {
+                    return null;
+                }
+            };
+
+            // 1) try configured NEXT_PUBLIC_API_URL
+            let found = null;
+            if (apiPrefix) {
+                found = await tryFetchServerInfo(apiPrefix);
+                if (found) setResolvedApiPrefix(apiPrefix);
+            }
+
+            // 2) try same-origin relative endpoint (useful if Next dev proxy or backend served via same host)
+            if (!found) {
+                found = await tryFetchServerInfo(null);
+                if (found) setResolvedApiPrefix('');
+            }
+
+            // 3) try common backend default port on same hostname (http://<host>:3001)
+            if (!found && typeof window !== 'undefined') {
+                const host = window.location.hostname || 'localhost';
+                const candidate = `http://${host}:3001`;
+                found = await tryFetchServerInfo(candidate);
+                if (found) setResolvedApiPrefix(candidate);
+            }
+
+            if (found && mounted) {
+                const info = found.info as any;
+                setServerInfo(info);
+                // Prefer frontendOrigin returned by backend (where the front is served) when present
+                const base = info?.frontendOrigin ? info.frontendOrigin : (info?.ip ? `http://${info.ip}:${info.port}` : (info?.url || (typeof window !== 'undefined' ? window.location.origin : '')));
+                const url = base.endsWith('/') ? base : base + '/';
+                setSyncUrl(url);
+                const qrSrc = (found.base && found.base !== '') ? `${found.base.replace(/\/$/, '')}/api/qr?data=${encodeURIComponent(url)}` : `/api/qr?data=${encodeURIComponent(url)}`;
+                setQrDataUrl(qrSrc);
+                return;
+            }
+
+            // fallback
+            console.warn('No se pudo obtener server-info, usando origin por defecto');
+            const fallback = (typeof window !== 'undefined' ? (window.location?.origin || '') + '/' : '');
+            setSyncUrl(fallback);
+            const qrSrc = (apiPrefix || '') ? `${(apiPrefix || '').replace(/\/$/, '')}/api/qr?data=${encodeURIComponent(fallback)}` : `/api/qr?data=${encodeURIComponent(fallback)}`;
+            setQrDataUrl(qrSrc);
+        };
+        setup();
+        return () => { mounted = false; };
+    }, []);
+
+    // keep qrDataUrl updated when user edits syncUrl
+    useEffect(() => {
+        if (!syncUrl) return;
+        const base = resolvedApiPrefix || '';
+        const qrSrc = base ? `${base.replace(/\/$/, '')}/api/qr?data=${encodeURIComponent(syncUrl)}` : `/api/qr?data=${encodeURIComponent(syncUrl)}`;
+        setQrDataUrl(qrSrc);
+    }, [syncUrl, resolvedApiPrefix]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -321,12 +482,13 @@ export default function SettingsPage() {
             <p className="text-sm text-muted-foreground">Gestiona tus tiendas y la apariencia de la aplicación.</p>
         </div>
       <Tabs defaultValue="stores" className="grid w-full gap-4">
-        <TabsList>
-          <TabsTrigger value="stores">Tiendas</TabsTrigger>
-          <TabsTrigger value="appearance">Apariencia</TabsTrigger>
-          <TabsTrigger value="advanced">Avanzados</TabsTrigger>
-          <TabsTrigger value="miscellaneous">Misceláneos</TabsTrigger>
-        </TabsList>
+                <TabsList>
+                    <TabsTrigger value="stores">Tiendas</TabsTrigger>
+                    <TabsTrigger value="appearance">Apariencia</TabsTrigger>
+                    <TabsTrigger value="advanced">Avanzados</TabsTrigger>
+                    <TabsTrigger value="miscellaneous">Misceláneos</TabsTrigger>
+                    <TabsTrigger value="sincronizacion">Sincronización</TabsTrigger>
+                </TabsList>
         <TabsContent value="stores">
            <div className="grid md:grid-cols-2 gap-6">
               <Card>
@@ -341,17 +503,17 @@ export default function SettingsPage() {
                         <div className="space-y-4">
                             <div className="space-y-1">
                                 <Label htmlFor="name">Nombre</Label>
-                                <Input id="name" value={storeDetails.name || ''} onChange={handleDetailsChange} />
+                                <Input id="name" value={storeDetails.name || ''} onChange={handleDetailsChange} disabled={!canEditSettings} />
                             </div>
                             <div className="space-y-1">
                                 <Label htmlFor="rif">RIF</Label>
-                                <Input id="rif" placeholder="J-12345678-9" value={storeDetails.rif || ''} onChange={handleDetailsChange} />
+                                <Input id="rif" placeholder="J-12345678-9" value={storeDetails.rif || ''} onChange={handleDetailsChange} disabled={!canEditSettings} />
                             </div>
                             <div className="space-y-1">
                                 <Label htmlFor="address">Dirección</Label>
-                                <Textarea id="address" value={storeDetails.address || ''} onChange={handleDetailsChange} />
+                                <Textarea id="address" value={storeDetails.address || ''} onChange={handleDetailsChange} disabled={!canEditSettings} />
                             </div>
-                            <Button onClick={handleSaveChanges} disabled={isSaving}>
+                            <Button onClick={handleSaveChanges} disabled={isSaving || !canEditSettings}>
                                 {isSaving ? 'Guardando...' : 'Guardar Cambios'}
                             </Button>
                         </div>
@@ -363,6 +525,7 @@ export default function SettingsPage() {
               </div>
            </div>
         </TabsContent>
+    {/* Catalog moved to main navigation; per-subdepartment management is accessible from there */}
         <TabsContent value="appearance">
           <Card>
             <CardHeader>
@@ -400,6 +563,7 @@ export default function SettingsPage() {
                             id="allowNegativeStockSales"
                             checked={storeDetails.advanced?.allowNegativeStockSales || false}
                             onCheckedChange={(checked) => handleAdvancedChange('allowNegativeStockSales', checked)}
+                            disabled={!canManageAdvanced}
                         />
                     </div>
                     <div className="flex items-center justify-between rounded-lg border p-4">
@@ -413,6 +577,7 @@ export default function SettingsPage() {
                             id="allowSellBelowCost"
                             checked={storeDetails.advanced?.allowSellBelowCost || false}
                             onCheckedChange={(checked) => handleAdvancedChange('allowSellBelowCost', checked)}
+                            disabled={!canManageAdvanced}
                         />
                     </div>
                     <div className="flex items-center justify-between rounded-lg border p-4">
@@ -426,6 +591,7 @@ export default function SettingsPage() {
                             id="showOutOfStockProducts"
                             checked={storeDetails.advanced?.showOutOfStockProducts || false}
                             onCheckedChange={(checked) => handleAdvancedChange('showOutOfStockProducts', checked)}
+                            disabled={!canManageAdvanced}
                         />
                     </div>
                     <div className="flex items-center justify-between rounded-lg border p-4">
@@ -438,10 +604,25 @@ export default function SettingsPage() {
                         <Switch
                             id="showInactiveProducts"
                             checked={storeDetails.advanced?.showInactiveProducts || false}
-                            onCheckedChange={(checked) => handleAdvancedChange('showInactiveProducts', checked)}
+                            onCheckedChange={(checked) => handleAdvancedChange('showInactiveProducts' as any, checked)}
+                            disabled={!canManageAdvanced}
                         />
                     </div>
-                    <Button onClick={handleSaveChanges} disabled={isSaving}>
+                    <div className="flex items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                            <Label htmlFor="enableGlobalAttributes" className="text-base">Habilitar gestión global de Marcas y Atributos</Label>
+                            <p className="text-sm text-muted-foreground">
+                                Cuando está activo, se muestran las secciones para administrar Marcas y Atributos a nivel global.
+                            </p>
+                        </div>
+                        <Switch
+                            id="enableGlobalAttributes"
+                            checked={storeDetails.advanced?.enableGlobalAttributes || false}
+                            onCheckedChange={(checked) => handleAdvancedChange('enableGlobalAttributes' as any, checked)}
+                            disabled={!canManageAdvanced}
+                        />
+                    </div>
+                    <Button onClick={handleSaveChanges} disabled={isSaving || !canManageAdvanced}>
                         {isSaving ? 'Guardando...' : 'Guardar Cambios Avanzados'}
                     </Button>
                 </CardContent>
@@ -457,13 +638,93 @@ export default function SettingsPage() {
                   Realiza respaldos y restauraciones de tu base de datos.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="flex flex-col sm:flex-row gap-4">
-                <Button><Upload className="mr-2 h-4 w-4" />Respaldar</Button>
-                <Button variant="outline"><Download className="mr-2 h-4 w-4" />Restaurar</Button>
-              </CardContent>
+                            <CardContent className="flex flex-col sm:flex-row gap-4">
+                                {(() => {
+                                    const canBackup = !!(currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('admin:backup'));
+                                    const canRestore = !!(currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('admin:restore'));
+                                    return (
+                                        <>
+                                                                        {(() => {
+                                                                            const backupMeta = getPermissionsMetaSync().find((p:any) => p.key === 'admin:backup');
+                                                                            const restoreMeta = getPermissionsMetaSync().find((p:any) => p.key === 'admin:restore');
+                                                                            return (
+                                                                                <>
+                                                                                    <TooltipProvider>
+                                                                                        <Tooltip>
+                                                                                            <TooltipTrigger asChild>
+                                                                                                <Button onClick={async () => {
+                                                                                                    try {
+                                                                                                        await (await import('@/lib/api')).backupDatabase();
+                                                                                                        toastSuccess('Éxito', 'Respaldo creado correctamente.');
+                                                                                                    } catch (err) {
+                                                                                                        // handled by API
+                                                                                                    }
+                                                                                                }} disabled={!canBackup}>
+                                                                                                    <Upload className="mr-2 h-4 w-4" />Respaldar
+                                                                                                </Button>
+                                                                                            </TooltipTrigger>
+                                                                                            {!canBackup && (
+                                                                                                <TooltipContent>
+                                                                                                    <p>{backupMeta?.label || 'Backup'}</p>
+                                                                                                    <p className="text-xs text-muted-foreground">{backupMeta?.description || 'Requiere permiso admin:backup'}</p>
+                                                                                                </TooltipContent>
+                                                                                            )}
+                                                                                        </Tooltip>
+                                                                                    </TooltipProvider>
+
+                                                                                    <TooltipProvider>
+                                                                                        <Tooltip>
+                                                                                            <TooltipTrigger asChild>
+                                                                                                <Button variant="outline" disabled={!canRestore}>
+                                                                                                    <Download className="mr-2 h-4 w-4" />Restaurar
+                                                                                                </Button>
+                                                                                            </TooltipTrigger>
+                                                                                            {!canRestore && (
+                                                                                                <TooltipContent>
+                                                                                                    <p>{restoreMeta?.label || 'Restaurar'}</p>
+                                                                                                    <p className="text-xs text-muted-foreground">{restoreMeta?.description || 'Requiere permiso admin:restore'}</p>
+                                                                                                </TooltipContent>
+                                                                                            )}
+                                                                                        </Tooltip>
+                                                                                    </TooltipProvider>
+                                                                                </>
+                                                                            );
+                                                                        })()}
+                                        </>
+                                    );
+                                })()}
+                            </CardContent>
             </Card>
            </div>
         </TabsContent>
+                            <TabsContent value="sincronizacion">
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle>Sincronización - Accede desde un móvil</CardTitle>
+                                        <CardDescription>
+                                            Escanea el código QR con tu teléfono para abrir la aplicación web desde la red local.
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="space-y-4">
+                                        <p className="text-sm text-muted-foreground">Enlace generado (editable):</p>
+                                        <div className="flex gap-2 items-center">
+                                            <Input
+                                                value={syncUrl}
+                                                onChange={(e) => setSyncUrl(e.target.value)}
+                                                id="sync-link"
+                                            />
+                                            <div className="flex flex-col sm:flex-row gap-2">
+                                                <Button onClick={handleCopyLink}>Copiar</Button>
+                                                <Button variant="outline" onClick={handleOpenLink}>Abrir</Button>
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-col items-center">
+                                            <img alt="QR para acceder a la app" src={qrDataUrl} className="border p-2 bg-white" />
+                                            <p className="text-xs text-muted-foreground mt-2">Si tu móvil y el equipo están en la misma red local, el QR abrirá la página directamente.</p>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </TabsContent>
       </Tabs>
     </div>
   )

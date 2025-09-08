@@ -2,6 +2,7 @@ import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { ThemeProvider } from '@/components/theme-provider';
+import { CurrentUserProvider } from '@/hooks/use-current-user';
 
 export const metadata: Metadata = {
   title: 'InventarioSimple',
@@ -22,8 +23,10 @@ export default function RootLayout({
       </head>
       <body className="font-body antialiased">
         <ThemeProvider storageKey="inventario-simple-theme">
-          {children}
-          <Toaster />
+          <CurrentUserProvider>
+            {children}
+            <Toaster />
+          </CurrentUserProvider>
         </ThemeProvider>
       </body>
     </html>

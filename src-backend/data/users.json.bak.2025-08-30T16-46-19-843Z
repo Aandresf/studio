@@ -1,0 +1,176 @@
+{
+  "permissionsList": [
+    "*",
+    "sales:create",
+    "sales:read",
+    "sales:edit",
+    "sales:annul",
+    "products:read",
+    "products:create",
+    "products:edit",
+    "products:delete",
+    "products:read_prices_sale",
+    "products:read_costs",
+    "products:read_costs_disabled",
+    "purchases:read",
+    "purchases:create",
+    "purchases:edit",
+    "purchases:annul",
+    "reports:read",
+    "dashboard:read",
+    "settings:edit",
+    "sales:delete",
+    "purchases:delete",
+    "stores:create",
+    "stores:delete",
+    "stores:set_active",
+    "users:create",
+    "users:edit",
+    "users:delete",
+    "users:permissions",
+    "inventory:write",
+    "reports:create_snapshot",
+    "pending:create",
+    "pending:delete",
+    "admin:backup",
+    "admin:restore",
+    "departments:create",
+    "departments:edit",
+    "departments:delete",
+    "brands:create",
+    "brands:edit",
+    "brands:delete",
+    "attributes:create",
+    "attributes:edit",
+    "attributes:delete",
+    "attributes:create_value",
+    "attributes:edit_value",
+    "attributes:delete_value"
+  ],
+  "users": [
+    {
+      "id": "IhPquMfl",
+      "username": "master",
+      "displayName": "Administrador",
+      "roleId": "master",
+      "permissions": [
+        0
+      ],
+      "createdAt": "2025-08-28T22:10:04.956Z"
+    },
+    {
+      "id": "9PD-3Etg",
+      "username": "ventas_admin",
+      "displayName": "Encargado de Ventas",
+      "roleId": "sales_admin",
+      "permissions": [],
+      "createdAt": "2025-08-28T22:10:04.956Z"
+    },
+    {
+      "id": "xIetViNG",
+      "username": "vendedor",
+      "displayName": "Vendedor",
+      "roleId": "sales_only",
+      "permissions": [],
+      "createdAt": "2025-08-28T22:10:04.956Z"
+    },
+    {
+      "id": "xIetViNF",
+      "username": "editor",
+      "displayName": "Lector y Escritor",
+      "roleId": "read_edit",
+      "permissions": [
+        2,
+        3,
+        12,
+        14,
+        5,
+        6,
+        7,
+        9,
+        10,
+        11,
+        16,
+        17,
+        18,
+        28
+      ],
+      "createdAt": "2025-08-28T22:10:04.956Z"
+    },
+    {
+      "id": "F8a0MT2q",
+      "username": "lector",
+      "displayName": "Usuario Lectura",
+      "roleId": "read_only",
+      "permissions": [
+        5,
+        16,
+        12,
+        17
+      ],
+      "createdAt": "2025-08-28T22:10:04.956Z",
+      "updatedAt": "2025-08-29T01:32:21.609Z"
+    }
+  ],
+  "roles": [
+    {
+      "id": "master",
+      "name": "Master",
+      "permissions": [
+        0
+      ]
+    },
+    {
+      "id": "sales_admin",
+      "name": "Ventas y Consulta",
+      "permissions": [
+        1,
+        2,
+        3,
+        4,
+        19,
+        5,
+        9,
+        11
+      ]
+    },
+    {
+      "id": "sales_only",
+      "name": "Solo Venta y Consulta",
+      "permissions": [
+        1,
+        2,
+        5,
+        9
+      ]
+    },
+    {
+      "id": "read_edit",
+      "name": "Lector/Edicion",
+      "permissions": [
+        2,
+        3,
+        6,
+        7,
+        9,
+        12,
+        14,
+        16,
+        17,
+        18,
+        28
+      ]
+    },
+    {
+      "id": "read_only",
+      "name": "Solo Lectura",
+      "permissions": [
+        5,
+        2,
+        12,
+        16,
+        17
+      ]
+    }
+  ]
+}

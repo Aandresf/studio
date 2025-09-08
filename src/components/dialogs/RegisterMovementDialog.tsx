@@ -42,26 +42,35 @@ export function RegisterMovementDialog({
   const [description, setDescription] = React.useState('');
   const [isSaving, setIsSaving] = React.useState(false);
 
+  // Calcular stock disponible a nivel de producto (suma de variantes)
+  const availableStock = React.useMemo(() => {
+    if (!product) return 0;
+    return (product.variants ?? []).reduce((acc, v) => acc + (v.current_stock || 0), 0);
+  }, [product]);
+
   const handleSave = async () => {
     if (!product) return;
 
-    if (quantity <= 0) {
+  if (quantity <= 0) {
       toastError("Error de Validación", "La cantidad debe ser mayor que cero.");
       return;
     }
-    if (quantity > product.stock) {
-      toastError("Error de Validación", "La cantidad a retirar no puede ser mayor que el stock actual.");
-      return;
-    }
+  if (quantity > availableStock) {
+        toastError("Error de Validación", "La cantidad a retirar no puede ser mayor que el stock actual.");
+        return;
+      }
 
     setIsSaving(true);
 
-    const movementData = {
-      product_id: product.id,
+    // Backend expects variant_id in InventoryMovement. If a product has a single variant, prefer that id.
+    const variantId = (product.variants && product.variants.length >= 1) ? product.variants[0].id : undefined;
+    const movementData: any = {
+      // include variant_id only when available; backend accepts variant_id or product_id depending on endpoint
+      ...(variantId ? { variant_id: variantId } : { product_id: product.id }),
       type,
       quantity,
       description,
-      unit_cost: 0, // Always send 0 for non-sale movements
+      unit_cost: 0,
     };
 
     console.log("Enviando al backend:", JSON.stringify(movementData, null, 2));
@@ -119,9 +128,9 @@ export function RegisterMovementDialog({
               value={quantity}
               onChange={(e) => setQuantity(Number(e.target.value))}
               min="1"
-              max={product.stock}
+              max={availableStock}
             />
-            <p className="text-sm text-muted-foreground">Stock actual: {product.stock}</p>
+            <p className="text-sm text-muted-foreground">Stock actual: {availableStock}</p>
           </div>
           <div className="grid gap-3">
             <Label htmlFor="description">Descripción (Opcional)</Label>

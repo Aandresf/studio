@@ -61,6 +61,11 @@ function getActiveDb() {
         console.log(`Conexión establecida con la base de datos: ${storeInfo.name} (${dbPath})`);
     });
 
+    // Ensure foreign keys are enforced on this connection
+    db.run('PRAGMA foreign_keys = ON;', (err) => {
+        if (err) console.error('Could not enable foreign_keys pragma:', err.message);
+    });
+
     openConnections.set(activeStoreId, db);
     return db;
 }

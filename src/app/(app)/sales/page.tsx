@@ -3,35 +3,45 @@
 import * as React from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Calendar as CalendarIcon, PlusCircle, Trash2, History, Loader2, ListRestart, Trash, XCircle } from 'lucide-react';
+import { Calendar as CalendarIcon, PlusCircle, Trash2, History, Loader2, ListRestart, Trash, XCircle, TableProperties } from 'lucide-react';
 
 import { useBackendStatus } from '@/app/(app)/layout';
-import { getProducts, createSale, updateSale, Product, getStores, getStoreDetails, getPendingTransactions, addPendingTransaction, removePendingTransaction } from '@/lib/api';
-import { SalePayload, GroupedSale, SaleItemPayload } from '@/lib/types';
+import { useCurrentUser } from '@/hooks/use-current-user';
+import ProtectedRedirect from '@/components/ProtectedRedirect';
+import { getProducts, createSale, getPendingTransactions, addPendingTransaction, removePendingTransaction, updateSale } from '@/lib/api';
+import { Product, SalePayload, ProductVariant, TransactionItemPayload, GroupedSale } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { toastSuccess, toastError } from '@/hooks/use-toast';
 
-import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { Combobox } from '@/components/ui/combobox';
+import { AdvancedCombobox } from '@/components/ui/AdvancedCombobox';
+import { useAsyncOptions } from '@/hooks/use-async-options';
+import { getCustomers } from '@/lib/api';
+import CustomerQuickCreator from '@/components/customers/CustomerQuickCreator';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { SalesHistoryDialog } from '@/components/dialogs/SalesHistoryDialog';
 import { SalesReceiptDialog } from '@/components/dialogs/SalesReceiptDialog';
 import { SalesConfirmationDialog } from '@/components/dialogs/SalesConfirmationDialog';
+import { VariantSelectionDialog } from '@/components/dialogs/VariantSelectionDialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 interface CartItem {
   id: string;
-  productId: number | null;
-  name: string;
+  variantId: number;
+  productId: number;
+  productName: string;
+  variantName: string;
   quantity: number;
   price: number;
   tax_rate: number;
   availableStock: number;
+  sku: string | null;
 }
 
 interface PendingSale {
@@ -44,130 +54,215 @@ interface PendingSale {
     createdAt: Date;
 }
 
-const createEmptyCartItem = (): CartItem => ({
-    id: `temp-${Date.now()}-${Math.random()}`,
-    productId: null,
-    name: '',
-    quantity: 1,
-    price: 0,
-    tax_rate: 0,
-    availableStock: 0,
-});
-
 export default function SalesPage() {
+    // 1. Hooks de contexto
+    const currentUser = useCurrentUser();
+    const { isBackendReady, refetchKey, triggerRefetch } = useBackendStatus();
+
+    // 2. Estados (useState)
+    // Formulario principal
     const [date, setDate] = React.useState<Date>(new Date());
     const [clientName, setClientName] = React.useState('');
     const [clientDni, setClientDni] = React.useState('');
+    const [selectedClient, setSelectedClient] = React.useState<any | null>(null);
     const [invoiceNumber, setInvoiceNumber] = React.useState('');
-    
-    const [products, setProducts] = React.useState<Product[]>([]);
-    const [cart, setCart] = React.useState<CartItem[]>([createEmptyCartItem()]);
-    
     const [isLoading, setIsLoading] = React.useState(false);
     const [isLoadingProducts, setIsLoadingProducts] = React.useState(true);
-    const [openComboboxIndex, setOpenComboboxIndex] = React.useState<number | null>(null);
+    
+    // Productos y carrito
+    const [products, setProducts] = React.useState<Product[]>([]);
+    const [cart, setCart] = React.useState<CartItem[]>([]);
+    const [selectedProductForVariants, setSelectedProductForVariants] = React.useState<Product | null>(null);
 
-    const [pendingSales, setPendingSales] = React.useState<PendingSale[]>([]);
+    // Diálogos y modales
+    const [isVariantDialogOpen, setIsVariantDialogOpen] = React.useState(false);
     const [isHistoryOpen, setIsHistoryOpen] = React.useState(false);
     const [isReceiptOpen, setIsReceiptOpen] = React.useState(false);
     const [isConfirmationOpen, setIsConfirmationOpen] = React.useState(false);
-    const [consolidatedItems, setConsolidatedItems] = React.useState<(SaleItemPayload & { name: string })[]>([]);
+
+    // Ventas y transacciones
+    const [pendingSales, setPendingSales] = React.useState<PendingSale[]>([]);
+    const [consolidatedItems, setConsolidatedItems] = React.useState<(TransactionItemPayload & { name: string })[]>([]);
     const [selectedTransactionId, setSelectedTransactionId] = React.useState<string | null>(null);
     const [editingTransactionId, setEditingTransactionId] = React.useState<string | null>(null);
 
-    const [storeSettings, setStoreSettings] = React.useState<any>({});
-
-    const { isBackendReady, refetchKey, triggerRefetch } = useBackendStatus();
-
+    // 3. Efectos (useEffect)
     React.useEffect(() => {
         if (!isBackendReady) return;
         const fetchInitialData = async () => {
             setIsLoadingProducts(true);
             try {
-                const { activeStoreId } = await getStores();
-                const [productsData, settingsData, pendingData] = await Promise.all([
+                const [productsData, pendingData] = await Promise.all([
                     getProducts(),
-                    getStoreDetails(activeStoreId),
                     getPendingTransactions()
                 ]);
-                
-                console.log('[SALES PAGE] Fetched store settings:', settingsData);
                 setProducts(productsData);
-                setStoreSettings(settingsData || {});
                 setPendingSales(pendingData.sales || []);
-
-            } catch (error) {
-                console.error('Error fetching initial sales data:', error);
-            } finally {
+            } catch (error) {} finally {
                 setIsLoadingProducts(false);
             }
         };
         fetchInitialData();
     }, [isBackendReady, refetchKey]);
 
+    // Prefill from query param ?clientId=
+    const searchParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+    React.useEffect(() => {
+        const clientId = searchParams.get('clientId');
+        if (clientId) {
+            (async () => {
+                try {
+                    const c = await (await import('@/lib/api')).getCustomer(clientId);
+                    setSelectedClient(c);
+                    setClientName(c?.name || '');
+                    setClientDni(c?.document || '');
+                } catch (e) {}
+            })();
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Load customers for combobox
+    const { options: customerOptions, load: loadCustomers, loading: loadingCustomers } = useAsyncOptions(getCustomers);
+    React.useEffect(() => { loadCustomers(); }, [refetchKey]);
+
+    // 4. Memos (useMemo)
     const productMap = React.useMemo(() => new Map(products.map(p => [p.id, p])), [products]);
+
+    // 2. Después las variables derivadas del estado
+    const canReadSales = currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('sales:read');
+    const canCreateSales = currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('sales:create');
+    const canEditSales = currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('sales:edit');
+    const canAnnulSales = currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('sales:annul');
+    const isReadOnly = !canCreateSales && !canEditSales && !canAnnulSales;
+    const hasAnySalesPermission = canReadSales || canCreateSales || canEditSales || canAnnulSales;
+
+    // permisos adicionales
+    const canEditPriceOnSale = currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('sales:edit_price');
+    const canEditInvoiceSale = currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('sales:edit_invoice');
+    const canViewCustomerSensitive = currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('customers:view_sensitive');
+
+    const generateInvoiceNumber = () => `V-${new Date().getFullYear()}${String(Date.now()).slice(-6)}`;
+
+    React.useEffect(() => { if (!invoiceNumber) setInvoiceNumber(generateInvoiceNumber()); }, []);
+
+    const displayClientDni = canViewCustomerSensitive ? clientDni : (clientDni ? '••••••' : '');
+
+    // 3. Finalmente la lógica de renderizado condicional
+    if (!hasAnySalesPermission) {
+        return <ProtectedRedirect condition={false} />;
+    }
+
+    const getProductDisplayValue = (productId: string) => {
+        const product = productMap.get(Number(productId));
+        return product ? product.name : '';
+    };
+
+    const productFilterFn = (options: Product[], searchValue: string): Product[] => {
+        if (!searchValue) return options;
+        const lowerCaseSearch = searchValue.toLowerCase();
+
+        return options.filter(product => {
+            const variants = product.variants ?? [];
+            const searchIn = [
+                product.name,
+                product.category || '',
+                // some responses include brand_name directly
+                (product as any).brand_name || '',
+                ...variants.map(v => v.sku || ''),
+                ...variants.flatMap(v => v.attribute_values?.map(av => av.value) || [])
+            ].join(' ').toLowerCase();
+
+            return searchIn.includes(lowerCaseSearch);
+        });
+    };
+
+    const renderProductOption = (product: Product) => {
+            console.log(product);
     
-    const productOptions = React.useMemo(() => {
-        const optionsMap = new Map<string, { value: string; label: string }>();
-        const showOutOfStock = storeSettings.advanced?.showOutOfStockProducts || false;
-
-        const filteredProducts = products.filter(p => {
-            if (showOutOfStock) return true;
-            return p.stock > 0;
-        });
-
-        filteredProducts.forEach(p => optionsMap.set(String(p.id), {
-            value: String(p.id),
-            label: `(${p.sku || 'N/A'}) ${p.name}`
-        }));
-
-        cart.forEach(item => {
-            if (item.productId && !optionsMap.has(String(item.productId))) {
-                const product = productMap.get(item.productId);
-                if (product) {
-                    optionsMap.set(String(product.id), {
-                        value: String(product.id),
-                        label: `(${product.sku || 'N/A'}) ${product.name}`
-                    });
+            const variants = product.variants ?? [];
+            const totalStock = variants.reduce((acc, v) => acc + v.current_stock, 0);
+            const attributes = () => {
+                const productAttributes: Record<string, Set<string>> = {};
+                variants.forEach(variant => {
+                    if (variant.current_stock > 0 && variant.attribute_values) {
+                        variant.attribute_values.forEach(av => {
+                            const attributeName = av.attribute_name ? av.attribute_name : `attr_${av.attribute_id}`;
+                            if (!productAttributes[attributeName]) {
+                                productAttributes[attributeName] = new Set<string>();
+                            }
+                            productAttributes[attributeName].add(av.value);
+                        });
+                    }
+                });
+                const attributesForDisplay: Record<string, string> = {};
+                for (const name in productAttributes) {
+                    attributesForDisplay[name] = Array.from(productAttributes[name]).join(', ');
                 }
+                // Mostrar los atributos y valores
+                return Object.entries(attributesForDisplay).length > 0
+                    ? Object.entries(attributesForDisplay).map(([name, values]) => (
+                        <p key={name}><b>{name}:</b> {values}</p>
+                    ))
+                    : <span className="text-muted-foreground">Sin atributos</span>;
             }
-        });
-        
-        return Array.from(optionsMap.values());
-    }, [products, cart, productMap, storeSettings]);
+    
+            return (
+                <div className="grid grid-cols-4 items-center w-full gap-2">
+                    <div className="flex flex-col justify-self-start">
+                        <span className="font-semibold">{product.name}</span>
+                        <span className="text-xs text-muted-foreground">{product.brand_name || product.brand?.name || ''}</span>
+                    </div>
+                    <span className="text-xs text-muted-foreground justify-self-center">SKU: {product.base_sku || 'N/A'}</span>
+                    <span className="justify-self-center">Stock: {totalStock}</span>
+                    <div className="justify-self-end">{attributes()}</div>
+                </div>
+            );
+        };
 
     const resetForm = () => {
         setDate(new Date());
         setClientName('');
         setClientDni('');
         setInvoiceNumber('');
-        setCart([createEmptyCartItem()]);
-        setOpenComboboxIndex(null);
+        setCart([]);
         setEditingTransactionId(null);
     };
 
-    const handleCartItemChange = (index: number, field: keyof Omit<CartItem, 'id' | 'name' | 'availableStock'>, value: any) => {
-        const newItems = [...cart];
-        const item = newItems[index];
-        
-        if (field === 'productId') {
-            const selectedProduct = productMap.get(Number(value));
-            if (selectedProduct) {
-                item.productId = selectedProduct.id;
-                item.name = selectedProduct.name;
-                item.price = selectedProduct.price;
-                item.tax_rate = selectedProduct.tax_rate;
-                item.availableStock = selectedProduct.stock;
-            }
-        } else {
-            item[field as 'quantity' | 'price'] = Number(value);
+    const handleProductSelect = (productId: string) => {
+        if (isReadOnly) return;
+        const product = productMap.get(Number(productId));
+        if (product) {
+            setSelectedProductForVariants(product);
+            setIsVariantDialogOpen(true);
         }
-        setCart(newItems);
     };
 
-    const addCartItem = () => {
-        setCart(prevItems => [...prevItems, createEmptyCartItem()]);
-        setOpenComboboxIndex(cart.length);
+    const handleVariantsSelected = (selectedVariants: (ProductVariant & { quantity?: number })[]) => {
+    if (isReadOnly) return;
+        const newCartItems: CartItem[] = selectedVariants.map(variant => ({
+            id: `temp-${variant.id}-${Date.now()}`,
+            variantId: variant.id,
+            productId: variant.product_id,
+            productName: selectedProductForVariants?.name || 'N/A',
+            variantName: variant.attribute_values?.map(v => v.value).join(' / ') || 'Est\u00e1ndar',
+            quantity: variant.quantity ?? 1, // default to 1 when coming from select-only
+            price: variant.sale_price,
+            tax_rate: 16.00,
+            availableStock: variant.current_stock,
+                sku: variant.sku ?? null,
+        }));
+
+        const newCart = [...cart];
+        newCartItems.forEach(newItem => {
+            const existingItemIndex = newCart.findIndex(item => item.variantId === newItem.variantId);
+            if (existingItemIndex > -1) {
+                newCart[existingItemIndex].quantity += newItem.quantity;
+            } else {
+                newCart.push(newItem);
+            }
+        });
+        setCart(newCart);
     };
 
     const removeCartItem = (index: number) => {
@@ -175,27 +270,18 @@ export default function SalesPage() {
     };
 
     const handleOpenConfirmation = () => {
-        const itemMap = new Map<number, SaleItemPayload & { name: string }>();
-
-        cart
-            .filter(item => item.productId !== null)
-            .forEach(item => {
-                const productId = item.productId!;
-                if (itemMap.has(productId)) {
-                    const existing = itemMap.get(productId)!;
-                    existing.quantity += item.quantity;
-                } else {
-                    itemMap.set(productId, {
-                        productId: productId,
-                        name: item.name,
-                        quantity: item.quantity,
-                        unitPrice: item.price,
-                        tax_rate: item.tax_rate,
-                    });
-                }
-            });
-        
-        const finalItems = Array.from(itemMap.values());
+        if (!selectedClient && !clientName) {
+            toastError('Cliente requerido', 'Selecciona un cliente antes de continuar.');
+            return;
+        }
+        const finalItems = cart.map(item => ({
+            variantId: item.variantId,
+            name: `${item.productName} (${item.variantName})`,
+            quantity: item.quantity,
+            unitPrice: item.price,
+            tax_rate: item.tax_rate,
+        }));
+        // @ts-ignore
         setConsolidatedItems(finalItems);
         setIsConfirmationOpen(true);
     };
@@ -208,62 +294,72 @@ export default function SalesPage() {
             entity_name: clientName || undefined,
             entity_document: clientDni || undefined,
             document_number: invoiceNumber || undefined,
+            // @ts-ignore
             items: consolidatedItems,
         };
 
         try {
+            let response;
             if (editingTransactionId) {
-                await updateSale({ transaction_id: editingTransactionId, saleData: salePayload });
+                response = await updateSale({ transaction_id: editingTransactionId, saleData: salePayload });
                 toastSuccess("Venta Actualizada", "La venta se ha modificado exitosamente.");
                 setSelectedTransactionId(editingTransactionId);
-                setIsReceiptOpen(true);
             } else {
-                const response = await createSale(salePayload);
+                response = await createSale(salePayload);
                 toastSuccess("Venta Registrada", "La venta se ha guardado exitosamente.");
-                setSelectedTransactionId(response.transaction_id);
-                setIsReceiptOpen(true);
+                if (response && (response as any).transaction_id) {
+                    setSelectedTransactionId((response as any).transaction_id);
+                }
             }
             
+            setIsReceiptOpen(true);
             triggerRefetch();
             resetForm();
-            setIsHistoryOpen(false);
         } catch (error) {
-            // Error handled in API layer
         } finally {
             setIsLoading(false);
             setIsConfirmationOpen(false);
         }
     };
 
-    const handleEditSale = (sale: GroupedSale) => {
-        setDate(new Date(sale.transaction_date));
-        setClientName(sale.entity_name);
-        setClientDni(sale.entity_document !== 'N/A' ? sale.entity_document : '');
-        setInvoiceNumber(sale.document_number);
+    const handleHoldSale = async () => {
+        if (cart.length === 0) {
+            toastError("Venta Vacía", "No puedes poner en espera una venta sin productos.");
+            return;
+        }
+        const newPendingSale: PendingSale = { 
+            id: `pending-sale-${Date.now()}`, 
+            cart, date, clientName, clientDni, invoiceNumber, createdAt: new Date() 
+        };
+        
+        try {
+            await addPendingTransaction('sale', newPendingSale);
+            toastSuccess("Venta en Espera", "La venta actual se ha guardado.");
+            resetForm();
+            triggerRefetch();
+        } catch (error) {}
+    };
 
-        // Consolidate items before setting the cart
-        const consolidatedItems = new Map<number, CartItem>();
-        sale.movements.forEach(m => {
-            const product = productMap.get(m.productId);
-            if (consolidatedItems.has(m.productId)) {
-                const existing = consolidatedItems.get(m.productId)!;
-                existing.quantity += m.quantity;
-            } else {
-                consolidatedItems.set(m.productId, {
-                    id: `edit-consolidated-${m.productId}`,
-                    productId: m.productId,
-                    name: m.productName,
-                    quantity: m.quantity,
-                    price: m.unit_price,
-                    tax_rate: product?.tax_rate || 0,
-                    availableStock: (product?.stock || 0) + m.quantity,
-                });
-            }
-        });
+    const handleRestoreSale = async (saleToRestore: PendingSale) => {
+        setCart(saleToRestore.cart);
+        setDate(new Date(saleToRestore.date));
+        setClientName(saleToRestore.clientName);
+        setClientDni(saleToRestore.clientDni);
+        setInvoiceNumber(saleToRestore.invoiceNumber);
+        
+        try {
+            await removePendingTransaction(saleToRestore.id);
+            toastSuccess("Venta Restaurada", "La venta ha sido cargada.");
+            triggerRefetch();
+        } catch (error) {}
+    };
 
-        setCart(Array.from(consolidatedItems.values()));
-        setEditingTransactionId(sale.transaction_id);
-        setIsHistoryOpen(false);
+    const handleRemovePendingSale = async (id: string) => {
+        try {
+            await removePendingTransaction(id);
+            toastSuccess("Venta Descartada", "La venta en espera ha sido eliminada.");
+            triggerRefetch();
+        } catch (error) {}
     };
 
     const handleViewReceiptFromHistory = (sale: GroupedSale) => {
@@ -271,234 +367,210 @@ export default function SalesPage() {
         setIsReceiptOpen(true);
     };
 
-    const handleHoldSale = async () => {
-        if (cart.every(item => item.productId === null)) {
-            toastError("Venta Vacía", "No puedes poner en espera una venta sin productos.");
-            return;
-        }
-        const newPendingSale: PendingSale = { 
-            id: `pending-${Date.now()}`, 
-            cart, 
-            date, 
-            clientName, 
-            clientDni, 
-            invoiceNumber, 
-            createdAt: new Date() 
-        };
-        
-        try {
-            await addPendingTransaction('sale', newPendingSale);
-            toastSuccess("Venta en Espera", "La venta actual se ha guardado.");
-            resetForm();
-            triggerRefetch(); // Recarga la lista de pendientes
-        } catch (error) {
-            // El error ya se muestra a través del toast en la capa de API
-        }
-    };
+    const handleEditSale = (sale: GroupedSale) => {
+        setDate(new Date(sale.transaction_date));
+        setClientName(sale.entity_name);
+        setClientDni(sale.entity_document);
+        setInvoiceNumber(sale.document_number);
+        setEditingTransactionId(sale.transaction_id);
 
-    const handleRestoreSale = async (saleToRestore: PendingSale) => {
-        setCart(saleToRestore.cart);
-        setDate(new Date(saleToRestore.date)); // Asegurarse que la fecha se restaura como objeto Date
-        setClientName(saleToRestore.clientName);
-        setClientDni(saleToRestore.clientDni);
-        setInvoiceNumber(saleToRestore.invoiceNumber);
-        
-        try {
-            await removePendingTransaction(saleToRestore.id);
-            toastSuccess("Venta Restaurada", "La venta ha sido cargada en el formulario.");
-            triggerRefetch(); // Recarga la lista de pendientes
-        } catch (error) {
-            // El error ya se muestra
-        }
-    };
-
-    const handleRemovePendingSale = async (id: string) => {
-        try {
-            await removePendingTransaction(id);
-            toastSuccess("Venta Descartada", "La venta en espera ha sido eliminada.");
-            triggerRefetch(); // Recarga la lista de pendientes
-        } catch (error) {
-            // El error ya se muestra
-        }
+        const newCart: CartItem[] = sale.movements.map(m => ({
+            id: `edit-${m.variantId}-${Math.random()}`,
+            variantId: m.variantId,
+            // @ts-ignore
+            productId: m.productId,
+            productName: m.productName,
+            variantName: m.variantName,
+            quantity: m.quantity,
+            price: m.unit_price || 0,
+            tax_rate: 16.00, // TODO
+            sku: (m as any).sku,
+            // @ts-ignore
+            availableStock: 0,
+        }));
+        setCart(newCart);
+        setIsHistoryOpen(false);
     };
 
     const subtotal = cart.reduce((acc, item) => acc + item.quantity * item.price, 0);
     const totalTaxes = cart.reduce((acc, item) => acc + (item.quantity * item.price * (item.tax_rate / 100)), 0);
     const total = subtotal + totalTaxes;
 
-    const allowNegativeSales = storeSettings.advanced?.allowNegativeStockSales || false;
-    console.log(`[SALES PAGE] 'allowNegativeSales' is currently: ${allowNegativeSales}`);
-
-    const isSubmitDisabled = React.useMemo(() => {
-        console.log('[SubmitCheck] Recalculating isSubmitDisabled...');
-        if (isLoading) {
-            console.log('[SubmitCheck] Disabled due to isLoading=true');
-            return true;
-        }
-
-        const isAnyItemInvalid = cart.some(item => {
-            console.log(`[SubmitCheck] Checking item: ${item.name || 'New Item'} (ID: ${item.productId})`);
-            if (!item.productId || item.quantity <= 0) {
-                console.log(`[SubmitCheck] -> INVALID: No product selected or quantity is zero.`);
-                return true;
-            }
-            if (allowNegativeSales) {
-                console.log(`[SubmitCheck] -> VALID (Negative sales allowed)`);
-                return false;
-            }
-            const invalid = item.quantity > item.availableStock;
-            if (invalid) {
-                console.log(`[SubmitCheck] -> INVALID: Quantity (${item.quantity}) > Stock (${item.availableStock})`);
-            } else {
-                console.log(`[SubmitCheck] -> VALID: Quantity (${item.quantity}) <= Stock (${item.availableStock})`);
-            }
-            return invalid;
-        });
-        
-        console.log(`[SubmitCheck] Final result: isAnyItemInvalid = ${isAnyItemInvalid}`);
-        return isAnyItemInvalid;
-    }, [cart, isLoading, allowNegativeSales]);
-
-    const renderComboboxHeader = () => (
-        <div className="grid grid-cols-12 gap-4 px-3 py-2 text-xs font-semibold text-muted-foreground bg-muted">
-            <div className="col-span-2 text-center">Código</div>
-            <div className="col-span-4 text-center">Producto</div>
-            <div className="col-span-2 text-right">Stock</div>
-            <div className="col-span-2 text-right">Precio</div>
-            <div className="col-span-2 text-right">IVA</div>
-        </div>
-    );
-
-    const renderComboboxOption = (option: { value: string; label: string }) => {
-        const product = productMap.get(Number(option.value));
-        if (!product) return <div>{option.label}</div>;
-        return (
-            <div className="grid grid-cols-12 gap-4 w-full text-sm">
-                <div className="col-span-2 font-mono text-xs text-center">{product.sku || 'N/A'}</div>
-                <div className="col-span-4 truncate" title={product.name}>{product.name}</div>
-                <div className="col-span-2 text-right">{product.stock}</div>
-                <div className="col-span-2 text-right">${product.price.toFixed(2)}</div>
-                <div className="col-span-2 text-right">{product.tax_rate.toFixed(2)}%</div>
-            </div>
-        );
-    };
+    const isSubmitDisabled = isLoading || cart.length === 0;
 
     return (
         <TooltipProvider>
         <div className="flex flex-col gap-6">
-            <div className="flex items-center justify-between">
-                <div className="flex-1">
-                    <h1 className="font-semibold text-lg md:text-2xl">Ventas</h1>
-                    <p className="text-sm text-muted-foreground">{editingTransactionId ? `Editando venta a ${clientName}` : "Crea y gestiona facturas de venta."}</p>
-                </div>
-                <Button variant="outline" onClick={() => setIsHistoryOpen(true)} disabled={editingTransactionId !== null}>
-                    <History className="mr-2 h-4 w-4" />
-                    Historial
-                </Button>
-            </div>
+                <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                            <h1 className="font-semibold text-lg md:text-2xl">Ventas</h1>
+                            <p className="text-sm text-muted-foreground">{editingTransactionId ? `Editando venta a ${clientName}` : "Crea y gestiona facturas de venta."}</p>
+                        </div>
+                        <Button variant="outline" onClick={() => setIsHistoryOpen(true)} disabled={editingTransactionId !== null}>
+                            <History className="mr-2 h-4 w-4" />Historial
+                        </Button>
+                    </div>
+                <div className="grid md:grid-cols-2 gap-4">
+                            <div>
+                                <Card>
+                                    <CardContent className="p-4">
+                                        <Label>Cliente</Label>
+                                        <div className="flex gap-2 items-center">
+                                            <div className="flex-1">
+                                                <AdvancedCombobox<any>
+                                                    options={customerOptions}
+                                                    value={selectedClient ? String(selectedClient.id) : ''}
+                                                    onChange={async (v) => {
+                                                        try {
+                                                            const c = await (await import('@/lib/api')).getCustomer(v);
+                                                            setSelectedClient(c);
+                                                            setClientName(c?.name || '');
+                                                            setClientDni(c?.document || '');
+                                                        } catch (e) {}
+                                                    }}
+                                                    valueAccessor={(o:any) => String(o.id)}
+                                                    filterFn={(opts: any[], search: string) => {
+                                                        if (!search) return opts;
+                                                        return opts.filter(o => (o.name || '').toLowerCase().includes(search.toLowerCase()) || (o.document || '').toLowerCase().includes(search.toLowerCase()));
+                                                    }}
+                                                    renderOption={(o:any) => (<div className="flex items-center justify-between"><div><div className="font-semibold">{o.name}</div><div className="text-xs text-muted-foreground">{o.document}</div></div><div className="text-sm">{o.email || ''}</div></div>)}
+                                                    displayValue={(val) => selectedClient?.name || clientName}
+                                                    placeholder={isLoadingProducts ? 'Cargando...' : 'Buscar cliente...'}
+                                                    searchPlaceholder="Buscar cliente..."
+                                                    emptyMessage="No se encontraron clientes."
+                                                    disabled={false}
+                                                />
+                                            </div>
+                                            <div>
+                                                {/* Quick create inline */}
+                                                <CustomerQuickCreator onCreated={(c:any) => { setSelectedClient(c); setClientName(c?.name || ''); setClientDni(c?.document || ''); loadCustomers(); }} />
+                                            </div>
+                                        </div>
+                                        {selectedClient && <div className="text-sm text-muted-foreground">Seleccionado: {selectedClient.name}</div>}
+                                    </CardContent>
+                                </Card>
+                            </div>
+                        </div>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
                 <div className="lg:col-span-2 space-y-6">
                     <Card>
                         <CardHeader><CardTitle>{editingTransactionId ? "Editar Venta" : "Nueva Venta"}</CardTitle></CardHeader>
-                        <CardContent>
-                        <div className="grid gap-6">
+                        <CardContent className="space-y-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="grid gap-2"><Label htmlFor="clientName">Cliente</Label><Input id="clientName" value={clientName} onChange={e => setClientName(e.target.value)} placeholder="Nombre del cliente" /></div>
-                                <div className="grid gap-2"><Label htmlFor="clientDni">DNI Cliente</Label><Input id="clientDni" value={clientDni} onChange={e => setClientDni(e.target.value)} placeholder="Cédula o RIF" /></div>
+                                <div className="grid gap-2"><Label htmlFor="clientName">Cliente</Label><Input id="clientName" value={clientName} readOnly placeholder="Nombre del cliente (seleccionado desde el buscador)" /></div>
+                                <div className="grid gap-2"><Label htmlFor="clientDni">DNI Cliente</Label><Input id="clientDni" value={clientDni} readOnly placeholder="Cédula o RIF" /></div>
                             </div>
                             <div>
-                                <div className="grid grid-cols-12 gap-2 items-center mb-2 px-1">
-                                    <div className="col-span-12 md:col-span-6"><Label className="text-sm font-medium">Producto</Label></div>
-                                    <div className="col-span-4 md:col-span-2"><Label className="text-sm font-medium">Cantidad</Label></div>
-                                    <div className="col-span-4 md:col-span-2"><Label className="text-sm font-medium">Precio Unit.</Label></div>
-                                    <div className="col-span-4 md:col-span-2"><Label className="text-sm font-medium text-right w-full pr-2">Acción</Label></div>
-                                </div>
-                                <div className="grid gap-4 border p-4 rounded-md">
-                                    {cart.map((item, index) => (
-                                        <div key={item.id} className="grid grid-cols-12 gap-2 items-end">
-                                            <div className="col-span-12 md:col-span-6">
-                                                <Combobox 
-                                                    open={openComboboxIndex === index} 
-                                                    onOpenChange={(isOpen) => setOpenComboboxIndex(isOpen ? index : null)} 
-                                                    options={productOptions} 
-                                                    value={item.productId ? String(item.productId) : ''} 
-                                                    onChange={(value) => { handleCartItemChange(index, 'productId', value); setOpenComboboxIndex(null); }} 
-                                                    placeholder={isLoadingProducts ? "Cargando..." : "Seleccionar..."} 
-                                                    searchPlaceholder="Buscar por código o nombre..." 
-                                                    emptyMessage="No hay productos." 
-                                                    disabled={isLoadingProducts}
-                                                    popoverClassName="w-[700px]"
-                                                    align="start"
-                                                    sideOffset={10}
-                                                    renderHeader={renderComboboxHeader}
-                                                    renderOption={renderComboboxOption}
-                                                />
-                                            </div>
-                                            <div className="col-span-4 md:col-span-2">
-                                                <Input 
-                                                    type="number" 
-                                                    value={item.quantity} 
-                                                    onChange={(e) => handleCartItemChange(index, 'quantity', e.target.value)} 
-                                                    min="1" 
-                                                    max={allowNegativeSales ? undefined : item.availableStock} 
-                                                />
-                                                {console.log(`[InputQty] Item ${item.name}: max set to -> ${allowNegativeSales ? 'undefined' : item.availableStock}`)}
-                                            </div>
-                                            <div className="col-span-4 md:col-span-2"><Input type="number" value={item.price} onChange={(e) => handleCartItemChange(index, 'price', e.target.value)} min="0" /></div>
-                                            <div className="col-span-4 md:col-span-2 flex justify-end"><Button variant="outline" size="icon" className="text-muted-foreground" onClick={() => removeCartItem(index)} disabled={cart.length <= 1}><Trash2 className="h-4 w-4"/></Button></div>
-                                        </div>
-                                    ))}
-                                </div>
-                                <div className="flex items-center gap-2 mt-4">
-                                    <Button size="sm" className="gap-1" onClick={addCartItem}><PlusCircle className="h-3.5 w-3.5" />Añadir Producto</Button>
-                                </div>
+                                <Label>Añadir Producto</Label>
+                                <AdvancedCombobox<Product>
+                                    options={products}
+                                    value={""}
+                                    onChange={handleProductSelect}
+                                    valueAccessor={(product) => String(product.id)}
+                                    filterFn={productFilterFn}
+                                    renderOption={renderProductOption}
+                                    displayValue={getProductDisplayValue}
+                                    placeholder={isLoadingProducts ? "Cargando..." : "Buscar producto..."}
+                                    searchPlaceholder="Buscar por nombre, SKU, categoría, marca..."
+                                    emptyMessage="No se encontraron productos."
+                                    disabled={isLoadingProducts || isReadOnly}
+                                />
                             </div>
-                        </div>
+                            <div className="border rounded-md">
+                                <Table>
+                                    <TableHeader><TableRow><TableHead>Producto</TableHead><TableHead>Cantidad</TableHead><TableHead>Precio Unit.</TableHead><TableHead>Total</TableHead><TableHead></TableHead></TableRow></TableHeader>
+                                    <TableBody>
+                                        {cart.length > 0 ? cart.map((item, index) => (
+                                            <TableRow key={item.id}>
+                                                <TableCell><p className="font-medium">{item.productName}</p><p className="text-xs text-muted-foreground">{item.variantName} ({item.sku})</p></TableCell>
+                                                <TableCell>
+                                                    <Input type="number" value={item.quantity} min={0} onChange={(e) => {
+                                                        const newItems = [...cart];
+                                                        newItems[index].quantity = parseInt(e.target.value, 10) || 0;
+                                                        setCart(newItems);
+                                                    }} className="w-20 text-center" />
+                                                </TableCell>
+                                                <TableCell>{canEditPriceOnSale ? (
+                                                    <Input type="number" value={item.price} onChange={(e) => {
+                                                        const newItems = [...cart];
+                                                        newItems[index].price = parseFloat(e.target.value) || 0;
+                                                        setCart(newItems);
+                                                    }} className="text-right w-24" />
+                                                ) : (`$${Number(item.price ?? 0).toFixed(2)}`)}</TableCell>
+                                                <TableCell>${Number(item.quantity * (item.price ?? 0)).toFixed(2)}</TableCell>
+                                                <TableCell>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => { if (!isReadOnly && editingTransactionId === null) removeCartItem(index); }}
+                                                        disabled={isReadOnly || editingTransactionId !== null}
+                                                    >
+                                                        <Trash2 className="h-4 w-4 text-destructive"/>
+                                                    </Button>
+                                                </TableCell>
+                                            </TableRow>
+                                        )) : (<TableRow><TableCell colSpan={5} className="text-center h-24">El carrito está vacío.</TableCell></TableRow>)}
+                                    </TableBody>
+                                </Table>
+                            </div>
                         </CardContent>
                     </Card>
                 </div>
-
                 <div className="space-y-6">
                     <Card>
                         <CardHeader><CardTitle>Configuración</CardTitle></CardHeader>
                         <CardContent className="space-y-4">
                             <div className="grid gap-2"><Label>Fecha de Venta</Label><Popover><PopoverTrigger asChild><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{date ? format(date, "PPP", { locale: es }) : <span>Seleccione fecha</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={date} onSelect={(d) => setDate(d || new Date())} initialFocus /></PopoverContent></Popover></div>
-                            <div className="grid gap-2"><Label htmlFor="invoiceNumber">Nº de Factura</Label><Input id="invoiceNumber" value={invoiceNumber} onChange={e => setInvoiceNumber(e.target.value)} placeholder="Opcional" /></div>
+                            <div className="grid gap-2"><Label htmlFor="invoiceNumber">Nº de Factura</Label><Input id="invoiceNumber" value={invoiceNumber} onChange={e => setInvoiceNumber(e.target.value)} placeholder="Opcional" readOnly={!canEditInvoiceSale} /></div>
                         </CardContent>
                     </Card>
-
                     <Card>
                         <CardHeader><CardTitle>Resumen</CardTitle></CardHeader>
                         <CardContent className="grid gap-4">
-                            <div className="flex justify-between"><span>Subtotal</span><span>${subtotal.toFixed(2)}</span></div>
-                            <div className="flex justify-between"><span>Impuestos</span><span>${totalTaxes.toFixed(2)}</span></div>
+                            <div className="flex justify-between"><span>Subtotal</span><span>${Number(subtotal ?? 0).toFixed(2)}</span></div>
+                            <div className="flex justify-between"><span>Impuestos</span><span>${Number(totalTaxes ?? 0).toFixed(2)}</span></div>
                             <Separator />
-                            <div className="flex justify-between font-semibold text-lg"><span>Total</span><span>${total.toFixed(2)}</span></div>
+                            <div className="flex justify-between font-semibold text-lg"><span>Total</span><span>${Number(total ?? 0).toFixed(2)}</span></div>
                         </CardContent>
                     </Card>
-
-                    <div className="flex flex-col gap-2">
-                         <Button onClick={handleOpenConfirmation} disabled={isSubmitDisabled} size="lg">
+                        <div className="flex flex-col gap-2">
+                         <Button 
+                            onClick={handleOpenConfirmation} 
+                            disabled={isReadOnly || isSubmitDisabled} 
+                            size="lg"
+                         >
                             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             {isLoading ? "Procesando..." : (editingTransactionId ? "Guardar Cambios" : "Registrar Venta")}
                         </Button>
-                        {editingTransactionId && (<Button variant="ghost" onClick={resetForm}><XCircle className="mr-2 h-4 w-4" />Cancelar Edición</Button>)}
-                        <Button variant="secondary" onClick={handleHoldSale} disabled={editingTransactionId !== null}>Poner en Espera</Button>
+                        <Button variant="outline" onClick={resetForm} disabled={isReadOnly}>
+                            Limpiar
+                        </Button>
+                        {editingTransactionId && (
+                            <Button variant="ghost" size="sm" onClick={resetForm}>
+                                <XCircle className="mr-2 h-4 w-4" />Cancelar Edición
+                            </Button>
+                        )}
+                        <Button 
+                            variant="secondary" 
+                            onClick={handleHoldSale} 
+                            disabled={isReadOnly || cart.length === 0}
+                        >
+                            Poner en Espera
+                        </Button>
                     </div>
-
                     {pendingSales.length > 0 && (
                         <Card>
-                            <CardHeader><CardTitle>Ventas en Espera</CardTitle><CardDescription>Restaura o elimina las ventas que dejaste pendientes.</CardDescription></CardHeader>
+                            <CardHeader><CardTitle>Ventas en Espera</CardTitle><CardDescription>Restaura o elimina las ventas pendientes.</CardDescription></CardHeader>
                             <CardContent className="space-y-4">
                                 {pendingSales.map((sale) => (
                                     <div key={sale.id} className="flex items-center justify-between p-2 border rounded-lg">
                                         <div>
                                             <p className="font-medium">{sale.clientName || "Cliente General"}</p>
-                                            <p className="text-sm text-muted-foreground">{sale.cart.length} producto(s) - {format(sale.createdAt, "p", { locale: es })}</p>
+                                            <p className="text-sm text-muted-foreground">{sale.cart.length} producto(s) - {format(new Date(sale.createdAt), "p", { locale: es })}</p>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            <Tooltip><TooltipTrigger asChild><Button variant="outline" size="icon" onClick={() => handleRestoreSale(sale)}><ListRestart className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent><p>Restaurar</p></TooltipContent></Tooltip>
-                                            <Tooltip><TooltipTrigger asChild><Button variant="destructive" size="icon" onClick={() => handleRemovePendingSale(sale.id)}><Trash className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent><p>Eliminar</p></TooltipContent></Tooltip>
+                                            <Tooltip><TooltipTrigger asChild><Button variant="outline" size="icon" onClick={() => { if (!isReadOnly) handleRestoreSale(sale); }} disabled={isReadOnly}><ListRestart className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent><p>Restaurar</p></TooltipContent></Tooltip>
+                                            <Tooltip><TooltipTrigger asChild><Button variant="destructive" size="icon" onClick={() => { if (!isReadOnly) handleRemovePendingSale(sale.id); }} disabled={isReadOnly}><Trash className="h-4 w-4" /></Button></TooltipTrigger><TooltipContent><p>Eliminar</p></TooltipContent></Tooltip>
                                         </div>
                                     </div>
                                 ))}
@@ -507,31 +579,19 @@ export default function SalesPage() {
                     )}
                 </div>
             </div>
-        </div>
+    </div>
+    <VariantSelectionDialog open={isVariantDialogOpen} onOpenChange={setIsVariantDialogOpen} product={selectedProductForVariants} onVariantsSelected={handleVariantsSelected} context="sale" selectOnly />
         <SalesHistoryDialog 
             open={isHistoryOpen} 
             onOpenChange={setIsHistoryOpen} 
             onViewReceipt={handleViewReceiptFromHistory} 
             onEditSale={handleEditSale} 
             refetchKey={refetchKey}
+            canEdit={currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('sales:edit')}
+            canAnnul={currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('sales:annul')}
         />
-        <SalesReceiptDialog 
-            open={isReceiptOpen} 
-            onOpenChange={(open) => {
-                if (!open) {
-                    setSelectedTransactionId(null);
-                }
-                setIsReceiptOpen(open);
-            }} 
-            transactionId={selectedTransactionId} 
-        />
-        <SalesConfirmationDialog 
-            open={isConfirmationOpen} 
-            onOpenChange={setIsConfirmationOpen}
-            saleItems={consolidatedItems}
-            onConfirm={handleFormSubmit}
-            isSaving={isLoading}
-        />
+        <SalesReceiptDialog open={isReceiptOpen} onOpenChange={(open) => { if (!open) setSelectedTransactionId(null); setIsReceiptOpen(open); }} transactionId={selectedTransactionId} />
+        <SalesConfirmationDialog open={isConfirmationOpen} onOpenChange={setIsConfirmationOpen} saleItems={consolidatedItems} onConfirm={handleFormSubmit} isSaving={isLoading} />
         </TooltipProvider>
     )
 }

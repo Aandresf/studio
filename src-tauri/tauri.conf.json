@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "fullscreen": false,
+        "fullscreen": true,
         "resizable": true,
         "title": "Inventario App",
         "width": 1200,
