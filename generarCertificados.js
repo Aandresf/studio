@@ -52,15 +52,25 @@ try {
   execSync(`openssl req -new -key ${keyPath} -out ${path.join(certDir, `${ip}.csr`)} -config ${confFilePath}`);
   execSync(`openssl x509 -req -in ${path.join(certDir, `${ip}.csr`)} -signkey ${keyPath} -sha256 -days 365 -out ${certPath} -extensions req_ext -extfile ${confFilePath}`);
 
+  // Generar formato PKCS#12 (.p12) - más fácil de importar en dispositivos
+  const p12Path = path.join(certDir, `${ip}.p12`);
+  console.log('Generando archivo PKCS#12 (.p12)...');
+  // Usamos una contraseña temporal para el .p12 - la pedirá al importar
+  const p12pass = 'temporal123';
+  execSync(`openssl pkcs12 -export -out "${p12Path}" -inkey "${keyPath}" -in "${certPath}" -passout pass:${p12pass}`);
+  console.log(`Archivo .p12 generado: ${p12Path} (contraseña: ${p12pass})`);
+
   // Además crear copias en formato .pem (nombres esperados por el servidor)
   const pemKeyPath = path.join(__dirname, 'src-backend', 'data', '.certs', 'key.pem');
   const pemCertPath = path.join(__dirname, 'src-backend', 'data', '.certs', 'cert.pem');
+  const pemP12Path = path.join(__dirname, 'src-backend', 'data', '.certs', 'cert.p12');
   // asegurar directorio destino
   const destDir = path.dirname(pemKeyPath);
   if (!fs.existsSync(destDir)) fs.mkdirSync(destDir, { recursive: true });
   fs.copyFileSync(keyPath, pemKeyPath);
   fs.copyFileSync(certPath, pemCertPath);
-  console.log(`Copiadas claves a: ${pemKeyPath} y ${pemCertPath}`);
+  fs.copyFileSync(p12Path, pemP12Path);
+  console.log(`Copiadas claves a: ${pemKeyPath}, ${pemCertPath} y ${pemP12Path}`);
 
   console.log('\n✅ ¡Certificado y clave generados con éxito!');
   console.log(`- Clave privada: ${keyPath}`);

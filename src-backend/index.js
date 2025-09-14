@@ -18,6 +18,9 @@ const isTestEnv = process.env.NODE_ENV === 'test';
 const app = express();
 const PORT = process.env.PORT || 3001;
 // Host to bind to. Priority: ENV vars (API_HOST/HOST) > data/.env BIND_IP > default 0.0.0.0
+// Añadir ruta temporal para servir el certificado
+const tempCertRoutes = require('./routes/temp-cert');
+app.use('/temp', tempCertRoutes);
 let HOST = process.env.API_HOST || process.env.HOST || null;
 try {
   if (!HOST) {
