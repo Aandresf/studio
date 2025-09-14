@@ -1,0 +1,168 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: 'Inter', sans-serif;
+}
+
+@layer base {
+  :root,
+  .light {
+    --background: 200 17% 94%;
+    --foreground: 224 71.4% 4.1%;
+    --card: 0 0% 100%;
+    --card-foreground: 224 71.4% 4.1%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 224 71.4% 4.1%;
+    --primary: 231 48% 48%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 220 13% 91%;
+    --secondary-foreground: 224 71.4% 4.1%;
+    --muted: 220 13% 91%;
+    --muted-foreground: 220 9% 46%;
+    --accent: 187 100% 42%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 220 13% 89%;
+    --input: 220 13% 89%;
+    --ring: 231 48% 48%;
+    --chart-1: 231 48% 48%;
+    --chart-2: 187 100% 42%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+    --radius: 0.5rem;
+  }
+  .dark {
+  /* Use pure black background for PWA dark mode */
+  --background: 0 0% 0%; /* pure black */
+  --foreground: 0 0% 98%;
+  --card: 0 0% 6%;
+    --card-foreground: 0 0% 98%;
+    --popover: 224 71.4% 4.1%;
+    --popover-foreground: 0 0% 98%;
+  /* buttons: use a muted primary with higher contrast on black */
+  --primary: 210 15% 25%; /* dark bluish */
+  --primary-foreground: 0 0% 98%;
+  --secondary: 215 20% 12%;
+  --secondary-foreground: 0 0% 98%;
+  --muted: 215 20% 12%;
+  --muted-foreground: 210 15% 70%;
+  --accent: 200 20% 18%;
+  --accent-foreground: 0 0% 98%;
+  --destructive: 0 70% 40%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 215 20% 12%;
+  --input: 210 10% 10%;
+  --ring: 210 10% 40%;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+  }
+  .sepia {
+    --background: 45 35% 90%;
+    --foreground: 45 15% 20%;
+    --card: 45 35% 95%;
+    --card-foreground: 45 15% 20%;
+    --popover: 45 35% 95%;
+    --popover-foreground: 45 15% 20%;
+    --primary: 35 40% 50%;
+    --primary-foreground: 45 20% 98%;
+    --secondary: 45 25% 85%;
+    --secondary-foreground: 45 15% 20%;
+    --muted: 45 25% 85%;
+    --muted-foreground: 45 10% 45%;
+    --accent: 45 60% 60%;
+    --accent-foreground: 45 15% 10%;
+    --destructive: 0 60% 50%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 45 20% 80%;
+    --input: 45 20% 80%;
+    --ring: 35 40% 50%;
+  }
+  .light-gray {
+    --background: 220 15% 96%;
+    --foreground: 220 10% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 220 10% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 10% 10%;
+    --primary: 220 30% 45%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 220 14% 91%;
+    --secondary-foreground: 220 10% 10%;
+    --muted: 220 14% 91%;
+    --muted-foreground: 220 9% 46%;
+    --accent: 220 40% 55%;
+    --accent-foreground: 0 0% 98%;
+    --border: 220 13% 89%;
+    --input: 220 13% 89%;
+    --ring: 220 30% 45%;
+  }
+  .black {
+    --background: 0 0% 8%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 12%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 12%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 80%;
+    --primary-foreground: 0 0% 10%;
+    --secondary: 0 0% 20%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 20%;
+    --muted-foreground: 0 0% 60%;
+    --accent: 0 0% 30%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 70% 40%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 25%;
+    --input: 0 0% 25%;
+    --ring: 0 0% 80%;
+  }
+  .mint {
+    --primary: 160 60% 40%;
+    --primary-foreground: 0 0% 98%;
+    --accent: 160 70% 50%;
+    --ring: 160 60% 40%;
+  }
+  .blue {
+    --primary: 210 70% 55%;
+    --primary-foreground: 0 0% 98%;
+    --accent: 210 80% 65%;
+    --ring: 210 70% 55%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Fade at right edge for scrollable tabs */
+.tabs-fade-right {
+  position: relative;
+}
+.tabs-fade-right::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  height: 100%;
+  width: 2.5rem;
+  pointer-events: none;
+  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,1) 100%);
+  /* adapt for dark mode */
+}
+
+.dark .tabs-fade-right::after {
+  background: linear-gradient(90deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.6) 100%);
+}

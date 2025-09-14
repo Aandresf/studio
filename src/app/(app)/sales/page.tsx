@@ -1,0 +1,623 @@
+'use client';
+
+import * as React from 'react';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { Calendar as CalendarIcon, PlusCircle, Trash2, History, Loader2, ListRestart, Trash, XCircle, TableProperties } from 'lucide-react';
+
+import { useBackendStatus } from '@/app/(app)/layout';
+import { useCurrentUser } from '@/hooks/use-current-user';
+import ProtectedRedirect from '@/components/ProtectedRedirect';
+import { getProducts, createSale, getPendingTransactions, addPendingTransaction, removePendingTransaction, updateSale, getStores } from '@/lib/api';
+import { Product, SalePayload, ProductVariant, TransactionItemPayload, GroupedSale } from '@/lib/types';
+import { cn } from '@/lib/utils';
+import { toastSuccess, toastError } from '@/hooks/use-toast';
+
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { AdvancedCombobox } from '@/components/ui/AdvancedCombobox';
+import { useAsyncOptions } from '@/hooks/use-async-options';
+import { getCustomers } from '@/lib/api';
+import CustomerQuickCreator from '@/components/customers/CustomerQuickCreator';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { SalesHistoryDialog } from '@/components/dialogs/SalesHistoryDialog';
+import { SalesReceiptDialog } from '@/components/dialogs/SalesReceiptDialog';
+import { SalesConfirmationDialog } from '@/components/dialogs/SalesConfirmationDialog';
+import { VariantSelectionDialog } from '@/components/dialogs/VariantSelectionDialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useIsPWA } from '@/hooks/use-is-pwa';
+
+interface CartItem {
+  id: string;
+  variantId: number;
+  productId: number;
+  productName: string;
+  variantName: string;
+  quantity: number;
+  price: number;
+  tax_rate: number;
+  availableStock: number;
+  sku: string | null;
+}
+
+interface PendingSale {
+    id: string;
+    cart: CartItem[];
+    date: Date;
+    clientName: string;
+    clientDni: string;
+    invoiceNumber: string;
+    createdAt: Date;
+}
+
+export default function SalesPage() {
+    // 1. Hooks de contexto
+    const currentUser = useCurrentUser();
+    const { isBackendReady, refetchKey, triggerRefetch } = useBackendStatus();
+
+    // 2. Estados (useState)
+    // Formulario principal
+    const [date, setDate] = React.useState<Date>(new Date());
+    const [clientName, setClientName] = React.useState('');
+    const [clientDni, setClientDni] = React.useState('');
+    const [selectedClient, setSelectedClient] = React.useState<any | null>(null);
+    const [invoiceNumber, setInvoiceNumber] = React.useState('');
+    const [isLoading, setIsLoading] = React.useState(false);
+    const [isLoadingProducts, setIsLoadingProducts] = React.useState(true);
+    
+    // Productos y carrito
+    const [products, setProducts] = React.useState<Product[]>([]);
+    const [cart, setCart] = React.useState<CartItem[]>([]);
+    const [selectedProductForVariants, setSelectedProductForVariants] = React.useState<Product | null>(null);
+
+    // Diálogos y modales
+    const [isVariantDialogOpen, setIsVariantDialogOpen] = React.useState(false);
+    const [isHistoryOpen, setIsHistoryOpen] = React.useState(false);
+    const [isReceiptOpen, setIsReceiptOpen] = React.useState(false);
+    const [isConfirmationOpen, setIsConfirmationOpen] = React.useState(false);
+
+    // Ventas y transacciones
+    const [pendingSales, setPendingSales] = React.useState<PendingSale[]>([]);
+    const [consolidatedItems, setConsolidatedItems] = React.useState<(TransactionItemPayload & { name: string })[]>([]);
+    const [selectedTransactionId, setSelectedTransactionId] = React.useState<string | null>(null);
+    const [editingTransactionId, setEditingTransactionId] = React.useState<string | null>(null);
+
+    // 3. Efectos (useEffect)
+    React.useEffect(() => {
+        if (!isBackendReady) return;
+        const fetchInitialData = async () => {
+            setIsLoadingProducts(true);
+            try {
+                // Ensure active store/context is resolved like Products page does
+                try { await getStores(); } catch (e) { /* ignore */ }
+                const [productsData, pendingData] = await Promise.all([
+                    getProducts(),
+                    getPendingTransactions()
+                ]);
+                console.debug('[SalesPage] loaded products:', Array.isArray(productsData) ? productsData.length : typeof productsData);
+                setProducts(productsData);
+                setPendingSales(pendingData.sales || []);
+            } catch (error) {
+                console.error('[SalesPage] fetchInitialData error', error);
+            } finally {
+                setIsLoadingProducts(false);
+            }
+        };
+        fetchInitialData();
+    }, [isBackendReady, refetchKey]);
+
+    // Prefill from query param ?clientId=
+    const searchParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+    React.useEffect(() => {
+        const clientId = searchParams.get('clientId');
+        if (clientId) {
+            (async () => {
+                try {
+                    const c = await (await import('@/lib/api')).getCustomer(clientId);
+                    setSelectedClient(c);
+                    setClientName(c?.name || '');
+                    setClientDni(c?.document || '');
+                } catch (e) {}
+            })();
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Load customers for combobox
+    const { options: customerOptions, load: loadCustomers, loading: loadingCustomers } = useAsyncOptions(getCustomers);
+    React.useEffect(() => { loadCustomers(); }, [refetchKey]);
+
+    // 4. Memos (useMemo)
+    const productMap = React.useMemo(() => new Map(products.map(p => [p.id, p])), [products]);
+
+    const isPwa = useIsPWA();
+
+    // 2. Después las variables derivadas del estado
+    const canReadSales = currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('sales:read');
+    const canCreateSales = currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('sales:create');
+    const canEditSales = currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('sales:edit');
+    const canAnnulSales = currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('sales:annul');
+    const isReadOnly = !canCreateSales && !canEditSales && !canAnnulSales;
+    const hasAnySalesPermission = canReadSales || canCreateSales || canEditSales || canAnnulSales;
+
+    // permisos adicionales
+    const canEditPriceOnSale = currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('sales:edit_price');
+    const canEditInvoiceSale = currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('sales:edit_invoice');
+    const canViewCustomerSensitive = currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('customers:view_sensitive');
+
+    const generateInvoiceNumber = () => `V-${new Date().getFullYear()}${String(Date.now()).slice(-6)}`;
+
+    React.useEffect(() => { if (!invoiceNumber) setInvoiceNumber(generateInvoiceNumber()); }, []);
+
+    const displayClientDni = canViewCustomerSensitive ? clientDni : (clientDni ? '••••••' : '');
+
+    // 3. Finalmente la lógica de renderizado condicional
+    if (!hasAnySalesPermission) {
+        return <ProtectedRedirect condition={false} />;
+    }
+
+    const getProductDisplayValue = (productId: string) => {
+        const product = productMap.get(Number(productId));
+        return product ? product.name : '';
+    };
+
+    const productFilterFn = (options: Product[], searchValue: string): Product[] => {
+        if (!searchValue) return options;
+        const lowerCaseSearch = searchValue.toLowerCase();
+
+        return options.filter(product => {
+            const variants = product.variants ?? [];
+            const searchIn = [
+                product.name,
+                product.category || '',
+                // some responses include brand_name directly
+                (product as any).brand_name || '',
+                ...variants.map(v => v.sku || ''),
+                ...variants.flatMap(v => v.attribute_values?.map(av => av.value) || [])
+            ].join(' ').toLowerCase();
+
+            return searchIn.includes(lowerCaseSearch);
+        });
+    };
+
+    const renderProductOption = (product: Product) => {
+            console.log(product);
+    
+            const variants = product.variants ?? [];
+            const totalStock = variants.reduce((acc, v) => acc + v.current_stock, 0);
+            const attributes = () => {
+                const productAttributes: Record<string, Set<string>> = {};
+                variants.forEach(variant => {
+                    if (variant.current_stock > 0 && variant.attribute_values) {
+                        variant.attribute_values.forEach(av => {
+                            const attributeName = av.attribute_name ? av.attribute_name : `attr_${av.attribute_id}`;
+                            if (!productAttributes[attributeName]) {
+                                productAttributes[attributeName] = new Set<string>();
+                            }
+                            productAttributes[attributeName].add(av.value);
+                        });
+                    }
+                });
+                
+                const attributesForDisplay: Record<string, string> = {};
+                for (const name in productAttributes) {
+                    attributesForDisplay[name] = Array.from(productAttributes[name]).join(', ');
+                }
+                // Mostrar los atributos y valores
+                return Object.entries(attributesForDisplay).length > 0
+                    ? Object.entries(attributesForDisplay).map(([name, values]) => (
+                        <p key={name}><b>{name}:</b> {values}</p>
+                    ))
+                    : <span className="text-muted-foreground">Sin atributos</span>;
+            }
+    
+            // Layout guard: ensure text truncates and attributes don't overflow
+            return (
+                <div className="grid grid-cols-4 items-center w-full gap-2 min-w-0">
+                    <div className="flex flex-col justify-self-start min-w-0 overflow-hidden">
+                        <span className="font-semibold truncate">{product.name}</span>
+                        <span className="text-xs text-muted-foreground truncate">{product.brand_name || product.brand?.name || ''}</span>
+                    </div>
+                    <span className="text-xs text-muted-foreground justify-self-center min-w-0 truncate">SKU: {product.base_sku || 'N/A'}</span>
+                    <span className="justify-self-center min-w-0">Stock: {totalStock}</span>
+                    <div className="justify-self-end min-w-0 max-w-[220px] overflow-hidden text-right">
+                        <span className="text-xs text-muted-foreground truncate block">
+                            {/* collapse attributes into a single line to avoid vertical overflow */}
+                            {(() => {
+                                try {
+                                    const attrsArray = [] as string[];
+                                    const v = product.variants ?? [];
+                                    v.forEach(variant => {
+                                        (variant.attribute_values || []).forEach(av => {
+                                            const key = av.attribute_name ? av.attribute_name : `attr_${av.attribute_id}`;
+                                            attrsArray.push(`${key}: ${av.value}`);
+                                        });
+                                    });
+                                    const unique = Array.from(new Set(attrsArray));
+                                    return unique.length ? unique.join(' • ') : 'Sin atributos';
+                                } catch (e) {
+                                    return 'Sin atributos';
+                                }
+                            })()}
+                        </span>
+                    </div>
+                </div>
+            );
+        };
+
+    const resetForm = () => {
+        setDate(new Date());
+        setClientName('');
+        setClientDni('');
+        setInvoiceNumber('');
+        setCart([]);
+        setEditingTransactionId(null);
+    };
+
+    const handleProductSelect = (productId: string) => {
+        if (isReadOnly) return;
+        const product = productMap.get(Number(productId));
+        if (product) {
+            setSelectedProductForVariants(product);
+            setIsVariantDialogOpen(true);
+        }
+    };
+
+    const handleVariantsSelected = (selectedVariants: (ProductVariant & { quantity?: number })[]) => {
+    if (isReadOnly) return;
+        const newCartItems: CartItem[] = selectedVariants.map(variant => ({
+            id: `temp-${variant.id}-${Date.now()}`,
+            variantId: variant.id,
+            productId: variant.product_id,
+            productName: selectedProductForVariants?.name || 'N/A',
+            variantName: variant.attribute_values?.map(v => v.value).join(' / ') || 'Est\u00e1ndar',
+            quantity: variant.quantity ?? 1, // default to 1 when coming from select-only
+            price: variant.sale_price,
+            tax_rate: 16.00,
+            availableStock: variant.current_stock,
+                sku: variant.sku ?? null,
+        }));
+
+        const newCart = [...cart];
+        newCartItems.forEach(newItem => {
+            const existingItemIndex = newCart.findIndex(item => item.variantId === newItem.variantId);
+            if (existingItemIndex > -1) {
+                newCart[existingItemIndex].quantity += newItem.quantity;
+            } else {
+                newCart.push(newItem);
+            }
+        });
+        setCart(newCart);
+    };
+
+    const removeCartItem = (index: number) => {
+        setCart(cart.filter((_, i) => i !== index));
+    };
+
+    const handleOpenConfirmation = () => {
+        if (!selectedClient && !clientName) {
+            toastError('Cliente requerido', 'Selecciona un cliente antes de continuar.');
+            return;
+        }
+        const finalItems = cart.map(item => ({
+            variantId: item.variantId,
+            name: `${item.productName} (${item.variantName})`,
+            quantity: item.quantity,
+            unitPrice: item.price,
+            tax_rate: item.tax_rate,
+        }));
+        // @ts-ignore
+        setConsolidatedItems(finalItems);
+        setIsConfirmationOpen(true);
+    };
+
+    const handleFormSubmit = async () => {
+        setIsLoading(true);
+        
+        const salePayload: SalePayload = {
+            transaction_date: date.toISOString(),
+            entity_name: clientName || undefined,
+            entity_document: clientDni || undefined,
+            document_number: invoiceNumber || undefined,
+            // @ts-ignore
+            items: consolidatedItems,
+        };
+
+        try {
+            let response;
+            if (editingTransactionId) {
+                response = await updateSale({ transaction_id: editingTransactionId, saleData: salePayload });
+                toastSuccess("Venta Actualizada", "La venta se ha modificado exitosamente.");
+                setSelectedTransactionId(editingTransactionId);
+            } else {
+                response = await createSale(salePayload);
+                toastSuccess("Venta Registrada", "La venta se ha guardado exitosamente.");
+                if (response && (response as any).transaction_id) {
+                    setSelectedTransactionId((response as any).transaction_id);
+                }
+            }
+            
+            setIsReceiptOpen(true);
+            triggerRefetch();
+            resetForm();
+        } catch (error) {
+        } finally {
+            setIsLoading(false);
+            setIsConfirmationOpen(false);
+        }
+    };
+
+    const handleHoldSale = async () => {
+        if (cart.length === 0) {
+            toastError("Venta Vacía", "No puedes poner en espera una venta sin productos.");
+            return;
+        }
+        const newPendingSale: PendingSale = { 
+            id: `pending-sale-${Date.now()}`, 
+            cart, date, clientName, clientDni, invoiceNumber, createdAt: new Date() 
+        };
+        
+        try {
+            await addPendingTransaction('sale', newPendingSale);
+            toastSuccess("Venta en Espera", "La venta actual se ha guardado.");
+            resetForm();
+            triggerRefetch();
+        } catch (error) {}
+    };
+
+    const handleRestoreSale = async (saleToRestore: PendingSale) => {
+        setCart(saleToRestore.cart);
+        setDate(new Date(saleToRestore.date));
+        setClientName(saleToRestore.clientName);
+        setClientDni(saleToRestore.clientDni);
+        setInvoiceNumber(saleToRestore.invoiceNumber);
+        
+        try {
+            await removePendingTransaction(saleToRestore.id);
+            toastSuccess("Venta Restaurada", "La venta ha sido cargada.");
+            triggerRefetch();
+        } catch (error) {}
+    };
+
+    const handleRemovePendingSale = async (id: string) => {
+        try {
+            await removePendingTransaction(id);
+            toastSuccess("Venta Descartada", "La venta en espera ha sido eliminada.");
+            triggerRefetch();
+        } catch (error) {}
+    };
+
+    const handleViewReceiptFromHistory = (sale: GroupedSale) => {
+        setSelectedTransactionId(sale.transaction_id);
+        setIsReceiptOpen(true);
+    };
+
+    const handleEditSale = (sale: GroupedSale) => {
+        setDate(new Date(sale.transaction_date));
+        setClientName(sale.entity_name);
+        setClientDni(sale.entity_document);
+        setInvoiceNumber(sale.document_number);
+        setEditingTransactionId(sale.transaction_id);
+
+        const newCart: CartItem[] = sale.movements.map(m => ({
+            id: `edit-${m.variantId}-${Math.random()}`,
+            variantId: m.variantId,
+            // @ts-ignore
+            productId: m.productId,
+            productName: m.productName,
+            variantName: m.variantName,
+            quantity: m.quantity,
+            price: m.unit_price || 0,
+            tax_rate: 16.00, // TODO
+            sku: (m as any).sku,
+            // @ts-ignore
+            availableStock: 0,
+        }));
+        setCart(newCart);
+        setIsHistoryOpen(false);
+    };
+
+    const subtotal = cart.reduce((acc, item) => acc + item.quantity * item.price, 0);
+    const totalTaxes = cart.reduce((acc, item) => acc + (item.quantity * item.price * (item.tax_rate / 100)), 0);
+    const total = subtotal + totalTaxes;
+
+    const isSubmitDisabled = isLoading || cart.length === 0;
+
+    return (
+        <TooltipProvider>
+            <div className="flex flex-col gap-6">
+                <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                        <h1 className="font-semibold text-lg md:text-2xl">Ventas</h1>
+                        <p className="text-sm text-muted-foreground">{editingTransactionId ? `Editando venta a ${clientName}` : "Crea y gestiona facturas de venta."}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Button variant="outline" onClick={() => setIsHistoryOpen(true)} disabled={editingTransactionId !== null}>
+                            <History className="mr-2 h-4 w-4" />Historial
+                        </Button>
+                        {/* {!isPwa && (
+                            <Button onClick={handleOpenConfirmation} disabled={isReadOnly || isSubmitDisabled} size="lg">Confirmar</Button>
+                        )} */}
+                    </div>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                        <Card>
+                            <CardContent className="p-4">
+                                <Label>Cliente</Label>
+                                <div className="flex gap-2 items-center">
+                                    <div className="flex-1">
+                                        <AdvancedCombobox<any>
+                                            options={customerOptions}
+                                            value={selectedClient ? String(selectedClient.id) : ''}
+                                            onChange={async (v) => {
+                                                try {
+                                                    const c = await (await import('@/lib/api')).getCustomer(v);
+                                                    setSelectedClient(c);
+                                                    setClientName(c?.name || '');
+                                                    setClientDni(c?.document || '');
+                                                } catch (e) {}
+                                            }}
+                                            valueAccessor={(o:any) => String(o.id)}
+                                            filterFn={(opts: any[], search: string) => {
+                                                if (!search) return opts;
+                                                return opts.filter(o => (o.name || '').toLowerCase().includes(search.toLowerCase()) || (o.document || '').toLowerCase().includes(search.toLowerCase()));
+                                            }}
+                                            renderOption={(o:any) => (<div className="flex items-center justify-between"><div><div className="font-semibold">{o.name}</div><div className="text-xs text-muted-foreground">{o.document}</div></div><div className="text-sm">{o.email || ''}</div></div>)}
+                                            displayValue={(val) => selectedClient?.name || clientName}
+                                            placeholder={isLoadingProducts ? 'Cargando...' : 'Buscar cliente...'}
+                                            searchPlaceholder="Buscar cliente..."
+                                            emptyMessage="No se encontraron clientes."
+                                            disabled={false}
+                                        />
+                                    </div>
+                                    <div>
+                                        <CustomerQuickCreator onCreated={(c:any) => { setSelectedClient(c); setClientName(c?.name || ''); setClientDni(c?.document || ''); loadCustomers(); }} />
+                                    </div>
+                                </div>
+                                {selectedClient && <div className="text-sm text-muted-foreground">Seleccionado: {selectedClient.name}</div>}
+                            </CardContent>
+                        </Card>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+                    <div className="lg:col-span-2 space-y-6">
+                        <Card>
+                            <CardHeader><CardTitle>{editingTransactionId ? "Editar Venta" : "Nueva Venta"}</CardTitle></CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="grid gap-2"><Label htmlFor="clientName">Cliente</Label><Input id="clientName" value={clientName} readOnly placeholder="Nombre del cliente (seleccionado desde el buscador)" /></div>
+                                    <div className="grid gap-2"><Label htmlFor="clientDni">DNI Cliente</Label><Input id="clientDni" value={clientDni} readOnly placeholder="Cédula o RIF" /></div>
+                                </div>
+                                <div>
+                                    <Label>Añadir Producto</Label>
+                                    <AdvancedCombobox<Product>
+                                        options={products}
+                                        value={""}
+                                        onChange={handleProductSelect}
+                                        valueAccessor={(product) => String(product.id)}
+                                        filterFn={productFilterFn}
+                                        renderOption={renderProductOption}
+                                        displayValue={getProductDisplayValue}
+                                        placeholder={isLoadingProducts ? "Cargando..." : "Buscar producto..."}
+                                        searchPlaceholder="Buscar por nombre, SKU, categoría, marca..."
+                                        emptyMessage="No se encontraron productos."
+                                        disabled={isLoadingProducts || isReadOnly}
+                                    />
+                                </div>
+                                <div className="border rounded-md">
+                                    <Table>
+                                        <TableHeader><TableRow><TableHead>Producto</TableHead><TableHead>Cantidad</TableHead><TableHead>Precio Unit.</TableHead><TableHead>Total</TableHead><TableHead></TableHead></TableRow></TableHeader>
+                                        <TableBody>
+                                            {cart.length > 0 ? cart.map((item, index) => (
+                                                <TableRow key={item.id}>
+                                                    <TableCell><p className="font-medium">{item.productName}</p><p className="text-xs text-muted-foreground">{item.variantName} ({item.sku})</p></TableCell>
+                                                    <TableCell>
+                                                        <Input type="number" value={item.quantity} min={0} onChange={(e) => {
+                                                            const newItems = [...cart];
+                                                            newItems[index].quantity = parseInt(e.target.value, 10) || 0;
+                                                            setCart(newItems);
+                                                        }} className="w-20 text-center" />
+                                                    </TableCell>
+                                                    <TableCell>{canEditPriceOnSale ? (
+                                                        <Input type="number" value={item.price} onChange={(e) => {
+                                                            const newItems = [...cart];
+                                                            newItems[index].price = parseFloat(e.target.value) || 0;
+                                                            setCart(newItems);
+                                                        }} className="text-right w-24" />
+                                                    ) : (`$${Number(item.price ?? 0).toFixed(2)}`)}</TableCell>
+                                                    <TableCell>${Number(item.quantity * (item.price ?? 0)).toFixed(2)}</TableCell>
+                                                    <TableCell>
+                                                        <Button variant="ghost" size="icon" onClick={() => { if (!isReadOnly && editingTransactionId === null) removeCartItem(index); }} disabled={isReadOnly || editingTransactionId !== null}>
+                                                            <Trash2 className="h-4 w-4 text-destructive"/>
+                                                        </Button>
+                                                    </TableCell>
+                                                </TableRow>
+                                            )) : (<TableRow><TableCell colSpan={5} className="text-center h-24">El carrito está vacío.</TableCell></TableRow>)}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+                    <div className="space-y-6">
+                        <Card>
+                            <CardHeader><CardTitle>Configuración</CardTitle></CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="grid gap-2"><Label>Fecha de Venta</Label><Popover><PopoverTrigger asChild><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{date ? format(date, "PPP", { locale: es }) : <span>Seleccione fecha</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={date} onSelect={(d) => setDate(d || new Date())} initialFocus /></PopoverContent></Popover></div>
+                                <div className="grid gap-2"><Label htmlFor="invoiceNumber">Nº de Factura</Label><Input id="invoiceNumber" value={invoiceNumber} onChange={e => setInvoiceNumber(e.target.value)} placeholder="Opcional" readOnly={!canEditInvoiceSale} /></div>
+                            </CardContent>
+                        </Card>
+                        <Card>
+                            <CardHeader><CardTitle>Resumen</CardTitle></CardHeader>
+                            <CardContent className="grid gap-4">
+                                <div className="flex justify-between"><span>Subtotal</span><span>${Number(subtotal ?? 0).toFixed(2)}</span></div>
+                                <div className="flex justify-between"><span>Impuestos</span><span>${Number(totalTaxes ?? 0).toFixed(2)}</span></div>
+                                <Separator />
+                                <div className="flex justify-between font-semibold text-lg"><span>Total</span><span>${Number(total ?? 0).toFixed(2)}</span></div>
+                            </CardContent>
+                        </Card>
+                        <div className="flex flex-col gap-2">
+                            {!isPwa && (
+                                <Button onClick={handleOpenConfirmation} disabled={isSubmitDisabled || isReadOnly} size="lg">
+                                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                    {isLoading ? "Procesando..." : (editingTransactionId ? "Guardar Cambios" : "Registrar Venta")}
+                                </Button>
+                            )}
+                            {editingTransactionId && (<Button variant="ghost" size="sm" onClick={resetForm}><XCircle className="mr-2 h-4 w-4" />Cancelar Edición</Button>)}
+                            {!isPwa && (<Button variant="secondary" onClick={handleHoldSale} disabled={editingTransactionId !== null}>Poner en Espera</Button>)}
+                        </div>
+                        {pendingSales.length > 0 && (
+                            <Card>
+                                <CardHeader><CardTitle>Ventas en Espera</CardTitle><CardDescription>Restaura o elimina las ventas pendientes.</CardDescription></CardHeader>
+                                <CardContent className="space-y-4">
+                                    {pendingSales.map((sale) => (
+                                        <div key={sale.id} className="flex items-center justify-between p-2 border rounded-lg">
+                                            <div>
+                                                <p className="font-medium">{sale.clientName || "Cliente General"}</p>
+                                                <p className="text-sm text-muted-foreground">{sale.cart.length} producto(s) - {format(new Date(sale.createdAt), "p", { locale: es })}</p>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <Button variant="outline" size="icon" onClick={() => { if (!isReadOnly) handleRestoreSale(sale); }} disabled={isReadOnly}><ListRestart className="h-4 w-4" /></Button>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent><p>Restaurar</p></TooltipContent>
+                                                </Tooltip>
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <Button variant="destructive" size="icon" onClick={() => { if (!isReadOnly) handleRemovePendingSale(sale.id); }} disabled={isReadOnly}><Trash className="h-4 w-4" /></Button>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent><p>Eliminar</p></TooltipContent>
+                                                </Tooltip>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </CardContent>
+                            </Card>
+                        )}
+                    </div>
+                </div>
+            </div>
+            <VariantSelectionDialog open={isVariantDialogOpen} onOpenChange={setIsVariantDialogOpen} product={selectedProductForVariants} onVariantsSelected={handleVariantsSelected} context="sale" selectOnly />
+            <SalesHistoryDialog 
+                open={isHistoryOpen} 
+                onOpenChange={setIsHistoryOpen} 
+                onViewReceipt={handleViewReceiptFromHistory} 
+                onEditSale={handleEditSale} 
+                refetchKey={refetchKey}
+                canEdit={currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('sales:edit')}
+                canAnnul={currentUser?.permissions?.includes('*') || currentUser?.permissions?.includes('sales:annul')}
+            />
+            <SalesReceiptDialog open={isReceiptOpen} onOpenChange={(open) => { if (!open) setSelectedTransactionId(null); setIsReceiptOpen(open); }} transactionId={selectedTransactionId} />
+            <SalesConfirmationDialog open={isConfirmationOpen} onOpenChange={setIsConfirmationOpen} saleItems={consolidatedItems} onConfirm={handleFormSubmit} isSaving={isLoading} />
+        </TooltipProvider>
+    )
+}

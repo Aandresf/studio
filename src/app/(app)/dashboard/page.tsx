@@ -1,0 +1,233 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { DollarSign, Package, ShoppingCart, Users } from "lucide-react";
+import { getDashboardSummary, getRecentSales } from '@/lib/api';
+import { DashboardSummary, RecentSale } from '@/lib/types';
+import { useBackendStatus } from '@/app/(app)/layout';
+import { useCurrentUser } from '@/hooks/use-current-user';
+import { useRouter } from 'next/navigation';
+import { Skeleton } from '@/components/ui/skeleton';
+import { SalesReceiptDialog } from '@/components/dialogs/SalesReceiptDialog'; // Import the dialog
+
+// Usar tipos compartidos desde src/lib/types
+
+// Componentes Skeleton para el estado de carga
+function StatsCardSkeleton() {
+    return (
+        <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <Skeleton className="h-4 w-2/3" />
+                <Skeleton className="h-4 w-4" />
+            </CardHeader>
+            <CardContent>
+                <Skeleton className="h-8 w-1/2 mb-1" />
+                <Skeleton className="h-3 w-1/3" />
+            </CardContent>
+        </Card>
+    );
+}
+
+function RecentSalesSkeleton() {
+    return (
+        <Table>
+            <TableHeader>
+                <TableRow>
+                    <TableHead>Cliente</TableHead>
+                    <TableHead>Estado</TableHead>
+                    <TableHead>Fecha</TableHead>
+                    <TableHead className="text-right">Monto</TableHead>
+                </TableRow>
+            </TableHeader>
+            <TableBody>
+                {Array.from({ length: 3 }).map((_, i) => (
+                    <TableRow key={i}>
+                        <TableCell>
+                            <Skeleton className="h-5 w-24 mb-1" />
+                            <Skeleton className="h-3 w-32" />
+                        </TableCell>
+                        <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                        <TableCell className="text-right"><Skeleton className="h-4 w-16 ml-auto" /></TableCell>
+                    </TableRow>
+                ))}
+            </TableBody>
+        </Table>
+    );
+}
+
+export default function Dashboard() {
+    const { isBackendReady, refetchKey } = useBackendStatus();
+    const current = useCurrentUser();
+    const router = useRouter();
+
+    useEffect(() => {
+        // If we finished loading user and there's no authenticated user, redirect to login
+        if (!current?.loading && !current?.userId) {
+            router.push('/login');
+        }
+    }, [current?.loading, current?.userId, router]);
+    const [summary, setSummary] = useState<DashboardSummary | null>(null);
+    const [recentSales, setRecentSales] = useState<RecentSale[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [selectedTransactionId, setSelectedTransactionId] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!isBackendReady) {
+            setLoading(true);
+            setError("Esperando conexión con el backend...");
+            return;
+        }
+
+        const fetchData = async () => {
+            setLoading(true);
+            setError(null);
+            try {
+                const [summaryData, salesData] = await Promise.all([
+                    getDashboardSummary(),
+                    getRecentSales()
+                ]);
+                setSummary(summaryData);
+                setRecentSales(salesData);
+            } catch (e: any) {
+                setError(`Error: ${e.message}`);
+                console.error(e);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchData();
+    }, [isBackendReady, refetchKey]);
+
+    const renderContent = () => {
+        if (loading) {
+            return (
+                <>
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                        <StatsCardSkeleton />
+                        <StatsCardSkeleton />
+                        <StatsCardSkeleton />
+                        <StatsCardSkeleton />
+                    </div>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Ventas Recientes</CardTitle>
+                            <CardDescription>Un resumen de sus ventas más recientes.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <RecentSalesSkeleton />
+                        </CardContent>
+                    </Card>
+                </>
+            );
+        }
+
+        if (error) {
+            return <div className="text-center py-10 text-red-500">{error}</div>;
+        }
+
+        return (
+            <>
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Ingresos Totales</CardTitle>
+                            <DollarSign className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">${Number(summary?.totalRevenue?.value ?? 0).toFixed(2)}</div>
+                            <p className="text-xs text-muted-foreground">{Number(summary?.totalRevenue?.change ?? 0).toFixed(1)}% desde el mes pasado</p>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Ventas</CardTitle>
+                            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">+{Number(summary?.sales?.value ?? 0)}</div>
+                            <p className="text-xs text-muted-foreground">{Number(summary?.sales?.change ?? 0).toFixed(1)}% desde el mes pasado</p>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Total de Productos</CardTitle>
+                            <Package className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{Number(summary?.totalProducts?.value ?? 0)}</div>
+                            <p className="text-xs text-muted-foreground">{Number(summary?.totalProducts?.change ?? 0) > 0 ? '+' : ''}{Number(summary?.totalProducts?.change ?? 0)} desde la semana pasada</p>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Nuevos Clientes</CardTitle>
+                            <Users className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">+{Number(summary?.newCustomers?.value ?? 0)}</div>
+                            <p className="text-xs text-muted-foreground">{Number(summary?.newCustomers?.change ?? 0) > 0 ? '+' : ''}{Number(summary?.newCustomers?.change ?? 0)} desde ayer</p>
+                        </CardContent>
+                    </Card>
+                </div>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Ventas Recientes</CardTitle>
+                        <CardDescription>Un resumen de sus ventas más recientes.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Cliente</TableHead>
+                                    <TableHead>Estado</TableHead>
+                                    <TableHead>Fecha</TableHead>
+                                    <TableHead className="text-right">Monto</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {recentSales.map(sale => (
+                                    <TableRow key={sale.id} onClick={() => setSelectedTransactionId(sale.id)} className="cursor-pointer hover:bg-muted/50">
+                                        <TableCell>
+                                            <div className="font-medium">{sale.customerName}</div>
+                                            <div className="text-sm text-muted-foreground">{sale.productName}</div>
+                                        </TableCell>
+                                        <TableCell><Badge variant={sale.status === 'Pending' ? 'secondary' : 'default'}>{sale.status}</Badge></TableCell>
+                                        <TableCell>{new Date(sale.date).toLocaleDateString()}</TableCell>
+                                        <TableCell className="text-right">${Number(sale.amount ?? 0).toFixed(2)}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                </Card>
+            </>
+        );
+    };
+
+    return (
+        <>
+            <div className="flex flex-col gap-6">
+                <div className="flex-1">
+                    <h1 className="font-semibold text-lg md:text-2xl">Panel de Control</h1>
+                    <p className="text-sm text-muted-foreground">Vista general de tu inventario.</p>
+                </div>
+                {renderContent()}
+            </div>
+            <SalesReceiptDialog
+                transactionId={selectedTransactionId}
+                open={selectedTransactionId !== null}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setSelectedTransactionId(null);
+                    }
+                }}
+            />
+        </>
+    )
+}

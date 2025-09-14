@@ -1,0 +1,30 @@
+{
+  "name": "Studio Inventario",
+  "short_name": "Inventario",
+  "description": "Consulta de productos, historial de ventas y compras (solo lectura).",
+  "start_url": "/pwa",
+  "display": "standalone",
+  "scope": "/pwa",
+  "background_color": "#FFFFFF",
+  "theme_color": "#7C3AED",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/maskable-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable any"
+    }
+  ],
+  "categories": ["business", "utilities"],
+  "orientation": "portrait-primary"
+}

@@ -1,0 +1,14 @@
+{
+  "dashboard": {
+    "statusCode": 200,
+    "body": "{\"totalRevenue\":{\"value\":520,\"change\":100},\"sales\":{\"value\":3,\"change\":100},\"totalProducts\":{\"value\":5,\"change\":0},\"newCustomers\":{\"value\":0,\"change\":0}}"
+  },
+  "departments": {
+    "statusCode": 200,
+    "body": "[{\"id\":3,\"name\":\"CALZADOS\",\"abbreviation\":\"CAL\",\"created_at\":\"2025-08-27 13:45:23\",\"updated_at\":\"2025-08-27 13:45:23\"},{\"id\":2,\"name\":\"PERFUMERIA\",\"abbreviation\":\"PERF\",\"created_at\":\"2025-08-26 21:19:59\",\"updated_at\":\"2025-08-26 21:19:59\"},{\"id\":1,\"name\":\"ROPA\",\"abbreviation\":\"ROP\",\"created_at\":\"2025-08-26 01:50:27\",\"updated_at\":\"2025-08-26 01:50:27\"}]"
+  },
+  "sku": {
+    "statusCode": 200,
+    "body": "{\"nextSku\":\"CAL-FRA-001\",\"nextNumber\":1}"
+  }
+}

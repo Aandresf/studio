@@ -1,0 +1,16 @@
+{
+  "watch": [
+    "src-backend/"
+  ],
+  "ext": "js,json,sql",
+  "ignore": [
+    ".git",
+    "node_modules/",
+    "src/",
+    "src-tauri/",
+    ".next/",
+    "out/",
+    "src-backend/data/"
+  ],
+  "exec": "node src-backend/index.js"
+}
