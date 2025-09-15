@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "cross-env NODE_OPTIONS='--inspect' next dev --turbopack -p 9002",
     "dev-backend": "node src-backend/index.js",
+    "dev-backend-rust": "cd src-backend-rust && cargo run",
+    "dev-rust": "concurrently \"npm run dev\" \"npm run dev-backend-rust\"",
     "genkit:dev": "genkit start -- tsx src/ai/dev.ts",
     "genkit:watch": "genkit start -- tsx --watch src/ai/dev.ts",
     "compile:frontend": "next build",
@@ -84,6 +86,7 @@
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "archiver": "^7.0.1",
+    "concurrently": "^8.2.2",
     "cross-env": "^7.0.3",
     "eslint": "9.35.0",
     "eslint-config-next": "15.5.3",
