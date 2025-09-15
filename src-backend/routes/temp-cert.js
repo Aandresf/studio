@@ -4,6 +4,14 @@ const fs = require('fs');
 const path = require('path');
 const QRCode = require('qrcode');
 
+// Middleware para forzar HTTPS
+router.use((req, res, next) => {
+    if (!req.secure) {
+        return res.redirect(301, `https://${req.headers.host}${req.url}`);
+    }
+    next();
+});
+
 // Leer la IP del .env
 const envPath = path.join(__dirname, '../data/.env');
 let BIND_IP = '192.168.0.6'; // default
@@ -14,10 +22,14 @@ if (fs.existsSync(envPath)) {
 }
 
 router.get('/certs', (req, res) => {
+    const protocol = req.secure ? 'https' : 'http';
+    const baseUrl = `${protocol}://${req.get('host')}`;
+    
     res.send(`
         <html>
         <head>
             <title>Certificados SSL</title>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <style>
                 body {
                     font-family: Arial, sans-serif;
@@ -32,7 +44,7 @@ router.get('/certs', (req, res) => {
                     border-radius: 8px;
                     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
                 }
-                h1 { color: #333; }
+                h1 { color: #333; font-size: 1.5em; }
                 .file-list {
                     list-style: none;
                     padding: 0;
@@ -44,8 +56,13 @@ router.get('/certs', (req, res) => {
                     border: 1px solid #dee2e6;
                     border-radius: 4px;
                     display: flex;
+                    flex-direction: column;
+                }
+                .file-header {
+                    display: flex;
                     justify-content: space-between;
                     align-items: center;
+                    margin-bottom: 10px;
                 }
                 .download-btn {
                     background: #007bff;
@@ -57,24 +74,45 @@ router.get('/certs', (req, res) => {
                 .download-btn:hover {
                     background: #0056b3;
                 }
+                .secure-note {
+                    background: #d4edda;
+                    color: #155724;
+                    padding: 10px;
+                    border-radius: 4px;
+                    margin-bottom: 20px;
+                }
+                .password-info {
+                    color: #666;
+                    margin-top: 5px;
+                    font-size: 0.9em;
+                }
             </style>
         </head>
         <body>
             <div class="container">
+                <div class="secure-note">
+                    ✓ Conexión segura HTTPS establecida
+                </div>
                 <h1>Certificados SSL para ${BIND_IP}</h1>
                 <ul class="file-list">
                     <li class="file-item">
-                        <span>Certificado y Clave (.p12)</span>
-                        <a href="/temp/download-p12" class="download-btn">Descargar</a>
-                        <small style="display:block;color:#666;margin-top:5px">Contraseña: temporal123</small>
+                        <div class="file-header">
+                            <span>Certificado y Clave (.p12)</span>
+                            <a href="${baseUrl}/temp/download-p12" class="download-btn">Descargar</a>
+                        </div>
+                        <span class="password-info">Contraseña: temporal123</span>
                     </li>
                     <li class="file-item">
-                        <span>Certificado (cert.pem)</span>
-                        <a href="/temp/download-cert" class="download-btn">Descargar</a>
+                        <div class="file-header">
+                            <span>Certificado (cert.pem)</span>
+                            <a href="${baseUrl}/temp/download-cert" class="download-btn">Descargar</a>
+                        </div>
                     </li>
                     <li class="file-item">
-                        <span>Clave Privada (key.pem)</span>
-                        <a href="/temp/download-key" class="download-btn">Descargar</a>
+                        <div class="file-header">
+                            <span>Clave Privada (key.pem)</span>
+                            <a href="${baseUrl}/temp/download-key" class="download-btn">Descargar</a>
+                        </div>
                     </li>
                 </ul>
             </div>
@@ -120,15 +158,20 @@ router.get('/download-p12', (req, res) => {
 });
 
 router.get('/cert-qr', async (req, res) => {
-    const certsUrl = 'https://' + BIND_IP + ':3001/temp/certs';
-    // Generar QR como PNG en lugar de HTML
+    const port = process.env.PORT || '3001';
+    const certsUrl = 'https://' + BIND_IP + ':' + port + '/temp/certs';
+    
+    // Generar QR como PNG
     const qrBuffer = await QRCode.toBuffer(certsUrl, {
         errorCorrectionLevel: 'H',
         scale: 10,
         margin: 2,
         type: 'png'
     });
+    
+    // Forzar descarga como imagen
     res.type('png');
+    res.set('Content-Disposition', 'attachment; filename="certificado-qr.png"');
     res.send(qrBuffer);
 });
 

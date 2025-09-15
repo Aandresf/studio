@@ -17,10 +17,21 @@ const isTestEnv = process.env.NODE_ENV === 'test';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// Middleware para forzar HTTPS y configurar CSP
+const forceHttps = require('./middleware/force-https');
+app.use(forceHttps({
+    allowLocal: true  // Permite HTTP solo en localhost
+}));
+
 // Host to bind to. Priority: ENV vars (API_HOST/HOST) > data/.env BIND_IP > default 0.0.0.0
 // Añadir ruta temporal para servir el certificado
 const tempCertRoutes = require('./routes/temp-cert');
 app.use('/temp', tempCertRoutes);
+
+// Añadir ruta para generar certificados
+const generateCertRoutes = require('./routes/generate-certificate');
+app.use('/api/generate-certificate', generateCertRoutes);
 let HOST = process.env.API_HOST || process.env.HOST || null;
 try {
   if (!HOST) {
@@ -142,8 +153,8 @@ app.get('/api/server-info', (req, res) => {
     const port = PORT;
     const host = HOST;
   // Try to infer frontend origin from request headers (Origin preferred, then Host)
-  const frontendOrigin = req.headers.origin || (req.protocol ? `${req.protocol}://${req.headers.host}` : `http://${req.headers.host}`) || null;
-  const url = `http://${ip || 'localhost'}:${port}`;
+  const frontendOrigin = req.headers.origin || (req.protocol ? `${req.protocol}://${req.headers.host}` : `https://${req.headers.host}`) || null;
+  const url = `https://${ip || 'localhost'}:${port}`;
   const interfaces = listLocalInterfaces();
   const preferredIp = choosePreferredIp(interfaces, connLocal);
   res.json({ ip, preferredIp, interfaces, host, port, url, frontendOrigin, connectionLocalAddress: connLocal || null, clientRemoteAddress: normalizeAddress(req.socket && req.socket.remoteAddress ? String(req.socket.remoteAddress) : null) });
@@ -164,7 +175,7 @@ app.get('/api/qr', async (req, res) => {
   const connLocal = normalizeAddress(req.socket && req.socket.localAddress ? String(req.socket.localAddress) : null);
   const interfaces = listLocalInterfaces();
   const preferredIp = choosePreferredIp(interfaces, connLocal) || getLocalIp(connLocal) || 'localhost';
-  const defaultTarget = `http://${preferredIp}:${PORT}`;
+  const defaultTarget = `https://${preferredIp}:${PORT}`;
   let data = String(req.query.data || preferredFromReq || defaultTarget);
   // Ensure the data URL contains an explicit port when we have a numeric PORT
   try {

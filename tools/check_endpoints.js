@@ -1,14 +1,14 @@
 const http = require('http');
 const https = require('https');
 const urls = [
-  'http://127.0.0.1:3001/',
-  'http://127.0.0.1:3001/index.html',
-  'http://127.0.0.1:3001/sw.js',
-  'http://192.168.0.6:3001/',
-  'http://192.168.0.6:3001/index.html',
-  'http://192.168.0.6:3001/api/server-info',
-  'http://192.168.0.6:3001/api/health',
-  'http://192.168.0.6:3001/api/qr?data=http://192.168.0.6:3001/'
+  'https://127.0.0.1:3001/',
+  'https://127.0.0.1:3001/index.html',
+  'https://127.0.0.1:3001/sw.js',
+  'https://192.168.0.6:3001/',
+  'https://192.168.0.6:3001/index.html',
+  'https://192.168.0.6:3001/api/server-info',
+  'https://192.168.0.6:3001/api/health',
+  'https://192.168.0.6:3001/api/qr?data=https://192.168.0.6:3001/'
 ];
 
 function fetchUrl(u, timeout = 8000) {

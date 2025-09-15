@@ -1,4 +1,4 @@
-const API_BASE = process.env.API_BASE || 'http://localhost:3001/api';
+const API_BASE = process.env.API_BASE || 'https://localhost:3001/api';
 
 (async () => {
   try {
