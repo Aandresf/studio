@@ -1,48 +1,472 @@
 // src-backend-rust/src/schema.rs
 
-// Este módulo podría contener funciones para gestionar migraciones
-// o para verificar la integridad del esquema en el futuro.
+use rusqlite::Connection;
+use log::{info, error, debug};
 
-pub const SCHEMA_SQL: &str = r#"
--- Este es un esquema simplificado basado en el original
-CREATE TABLE IF NOT EXISTS users (
-    id TEXT PRIMARY KEY,
-    username TEXT UNIQUE NOT NULL,
-    password TEXT NOT NULL,
-    display_name TEXT,
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-    role_id TEXT,
-    FOREIGN KEY (role_id) REFERENCES roles(id)
-);
-
-CREATE TABLE IF NOT EXISTS roles (
-    id TEXT PRIMARY KEY,
-    name TEXT UNIQUE NOT NULL,
-    description TEXT
-);
-
-CREATE TABLE IF NOT EXISTS products (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    description TEXT,
-    sku TEXT UNIQUE,
-    barcode TEXT UNIQUE,
-    cost_price REAL,
-    sales_price REAL,
-    stock REAL DEFAULT 0,
-    department_id TEXT,
-    subdepartment_id TEXT,
-    brand_id TEXT,
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (department_id) REFERENCES departments(id),
-    FOREIGN KEY (subdepartment_id) REFERENCES subdepartments(id),
-    FOREIGN KEY (brand_id) REFERENCES brands(id)
-);
-
--- ... más tablas según sea necesario
-"#;
-
-pub fn apply_schema(conn: &rusqlite::Connection) -> rusqlite::Result<()> {
-    conn.execute_batch(SCHEMA_SQL)
+pub fn apply_schema(conn: &Connection) -> rusqlite::Result<()> {
+    debug!("Aplicando esquema de base de datos para Studio (tienda de ropa)...");
+    
+    // Activar la coerción de claves foráneas
+    conn.execute("PRAGMA foreign_keys = ON;", [])?;
+    
+    // Lista de sentencias SQL para crear el esquema
+    let schema_statements = vec![
+        // Tabla de departamentos
+        r#"
+        CREATE TABLE IF NOT EXISTS departments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE,
+            abbreviation TEXT NOT NULL UNIQUE,
+            status TEXT NOT NULL DEFAULT 'Activo',
+            deleted_at TEXT,
+            deleted_by TEXT,
+            created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now')),
+            updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now'))
+        )
+        "#,
+        
+        // Tabla de subdepartamentos
+        r#"
+        CREATE TABLE IF NOT EXISTS subdepartments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            abbreviation TEXT NOT NULL,
+            department_id INTEGER NOT NULL,
+            status TEXT NOT NULL DEFAULT 'Activo',
+            deleted_at TEXT,
+            deleted_by TEXT,
+            created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now')),
+            updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now')),
+            FOREIGN KEY (department_id) REFERENCES departments (id) ON DELETE CASCADE,
+            UNIQUE(department_id, name),
+            UNIQUE(department_id, abbreviation)
+        )
+        "#,
+        
+        // Tabla de marcas
+        r#"
+        CREATE TABLE IF NOT EXISTS brands (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            subdepartment_id INTEGER,
+            status TEXT NOT NULL DEFAULT 'Activo',
+            deleted_at TEXT,
+            deleted_by TEXT,
+            created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now')),
+            updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now')),
+            FOREIGN KEY (subdepartment_id) REFERENCES subdepartments (id) ON DELETE CASCADE
+        )
+        "#,
+        
+        // Tabla de secuencias para SKU
+        r#"
+        CREATE TABLE IF NOT EXISTS product_sequences (
+            department_id INTEGER NOT NULL,
+            subdepartment_id INTEGER NOT NULL,
+            last_number INTEGER NOT NULL DEFAULT 0,
+            PRIMARY KEY (department_id, subdepartment_id),
+            FOREIGN KEY (department_id) REFERENCES departments (id) ON DELETE CASCADE,
+            FOREIGN KEY (subdepartment_id) REFERENCES subdepartments (id) ON DELETE CASCADE
+        )
+        "#,
+        
+        // Tabla de productos
+        r#"
+        CREATE TABLE IF NOT EXISTS products (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            base_sku TEXT UNIQUE,
+            description TEXT DEFAULT '',
+            department_id INTEGER,
+            subdepartment_id INTEGER,
+            brand_id INTEGER,
+            status TEXT NOT NULL DEFAULT 'Activo',
+            deleted_at TEXT,
+            deleted_by TEXT,
+            created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now')),
+            updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now')),
+            FOREIGN KEY (brand_id) REFERENCES brands (id) ON DELETE SET NULL,
+            FOREIGN KEY (department_id) REFERENCES departments (id) ON DELETE SET NULL,
+            FOREIGN KEY (subdepartment_id) REFERENCES subdepartments (id) ON DELETE SET NULL
+        )
+        "#,
+        
+        // Tabla de atributos
+        r#"
+        CREATE TABLE IF NOT EXISTS attributes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            subdepartment_id INTEGER,
+            status TEXT NOT NULL DEFAULT 'Activo',
+            deleted_at TEXT,
+            deleted_by TEXT,
+            created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now')),
+            updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now')),
+            FOREIGN KEY (subdepartment_id) REFERENCES subdepartments (id) ON DELETE CASCADE
+        )
+        "#,
+        
+        // Tabla de valores de atributos
+        r#"
+        CREATE TABLE IF NOT EXISTS attribute_values (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            attribute_id INTEGER NOT NULL,
+            value TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'Activo',
+            deleted_at TEXT,
+            deleted_by TEXT,
+            created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now')),
+            updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now')),
+            FOREIGN KEY (attribute_id) REFERENCES attributes (id) ON DELETE CASCADE,
+            UNIQUE(attribute_id, value)
+        )
+        "#,
+        
+        // Tabla de variantes de producto (SKUs)
+        r#"
+        CREATE TABLE IF NOT EXISTS product_variants (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            product_id INTEGER NOT NULL,
+            sku TEXT UNIQUE,
+            cost_price REAL NOT NULL DEFAULT 0,
+            sale_price REAL NOT NULL DEFAULT 0,
+            current_stock REAL NOT NULL DEFAULT 0,
+            status TEXT NOT NULL DEFAULT 'Activo',
+            deleted_at TEXT,
+            deleted_by TEXT,
+            created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now')),
+            updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now')),
+            FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE
+        )
+        "#,
+        
+        // Tabla pivote para relación entre variantes y valores de atributos
+        r#"
+        CREATE TABLE IF NOT EXISTS variant_attribute_values (
+            variant_id INTEGER NOT NULL,
+            attribute_value_id INTEGER NOT NULL,
+            PRIMARY KEY (variant_id, attribute_value_id),
+            FOREIGN KEY (variant_id) REFERENCES product_variants (id) ON DELETE CASCADE,
+            FOREIGN KEY (attribute_value_id) REFERENCES attribute_values (id) ON DELETE CASCADE
+        )
+        "#,
+        
+        // Tabla de movimientos de inventario
+        r#"
+        CREATE TABLE IF NOT EXISTS inventory_movements (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            variant_id INTEGER NOT NULL,
+            transaction_id TEXT NOT NULL,
+            transaction_date DATETIME NOT NULL,
+            entity_name TEXT,
+            entity_document TEXT,
+            document_number TEXT,
+            type TEXT CHECK(type IN ('ENTRADA', 'SALIDA', 'RETIRO', 'AUTO-CONSUMO', 'AJUSTE')) NOT NULL,
+            quantity REAL NOT NULL,
+            unit_cost REAL,
+            price REAL,
+            description TEXT,
+            status TEXT NOT NULL DEFAULT 'Activo',
+            deleted_at TEXT,
+            deleted_by TEXT,
+            created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now')),
+            user_id TEXT,
+            FOREIGN KEY (variant_id) REFERENCES product_variants (id) ON DELETE CASCADE,
+            FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL
+        )
+        "#,
+        
+        // Tabla de reportes de inventario
+        r#"
+        CREATE TABLE IF NOT EXISTS inventory_reports (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            start_date TEXT NOT NULL,
+            end_date TEXT NOT NULL,
+            generated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now')),
+            report_data TEXT
+        )
+        "#,
+        
+        // Tabla de contadores de documentos
+        r#"
+        CREATE TABLE IF NOT EXISTS document_counters (
+            counter_type TEXT PRIMARY KEY,
+            last_number INTEGER NOT NULL DEFAULT 0
+        )
+        "#,
+        
+        // Tabla de snapshots de inventario
+        r#"
+        CREATE TABLE IF NOT EXISTS inventory_snapshots (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            product_id INTEGER NOT NULL,
+            snapshot_date TEXT NOT NULL,
+            closing_stock REAL NOT NULL,
+            closing_average_cost REAL NOT NULL,
+            created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now')),
+            FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE,
+            UNIQUE(product_id, snapshot_date)
+        )
+        "#,
+        
+        // Tabla de roles
+        r#"
+        CREATE TABLE IF NOT EXISTS roles (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL UNIQUE,
+            description TEXT,
+            status TEXT NOT NULL DEFAULT 'Activo',
+            deleted_at TEXT,
+            deleted_by TEXT,
+            created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now')),
+            updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now'))
+        )
+        "#,
+        
+        // Tabla de permisos
+        r#"
+        CREATE TABLE IF NOT EXISTS permissions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            key TEXT NOT NULL UNIQUE,
+            label TEXT,
+            description TEXT,
+            status TEXT NOT NULL DEFAULT 'Activo',
+            deleted_at TEXT,
+            deleted_by TEXT,
+            created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now'))
+        )
+        "#,
+        
+        // Tabla de usuarios
+        r#"
+        CREATE TABLE IF NOT EXISTS users (
+            id TEXT PRIMARY KEY,
+            name TEXT,
+            username TEXT UNIQUE,
+            display_name TEXT,
+            email TEXT,
+            role_id TEXT,
+            password_hash TEXT,
+            status TEXT NOT NULL DEFAULT 'Activo',
+            deleted_at TEXT,
+            deleted_by TEXT,
+            created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now')),
+            updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now')),
+            FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE SET NULL
+        )
+        "#,
+        
+        // Tabla de permisos de roles
+        r#"
+        CREATE TABLE IF NOT EXISTS role_permissions (
+            role_id TEXT NOT NULL,
+            permission_id INTEGER NOT NULL,
+            PRIMARY KEY (role_id, permission_id),
+            FOREIGN KEY (role_id) REFERENCES roles (id) ON DELETE CASCADE,
+            FOREIGN KEY (permission_id) REFERENCES permissions (id) ON DELETE CASCADE
+        )
+        "#,
+        
+        // Tabla de permisos de usuarios
+        r#"
+        CREATE TABLE IF NOT EXISTS user_permissions (
+            user_id TEXT NOT NULL,
+            permission_id INTEGER NOT NULL,
+            granted INTEGER NOT NULL DEFAULT 1,
+            PRIMARY KEY (user_id, permission_id),
+            FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+            FOREIGN KEY (permission_id) REFERENCES permissions (id) ON DELETE CASCADE
+        )
+        "#,
+        
+        // Tabla de clientes
+        r#"
+        CREATE TABLE IF NOT EXISTS customers (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            document TEXT,
+            email TEXT,
+            phone TEXT,
+            address TEXT,
+            notes TEXT,
+            status TEXT NOT NULL DEFAULT 'Activo',
+            deleted_at TEXT,
+            deleted_by TEXT,
+            created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now')),
+            updated_at TEXT
+        )
+        "#,
+        
+        // Tabla de proveedores
+        r#"
+        CREATE TABLE IF NOT EXISTS suppliers (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            document TEXT,
+            email TEXT,
+            phone TEXT,
+            address TEXT,
+            notes TEXT,
+            status TEXT NOT NULL DEFAULT 'Activo',
+            deleted_at TEXT,
+            deleted_by TEXT,
+            created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%S', 'now')),
+            updated_at TEXT
+        )
+        "#,
+        
+        // Triggers para actualizar automáticamente 'updated_at'
+        r#"
+        CREATE TRIGGER IF NOT EXISTS update_products_updated_at AFTER UPDATE ON products FOR EACH ROW 
+        BEGIN 
+            UPDATE products SET updated_at = strftime('%Y-%m-%d %H:%M:%S', 'now') WHERE id = OLD.id; 
+        END;
+        "#,
+        
+        r#"
+        CREATE TRIGGER IF NOT EXISTS update_brands_updated_at AFTER UPDATE ON brands FOR EACH ROW 
+        BEGIN 
+            UPDATE brands SET updated_at = strftime('%Y-%m-%d %H:%M:%S', 'now') WHERE id = OLD.id; 
+        END;
+        "#,
+        
+        r#"
+        CREATE TRIGGER IF NOT EXISTS update_attributes_updated_at AFTER UPDATE ON attributes FOR EACH ROW 
+        BEGIN 
+            UPDATE attributes SET updated_at = strftime('%Y-%m-%d %H:%M:%S', 'now') WHERE id = OLD.id; 
+        END;
+        "#,
+        
+        r#"
+        CREATE TRIGGER IF NOT EXISTS update_attribute_values_updated_at AFTER UPDATE ON attribute_values FOR EACH ROW 
+        BEGIN 
+            UPDATE attribute_values SET updated_at = strftime('%Y-%m-%d %H:%M:%S', 'now') WHERE id = OLD.id; 
+        END;
+        "#,
+        
+        r#"
+        CREATE TRIGGER IF NOT EXISTS update_product_variants_updated_at AFTER UPDATE ON product_variants FOR EACH ROW 
+        BEGIN 
+            UPDATE product_variants SET updated_at = strftime('%Y-%m-%d %H:%M:%S', 'now') WHERE id = OLD.id; 
+        END;
+        "#,
+        
+        r#"
+        CREATE TRIGGER IF NOT EXISTS update_departments_updated_at AFTER UPDATE ON departments FOR EACH ROW 
+        BEGIN 
+            UPDATE departments SET updated_at = strftime('%Y-%m-%d %H:%M:%S', 'now') WHERE id = OLD.id; 
+        END;
+        "#,
+        
+        r#"
+        CREATE TRIGGER IF NOT EXISTS update_subdepartments_updated_at AFTER UPDATE ON subdepartments FOR EACH ROW 
+        BEGIN 
+            UPDATE subdepartments SET updated_at = strftime('%Y-%m-%d %H:%M:%S', 'now') WHERE id = OLD.id; 
+        END;
+        "#,
+        
+        // Índices para mejorar el rendimiento
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_brands_subdept_name ON brands (subdepartment_id, name)",
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_attributes_subdept_name ON attributes (subdepartment_id, name)",
+        "CREATE INDEX IF NOT EXISTS idx_movements_variant_id ON inventory_movements (variant_id)",
+        "CREATE INDEX IF NOT EXISTS idx_movements_transaction_id ON inventory_movements (transaction_id)",
+        "CREATE INDEX IF NOT EXISTS idx_products_name ON products (name)",
+        "CREATE INDEX IF NOT EXISTS idx_products_base_sku ON products (base_sku)",
+        "CREATE INDEX IF NOT EXISTS idx_variants_sku ON product_variants (sku)",
+        "CREATE INDEX IF NOT EXISTS idx_variants_product_id ON product_variants (product_id)",
+        "CREATE INDEX IF NOT EXISTS idx_brands_name ON brands (name)",
+        "CREATE INDEX IF NOT EXISTS idx_departments_name ON departments (name)",
+        "CREATE INDEX IF NOT EXISTS idx_subdepartments_name ON subdepartments (name)",
+        "CREATE INDEX IF NOT EXISTS idx_permissions_key ON permissions (key)",
+        "CREATE INDEX IF NOT EXISTS idx_role_permissions_role_id ON role_permissions (role_id)",
+        "CREATE INDEX IF NOT EXISTS idx_user_permissions_user_id ON user_permissions (user_id)",
+    ];
+    
+    // Ejecutar cada sentencia
+    for statement in schema_statements {
+        match conn.execute(statement, []) {
+            Ok(_) => {},
+            Err(e) => {
+                error!("Error al ejecutar sentencia SQL: {}", e);
+                return Err(e);
+            }
+        }
+    }
+    
+    // Insertar contadores de documentos iniciales
+    match conn.execute(
+        "INSERT OR IGNORE INTO document_counters (counter_type, last_number) VALUES ('AUTO_PURCHASE', 0)",
+        [],
+    ) {
+        Ok(_) => debug!("Contador AUTO_PURCHASE inicializado"),
+        Err(e) => error!("Error al inicializar contador AUTO_PURCHASE: {}", e),
+    };
+    
+    match conn.execute(
+        "INSERT OR IGNORE INTO document_counters (counter_type, last_number) VALUES ('AUTO_SALE', 0)",
+        [],
+    ) {
+        Ok(_) => debug!("Contador AUTO_SALE inicializado"),
+        Err(e) => error!("Error al inicializar contador AUTO_SALE: {}", e),
+    };
+    
+    // Verificar si necesitamos crear un rol y usuario administrador por defecto
+    let count: i64 = conn.query_row("SELECT COUNT(*) FROM roles", [], |row| row.get(0))?;
+    
+    if count == 0 {
+        debug!("Creando rol de administrador por defecto...");
+        
+        // Generar ID único para el rol
+        let role_id = nanoid::nanoid!(10);
+        
+        // Crear rol de administrador
+        conn.execute(
+            "INSERT INTO roles (id, name, description, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+            [
+                &role_id,
+                "admin",
+                "Administrador del sistema",
+                &chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string(),
+                &chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string(),
+            ],
+        )?;
+        
+        debug!("Rol de administrador creado correctamente");
+        
+        // Verificar si necesitamos crear un usuario administrador por defecto
+        let count: i64 = conn.query_row("SELECT COUNT(*) FROM users", [], |row| row.get(0))?;
+        
+        if count == 0 {
+            debug!("Creando usuario administrador por defecto...");
+            
+            // Generar ID único para el usuario
+            let user_id = nanoid::nanoid!(10);
+            
+            // Crear contraseña predeterminada (admin)
+            let default_password = bcrypt::hash("admin", bcrypt::DEFAULT_COST)
+                .map_err(|_| rusqlite::Error::InvalidQuery)?;
+            
+            // Crear usuario administrador
+            conn.execute(
+                "INSERT INTO users (id, name, username, display_name, email, password_hash, role_id, created_at, updated_at) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                [
+                    &user_id,
+                    "admin",
+                    "admin",
+                    "Administrador",
+                    "admin@ejemplo.com",
+                    &default_password,
+                    &role_id,
+                    &chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string(),
+                    &chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string(),
+                ],
+            )?;
+            
+            debug!("Usuario administrador creado correctamente");
+        }
+    }
+    
+    info!("Esquema de base de datos para Studio (tienda de ropa) aplicado correctamente");
+    Ok(())
 }

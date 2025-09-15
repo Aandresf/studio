@@ -1,13 +1,15 @@
 // src-backend-rust/src/config.rs
 
 use serde::Deserialize;
-use std::path::PathBuf;
+use std::path::{PathBuf, Path};
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct Settings {
     pub host: String,
     pub port: u16,
     pub data_dir: PathBuf,
+    pub db_path: String,
+    pub jwt_secret: String,
 }
 
 impl Settings {
@@ -19,6 +21,8 @@ impl Settings {
             .set_default("host", "127.0.0.1")?
             .set_default("port", 8080)?
             .set_default("data_dir", "./data")?
+            .set_default("db_path", "./data/database.db")?
+            .set_default("jwt_secret", "insecure_development_secret")?
             
             // Sobrescribir con un archivo de configuración (ej. `config/development.toml`)
             .add_source(config::File::with_name(&format!("config/{}", run_mode)).required(false))
@@ -27,6 +31,15 @@ impl Settings {
             .add_source(config::Environment::with_prefix("APP"))
             .build()?;
 
-        s.try_deserialize()
+        let mut settings: Settings = s.try_deserialize()?;
+        
+        // Asegurar que las rutas relativas sean absolutas
+        if !Path::new(&settings.db_path).is_absolute() {
+            let current_dir = std::env::current_dir()
+                .map_err(|e| config::ConfigError::Message(format!("Error obteniendo directorio actual: {}", e)))?;
+            settings.db_path = current_dir.join(settings.db_path).to_string_lossy().into_owned();
+        }
+        
+        Ok(settings)
     }
 }

@@ -15,9 +15,16 @@ src-backend-rust/
 │   ├── excel_generator.rs    // Equivalente a excel-generator.js
 │   ├── schema.rs             // Para gestionar el esquema de la BD
 │   │
+│   ├── models/
+│   │   ├── mod.rs
+│   │   ├── user.rs
+│   │   ├── product.rs
+│   │   └── ... otros modelos
+│   │
 │   ├── lib/
 │   │   ├── authorize.rs
-│   │   └── document_counter.rs
+│   │   ├── document_counter.rs
+│   │   └── jwt.rs
 │   │
 │   ├── middleware/
 │   │   ├── auth.rs
@@ -54,22 +61,28 @@ src-backend-rust/
 
 ### Módulos Principales
 - [x] `index.js` -> `src/main.rs` (Estructura inicial creada)
-- [x] `config.js` -> `src/config.rs`
-- [x] `database-manager.js` -> `src/database_manager.rs`
+- [x] `config.js` -> `src/config.rs` (Actualizado con soporte para db_path y jwt_secret)
+- [x] `database-manager.js` -> `src/database_manager.rs` (Mejorado con pool de conexiones)
 - [x] `excel-generator.js` -> `src/excel_generator.rs`
-- [x] `schema.sql` -> `src/schema.rs`
+- [x] `schema.sql` -> `src/schema.rs` (Actualizado con el esquema completo)
+
+### Modelos (`models/`)
+- [x] `models/user.js` -> `src/models/user.rs` (Completado con autenticación y operaciones CRUD)
+- [ ] `models/product.js` -> `src/models/product.rs` (Pendiente)
+- [ ] Otros modelos (departamentos, marcas, etc.) (Pendiente)
 
 ### Librerías (`lib/`)
 - [x] `authorize.js` -> `src/lib/authorize.rs`
 - [x] `documentCounter.js` -> `src/lib/document_counter.rs`
+- [x] JWT Tokens -> `src/lib/jwt.rs` (Implementado)
 
 ### Middlewares (`middleware/`)
-- [x] `auth.js` -> `src/middleware/auth.rs`
+- [x] `auth.js` -> `src/middleware/auth.rs` (Actualizado con validación de tokens JWT)
 - [x] `force-https.js` -> `src/middleware/force_https.rs`
 
 ### Rutas (`routes/`)
 - [x] `products.js` -> `src/routes/products.rs`
-- [x] `auth.js` -> `src/routes/auth.rs`
+- [x] `auth.js` -> `src/routes/auth.rs` (Actualizado con autenticación real usando el modelo User)
 - [x] `users.js` -> `src/routes/users.rs`
 - [x] `inventory.js` -> `src/routes/inventory.rs`
 - [x] `sales.js` -> `src/routes/sales.rs`
@@ -89,15 +102,48 @@ src-backend-rust/
 - [x] `stores.js` -> `src/routes/stores.rs`
 - [x] `suppliers.js` -> `src/routes/suppliers.rs`
 
-## Librerías de Rust a Instalar (Dependencias en `Cargo.toml`)
+## Etapas de Migración
 
-*   **actix-web**: Para el servidor web (framework principal).
-*   **serde**: Para serialización y deserialización de datos (JSON).
-*   **tokio**: Para el runtime asíncrono.
-*   **rusqlite**: Para la base de datos SQLite.
-*   **chrono**: Para manejo de fechas y horas.
-*   **jsonwebtoken**: Para manejar JWT (JSON Web Tokens).
-*   **bcrypt**: Para el hashing de contraseñas.
+### Fase 1: Estructura Básica (Completada ✅)
+- Configurar la estructura del proyecto
+- Configurar dependencias en Cargo.toml
+- Migrar la estructura de rutas
+
+### Fase 2: Conectividad y Seguridad (Completada ✅)
+- Migrar la configuración
+- Implementar el administrador de base de datos
+- Implementar autenticación y autorización
+
+### Fase 3: Modelos de Datos (En progreso 🔄)
+- Implementar el modelo de usuario (Completado ✅)
+- Implementar modelos para productos, departamentos, etc.
+- Actualizar el esquema de la base de datos
+
+### Fase 4: Integración de Funcionalidad (Pendiente ⏳)
+- Integrar funcionalidad real en cada ruta
+- Implementar reportes y exportación a Excel
+- Integrar búsqueda y filtros
+
+### Fase 5: Optimización y Pruebas (Pendiente ⏳)
+- Añadir pruebas unitarias
+- Optimizar rendimiento
+- Documentar el código
+
+## Librerías de Rust Instaladas (Dependencias en `Cargo.toml`)
+
+*   **actix-web**: Para el servidor web (framework principal)
+*   **actix-cors**: Para el manejo de CORS
+*   **tokio**: Para el runtime asíncrono
+*   **serde, serde_json**: Para serialización y deserialización de datos (JSON)
+*   **rusqlite**: Para la base de datos SQLite
+*   **r2d2, r2d2_sqlite**: Para el pool de conexiones a la base de datos
+*   **chrono**: Para manejo de fechas y horas
+*   **jsonwebtoken**: Para manejar JWT (JSON Web Tokens)
+*   **bcrypt**: Para el hashing de contraseñas
+*   **config**: Para la gestión de configuración
+*   **env_logger, log**: Para logging
+*   **nanoid**: Para generación de IDs únicos
+*   **rust_xlsxwriter**: Para generación de archivos Excel
 *   **config**: Para gestionar la configuración desde archivos.
 *   **env_logger**: Para logging.
 *   **rust_xlsxwriter**: Para trabajar con archivos Excel.

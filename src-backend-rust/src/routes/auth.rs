@@ -1,25 +1,11 @@
 // src-backend-rust/src/routes/auth.rs
 
 use actix_web::{web, HttpResponse, Responder, cookie::{Cookie, SameSite}};
-use serde::{Deserialize, Serialize};
-use jsonwebtoken::{encode, decode, Header, Validation, EncodingKey, DecodingKey};
-use chrono::{Utc, Duration};
-use std::env;
 use serde_json::json;
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct LoginRequest {
-    username: String,
-    password: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Claims {
-    sub: String,        // subject (user ID)
-    username: String,   // username
-    role: String,       // role ID
-    exp: usize,         // expiration time
-}
+use crate::models::{AuthRequest, AuthResponse, User};
+use crate::database_manager::DatabaseManager;
+use crate::lib::jwt;
+use log::{info, error};
 
 // Configuración de rutas para autenticación
 pub fn init(cfg: &mut web::ServiceConfig) {
@@ -27,59 +13,84 @@ pub fn init(cfg: &mut web::ServiceConfig) {
         web::scope("/api/auth")
             .route("/login", web::post().to(login))
             .route("/logout", web::post().to(logout))
+            .route("/verify", web::post().to(verify_token))
             .route("/status", web::get().to(status))
     );
 }
 
 // Controladores
 
-async fn login(login_data: web::Json<LoginRequest>) -> impl Responder {
-    // En una implementación real, verificaríamos las credenciales en la BD
-    // y generaríamos un JWT real
+async fn login(
+    auth_data: web::Json<AuthRequest>,
+    db_manager: web::Data<DatabaseManager>,
+    config: web::Data<crate::config::Settings>,
+) -> impl Responder {
+    // Obtener una conexión de la base de datos
+    let conn = match db_manager.get_connection() {
+        Ok(conn) => conn,
+        Err(e) => {
+            error!("Error al obtener conexión de BD: {}", e);
+            return HttpResponse::InternalServerError().json(json!({
+                "error": "Error de conexión a base de datos"
+            }));
+        }
+    };
     
-    // Este es un ejemplo simplificado
-    if login_data.username == "admin" && login_data.password == "password" {
-        // Crear token JWT
-        let claims = Claims {
-            sub: "1".to_string(),
-            username: login_data.username.clone(),
-            role: "admin".to_string(),
-            exp: (Utc::now() + Duration::hours(24)).timestamp() as usize,
-        };
-        
-        let secret = env::var("JWT_SECRET").unwrap_or_else(|_| "your_jwt_secret_key".to_string());
-        let token = encode(
-            &Header::default(),
-            &claims,
-            &EncodingKey::from_secret(secret.as_bytes())
-        ).unwrap();
-        
-        // Crear cookie de sesión
-        let cookie = Cookie::build("session", token.clone())
-            .path("/")
-            .http_only(true)
-            .same_site(SameSite::Lax)
-            .finish();
-        
-        // Devolver respuesta con cookie y datos del usuario
-        HttpResponse::Ok()
-            .cookie(cookie)
-            .json(json!({
-                "success": true,
-                "user": {
-                    "id": "1",
-                    "username": login_data.username,
-                    "display_name": "Administrador",
-                    "role": "admin",
-                    "permissions": ["manage_products", "manage_inventory", "manage_sales"]
-                },
-                "token": token
+    // Autenticar usuario
+    let auth_result = match User::authenticate(&conn, &auth_data) {
+        Ok(result) => result,
+        Err(e) => {
+            error!("Error en autenticación: {}", e);
+            return HttpResponse::InternalServerError().json(json!({
+                "error": "Error de autenticación"
+            }));
+        }
+    };
+    
+    // Verificar si las credenciales son correctas
+    match auth_result {
+        Some(user) => {
+            if user.status != "Activo" {
+                return HttpResponse::Forbidden().json(json!({
+                    "error": "Usuario desactivado o eliminado"
+                }));
+            }
+            
+            // Generar token JWT
+            let token = match jwt::generate_token(&user.id, &user.username, user.role_id.as_deref(), &config.jwt_secret) {
+                Ok(token) => token,
+                Err(e) => {
+                    error!("Error generando token: {}", e);
+                    return HttpResponse::InternalServerError().json(json!({
+                        "error": "Error generando token de autenticación"
+                    }));
+                }
+            };
+            
+            // Crear cookie de sesión
+            let cookie = Cookie::build("session", token.clone())
+                .path("/")
+                .http_only(true)
+                .same_site(SameSite::Lax)
+                .finish();
+            
+            // Devolver respuesta con token y datos de usuario
+            let response = AuthResponse {
+                token,
+                user: user.to_response(),
+            };
+            
+            info!("Usuario {} autenticado correctamente", user.username);
+            HttpResponse::Ok()
+                .cookie(cookie)
+                .json(response)
+        },
+        None => {
+            // Credenciales incorrectas
+            HttpResponse::Unauthorized().json(json!({
+                "error": "Credenciales inválidas"
             }))
-    } else {
-        HttpResponse::Unauthorized().json(json!({
-            "success": false,
-            "message": "Credenciales inválidas"
-        }))
+        }
     }
 }
 
@@ -97,6 +108,89 @@ async fn logout() -> impl Responder {
             "success": true,
             "message": "Sesión cerrada correctamente"
         }))
+}
+
+async fn verify_token(
+    token: web::Json<serde_json::Value>,
+    config: web::Data<crate::config::Settings>,
+) -> impl Responder {
+    // Extraer token de la solicitud
+    let token_str = match token.get("token") {
+        Some(t) => match t.as_str() {
+            Some(s) => s,
+            None => {
+                return HttpResponse::BadRequest().json(json!({
+                    "error": "Token inválido"
+                }));
+            }
+        },
+        None => {
+            return HttpResponse::BadRequest().json(json!({
+                "error": "Token no proporcionado"
+            }));
+        }
+    };
+    
+    // Validar token
+    match jwt::validate_token(token_str, &config.jwt_secret) {
+        Ok(claims) => {
+            // Token válido
+            HttpResponse::Ok().json(json!({
+                "valid": true,
+                "user": {
+                    "id": claims.user_id,
+                    "username": claims.sub,
+                    "role_id": claims.role_id
+                }
+            }))
+        },
+        Err(e) => {
+            // Token inválido
+            error!("Error al validar token: {}", e);
+            HttpResponse::Unauthorized().json(json!({
+                "valid": false,
+                "error": "Token inválido o expirado"
+            }))
+        }
+    }
+}
+
+async fn status(
+    config: web::Data<crate::config::Settings>,
+    req: web::HttpRequest,
+) -> impl Responder {
+    // Intentar obtener el token de la cookie
+    let token = match req.cookie("session") {
+        Some(cookie) => cookie.value().to_string(),
+        None => {
+            return HttpResponse::Unauthorized().json(json!({
+                "authenticated": false,
+                "message": "No hay sesión activa"
+            }));
+        }
+    };
+    
+    // Validar token
+    match jwt::validate_token(&token, &config.jwt_secret) {
+        Ok(claims) => {
+            // Token válido
+            HttpResponse::Ok().json(json!({
+                "authenticated": true,
+                "user": {
+                    "id": claims.user_id,
+                    "username": claims.sub,
+                    "role_id": claims.role_id
+                }
+            }))
+        },
+        Err(_) => {
+            // Token inválido
+            HttpResponse::Unauthorized().json(json!({
+                "authenticated": false,
+                "message": "Sesión inválida o expirada"
+            }))
+        }
+    }
 }
 
 async fn status() -> impl Responder {

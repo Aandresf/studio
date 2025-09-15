@@ -7,6 +7,7 @@ use std::fs;
 use std::path::Path;
 use std::sync::Arc;
 use serde_json::json;
+use log::{info, error};
 
 // Declaramos los módulos que hemos creado
 mod config;
@@ -16,6 +17,7 @@ mod routes;
 mod middleware;
 mod lib;
 mod excel_generator;
+mod models;
 
 async fn health_check() -> impl Responder {
     HttpResponse::Ok().json(json!({"ok": true}))
@@ -30,7 +32,7 @@ async fn main() -> std::io::Result<()> {
     let settings = match config::Settings::new() {
         Ok(s) => s,
         Err(e) => {
-            eprintln!("Error cargando la configuración: {}", e);
+            error!("Error cargando la configuración: {}", e);
             return Err(std::io::Error::new(std::io::ErrorKind::Other, "Error de configuración"));
         }
     };
@@ -39,10 +41,18 @@ async fn main() -> std::io::Result<()> {
     let host = settings.host.clone();
     let port = settings.port;
 
-    println!("🚀 Servidor Rust escuchando en http://{}:{}", host, port);
+    info!("🚀 Servidor Rust escuchando en http://{}:{}", host, port);
 
     // Crear y configurar el administrador de base de datos
     let db_manager = Arc::new(database_manager::DatabaseManager::new());
+    
+    // Inicializar la conexión a la base de datos
+    let db_path = Path::new(&settings.db_path);
+    if let Err(e) = db_manager.initialize(db_path) {
+        error!("Error inicializando la base de datos: {}", e);
+        return Err(std::io::Error::new(std::io::ErrorKind::Other, "Error de base de datos"));
+    }
+    
     let db_manager_data = web::Data::new(db_manager.clone());
 
     // Iniciar el servidor HTTP

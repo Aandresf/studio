@@ -2,3 +2,4 @@
 
 pub mod authorize;
 pub mod document_counter;
+pub mod jwt;
