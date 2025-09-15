@@ -232,9 +232,6 @@ async fn get_settings_by_category(
         }
     }
 }
-        "message": format!("Configuración '{}' actualizada correctamente", key)
-    }))
-}
 
 async fn get_settings_by_category(path: web::Path<String>) -> impl Responder {
     let category = path.into_inner();

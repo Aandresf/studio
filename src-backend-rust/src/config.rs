@@ -59,4 +59,3 @@ pub fn get_data_dir() -> Result<PathBuf, io::Error> {
     let current_dir = env::current_dir()?;
     Ok(current_dir.join("data"))
 }
-}

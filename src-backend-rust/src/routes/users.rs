@@ -128,7 +128,7 @@ async fn get_user(path: web::Path<String>, pool: web::Data<DbPool>) -> impl Resp
         }
     }
 }
-}
+
 
 async fn create_user(user: web::Json<NewUser>, pool: web::Data<DbPool>) -> impl Responder {
     let conn = match pool.get() {
@@ -228,7 +228,7 @@ async fn update_user(path: web::Path<String>, user: web::Json<UserUpdate>, pool:
         }
     }
 }
-}
+
 
 async fn delete_user(path: web::Path<String>, pool: web::Data<DbPool>) -> impl Responder {
     let user_id = path.into_inner();

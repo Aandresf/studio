@@ -11,7 +11,7 @@ pub fn init(cfg: &mut web::ServiceConfig) {
             .route("/by-brand/{brand_id}", web::get().to(get_products_by_brand))
             .route("/by-subdepartment/{subdepartment_id}", web::get().to(get_products_by_subdepartment))
     );
-}/products.rs
+}
 
 use actix_web::{web, HttpResponse, Responder, http::StatusCode};
 use serde::{Deserialize, Serialize};
@@ -80,7 +80,7 @@ async fn get_product(
         }
     }
 }
-}
+
 
 async fn create_product(
     product: web::Json<NewProduct>, 
@@ -130,7 +130,7 @@ async fn update_product(
         }
     }
 }
-}
+
 
 async fn delete_product(
     path: web::Path<i64>, 
