@@ -2,6 +2,8 @@
 
 use serde::Deserialize;
 use std::path::{PathBuf, Path};
+use std::env;
+use std::io;
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct Settings {
@@ -42,4 +44,19 @@ impl Settings {
         
         Ok(settings)
     }
+}
+
+// Función para obtener el directorio de datos
+// Esta función es usada por módulos que necesitan acceso al sistema de archivos
+pub fn get_data_dir() -> Result<PathBuf, io::Error> {
+    // Intentar obtener del entorno
+    if let Ok(dir) = env::var("APP_DATA_DIR") {
+        let path = PathBuf::from(dir);
+        return Ok(path);
+    }
+    
+    // Utilizar el directorio actual + /data como fallback
+    let current_dir = env::current_dir()?;
+    Ok(current_dir.join("data"))
+}
 }

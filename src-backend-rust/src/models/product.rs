@@ -688,6 +688,45 @@ pub struct ProductVariantAttribute {
 }
 
 impl ProductVariant {
+    // Buscar todas las variantes de productos
+    pub fn find_all(pool: &DbPool) -> SqliteResult<Vec<ProductVariant>> {
+        let conn = pool.get().map_err(|e| {
+            error!("Error al obtener conexión del pool: {}", e);
+            SqliteError::QueryReturnedNoRows
+        })?;
+        
+        let mut stmt = conn.prepare(
+            "SELECT pv.id, pv.product_id, pv.sku, pv.price, pv.cost, pv.stock, pv.status, pv.deleted_at, pv.deleted_by, pv.created_at, pv.updated_at 
+            FROM product_variants pv 
+            JOIN products p ON pv.product_id = p.id 
+            WHERE (pv.status IS NULL OR pv.status <> 'deleted') 
+            ORDER BY pv.id ASC"
+        )?;
+        
+        let variants_iter = stmt.query_map([], |row| {
+            Ok(ProductVariant {
+                id: row.get(0)?,
+                product_id: row.get(1)?,
+                sku: row.get(2)?,
+                price: row.get(3)?,
+                cost: row.get(4)?,
+                stock: row.get(5)?,
+                status: row.get(6)?,
+                deleted_at: row.get(7)?,
+                deleted_by: row.get(8)?,
+                created_at: row.get(9)?,
+                updated_at: row.get(10)?,
+            })
+        })?;
+        
+        let mut variants = Vec::new();
+        for variant in variants_iter {
+            variants.push(variant?);
+        }
+        
+        Ok(variants)
+    }
+    
     // Buscar una variante de producto por ID
     pub fn find_by_id(pool: &DbPool, id: i64) -> SqliteResult<Option<ProductVariant>> {
         let conn = pool.get().map_err(|e| {
