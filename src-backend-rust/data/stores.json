@@ -1,0 +1,13 @@
+{
+  "stores": [
+    {
+      "id": "disveliz_diaz_studio_848V",
+      "name": "Vilma Store",
+      "dbPath":
+        "database_disveliz_diaz_studio_848V_new.db",
+      "status": "active",
+      "deletion_date": null
+    }
+  ],
+  "activeStoreId": "disveliz_diaz_studio_848V"
+}
