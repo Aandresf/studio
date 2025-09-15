@@ -15,12 +15,12 @@ src-backend-rust/
 │   ├── models/                   // Modelos de datos
 │   │   ├── mod.rs                // Exporta todos los modelos
 │   │   ├── user.rs               // Modelo de usuario
-│   │   ├── product.rs            // Modelo de producto
-│   │   ├── department.rs         // Modelo de departamento
+│   │   ├── product.rs            // Modelo de producto y variantes
+│   │   ├── department.rs         // Modelo de departamento y subdepartamentos
 │   │   ├── brand.rs              // Modelo de marca
-│   │   ├── attribute.rs          // Modelo de atributo
-│   │   ├── customer.rs           // Modelo de cliente
-│   │   └── supplier.rs           // Modelo de proveedor
+│   │   ├── attribute.rs          // Modelo de atributo y valores de atributos
+│   │   ├── customer_supplier.rs  // Modelos de cliente y proveedor
+│   │   └── inventory_movement.rs // Modelo de movimientos de inventario
 │   │
 │   ├── lib/
 │   │   ├── mod.rs                // Módulo que agrupa librerías
@@ -68,12 +68,12 @@ src-backend-rust/
 
 ### Modelos
 - ✅ `models/user.rs` - Modelo de usuario completo con funciones CRUD
-- ❌ `models/product.rs` - Modelo de producto 
-- ❌ `models/department.rs` - Modelo de departamento
-- ❌ `models/brand.rs` - Modelo de marca
-- ❌ `models/attribute.rs` - Modelo de atributo
-- ❌ `models/customer.rs` - Modelo de cliente
-- ❌ `models/supplier.rs` - Modelo de proveedor
+- ✅ `models/product.rs` - Modelo de producto con variantes y atributos
+- ✅ `models/department.rs` - Modelo de departamento con subdepartamentos
+- ✅ `models/brand.rs` - Modelo de marca
+- ✅ `models/attribute.rs` - Modelo de atributo con valores de atributos
+- ✅ `models/customer_supplier.rs` - Modelos de cliente y proveedor
+- ✅ `models/inventory_movement.rs` - Modelo de movimientos de inventario
 
 ### Librerías
 - ✅ `lib/authorize.rs` - Middleware de autorización
@@ -111,17 +111,16 @@ src-backend-rust/
 - ✅ **Configuración**: Sistema de configuración completo
 - ✅ **Base de datos**: Implementado esquema y conexión con pool
 - ✅ **Autenticación**: Sistema de autenticación JWT implementado
-- ✅ **Modelo de usuario**: Implementado con todas las operaciones CRUD
-- ❌ **Modelos restantes**: Pendiente de implementar
-- ❌ **Integración completa**: Pendiente reemplazar datos simulados por consultas reales
+- ✅ **Modelos de datos**: Todos los modelos implementados con operaciones CRUD
+- ❌ **Integración completa**: Pendiente reemplazar datos simulados por consultas reales utilizando los modelos
 - ❌ **Pruebas**: Pendiente de implementar pruebas unitarias y de integración
 
 ## Próximos Pasos
 
-1. Implementar los modelos restantes (producto, departamento, etc.)
-2. Integrar los modelos con las rutas API existentes
-3. Implementar pruebas unitarias
-4. Validación y manejo de errores más robusto
+1. Integrar los modelos con las rutas API existentes
+2. Reemplazar datos simulados con consultas reales utilizando los modelos implementados
+3. Implementar pruebas unitarias para todos los modelos y rutas
+4. Mejorar el manejo de errores y la validación de datos
 5. Optimización del rendimiento
 6. Implementar websockets para notificaciones en tiempo real
 7. Mejorar la seguridad y el control de acceso

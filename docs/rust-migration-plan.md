@@ -68,8 +68,12 @@ src-backend-rust/
 
 ### Modelos (`models/`)
 - [x] `models/user.js` -> `src/models/user.rs` (Completado con autenticación y operaciones CRUD)
-- [ ] `models/product.js` -> `src/models/product.rs` (Pendiente)
-- [ ] Otros modelos (departamentos, marcas, etc.) (Pendiente)
+- [x] `models/product.js` -> `src/models/product.rs` (Completado con variantes y atributos)
+- [x] `models/department.js` -> `src/models/department.rs` (Completado con subdepartamentos)
+- [x] `models/brand.js` -> `src/models/brand.rs` (Completado)
+- [x] `models/attribute.js` -> `src/models/attribute.rs` (Completado con valores de atributos)
+- [x] `models/customer.js` y `models/supplier.js` -> `src/models/customer_supplier.rs` (Completado)
+- [x] `models/inventory_movement.js` -> `src/models/inventory_movement.rs` (Completado)
 
 ### Librerías (`lib/`)
 - [x] `authorize.js` -> `src/lib/authorize.rs`
@@ -114,10 +118,10 @@ src-backend-rust/
 - Implementar el administrador de base de datos
 - Implementar autenticación y autorización
 
-### Fase 3: Modelos de Datos (En progreso 🔄)
+### Fase 3: Modelos de Datos (Completada ✅)
 - Implementar el modelo de usuario (Completado ✅)
-- Implementar modelos para productos, departamentos, etc.
-- Actualizar el esquema de la base de datos
+- Implementar modelos para productos, departamentos, etc. (Completado ✅)
+- Actualizar el esquema de la base de datos (Completado ✅)
 
 ### Fase 4: Integración de Funcionalidad (Pendiente ⏳)
 - Integrar funcionalidad real en cada ruta
@@ -151,12 +155,13 @@ src-backend-rust/
 
 ## Próximos Pasos
 
-Ahora que hemos completado la migración de todos los archivos del backend, los próximos pasos son:
+Ahora que hemos completado la implementación de todos los modelos y la migración de todos los archivos del backend, los próximos pasos son:
 
-1. **Implementar Integración con Base de Datos**: Reemplazar respuestas simuladas con consultas reales a la BD.
-2. **Pruebas Unitarias**: Escribir pruebas para cada módulo.
-3. **Pruebas de Integración**: Verificar que todos los componentes funcionan juntos correctamente.
-4. **Optimización**: Mejorar el rendimiento y uso de recursos.
-5. **Documentación**: Completar la documentación de la API y el código.
-6. **Implementar Websockets**: Para notificaciones en tiempo real.
-7. **Refactorización**: Mejorar la estructura del código y eliminar duplicaciones.
+1. **Implementar Integración con Base de Datos**: Reemplazar respuestas simuladas con consultas reales a la BD utilizando los modelos implementados.
+2. **Integrar Modelos con Rutas**: Conectar los modelos implementados con las rutas API existentes.
+3. **Pruebas Unitarias**: Escribir pruebas para cada módulo.
+4. **Pruebas de Integración**: Verificar que todos los componentes funcionan juntos correctamente.
+5. **Optimización**: Mejorar el rendimiento y uso de recursos.
+6. **Documentación**: Completar la documentación de la API y el código.
+7. **Implementar Websockets**: Para notificaciones en tiempo real.
+8. **Refactorización**: Mejorar la estructura del código y eliminar duplicaciones.
