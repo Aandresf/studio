@@ -52,6 +52,10 @@ impl DatabaseManager {
         crate::schema::apply_schema(&conn)
             .map_err(|e| format!("Error al aplicar el esquema: {}", e))?;
         
+        // Inicializar permisos básicos
+        let _ = self.initialize_permissions(&conn)
+            .map_err(|e| error!("Advertencia al inicializar permisos: {}", e));
+        
         // Guardar el pool
         {
             let mut pool_guard = self.pool.lock().unwrap();
@@ -65,6 +69,79 @@ impl DatabaseManager {
         }
         
         info!("Base de datos inicializada correctamente en: {:?}", db_path);
+        Ok(())
+    }
+    
+    /// Inicializar permisos básicos y roles
+    fn initialize_permissions(&self, conn: &Connection) -> Result<(), String> {
+        use crate::models::role_permission::{Role, Permission};
+        
+        // Asegurar que existan los permisos básicos
+        match Permission::ensure_permissions_catalog(conn) {
+            Ok(_) => debug!("Permisos básicos inicializados correctamente"),
+            Err(e) => return Err(format!("Error al inicializar permisos básicos: {}", e)),
+        }
+        
+        // Crear roles básicos si no existen
+        let roles = [
+            ("admin", "Administrador", Some("Acceso completo al sistema")),
+            ("sales", "Ventas", Some("Acceso a funciones de ventas")),
+            ("warehouse", "Bodega", Some("Acceso a inventario y compras")),
+            ("manager", "Gerente", Some("Acceso a reportes y estadísticas")),
+        ];
+        
+        for (id, name, description) in roles.iter() {
+            let result = Role::find_by_id(conn, id);
+            if result.is_err() {
+                match Role::create(conn, id, name, *description) {
+                    Ok(_) => debug!("Rol {} creado correctamente", id),
+                    Err(e) => error!("Error al crear rol {}: {}", id, e),
+                }
+            }
+        }
+        
+        // Asignar permisos al rol de administrador
+        let admin_permissions = [
+            "*", // Acceso total
+        ];
+        
+        for perm in admin_permissions.iter() {
+            match crate::models::role_permission::assign_permission_to_role(conn, "admin", perm) {
+                Ok(_) => (),
+                Err(e) => error!("Error al asignar permiso {} al rol admin: {}", perm, e),
+            }
+        }
+        
+        // Permisos para rol de ventas
+        let sales_permissions = [
+            "sales:create", "sales:read", "sales:edit", "sales:annul",
+            "products:read", "products:read_prices_sale",
+            "customers:read", "customers:create", "customers:edit",
+            "dashboard:read",
+            "inventory:write", "pending:create", "pending:delete",
+        ];
+        
+        for perm in sales_permissions.iter() {
+            match crate::models::role_permission::assign_permission_to_role(conn, "sales", perm) {
+                Ok(_) => (),
+                Err(e) => error!("Error al asignar permiso {} al rol sales: {}", perm, e),
+            }
+        }
+        
+        // Permisos para rol de bodega
+        let warehouse_permissions = [
+            "products:read", "products:read_costs",
+            "inventory:write", "purchases:read", "purchases:create", "purchases:edit",
+            "suppliers:read", "suppliers:create", "suppliers:edit",
+        ];
+        
+        for perm in warehouse_permissions.iter() {
+            match crate::models::role_permission::assign_permission_to_role(conn, "warehouse", perm) {
+                Ok(_) => (),
+                Err(e) => error!("Error al asignar permiso {} al rol warehouse: {}", perm, e),
+            }
+        }
+        
         Ok(())
     }
     

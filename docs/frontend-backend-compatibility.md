@@ -219,10 +219,11 @@ Este documento analiza la compatibilidad entre las peticiones del frontend y las
 | `/api/users` | POST | ✅ | `src-backend-rust/src/routes/users.rs` |
 | `/api/users/:id` | PUT | ✅ | `src-backend-rust/src/routes/users.rs` |
 | `/api/users/:id` | DELETE | ✅ | `src-backend-rust/src/routes/users.rs` |
-| `/api/users/:id/permissions` | GET | ⚠️ | `src-backend-rust/src/routes/role_permissions.rs` |
-| `/api/users/:id/permissions` | PUT | ⚠️ | `src-backend-rust/src/routes/role_permissions.rs` |
+| `/api/users/:id/permissions` | GET | ✅ | `src-backend-rust/src/routes/role_permissions.rs` |
+| `/api/users/:id/permissions` | PUT | ✅ | `src-backend-rust/src/routes/role_permissions.rs` |
+| `/api/meta/permissions` | GET | ✅ | `src-backend-rust/src/routes/role_permissions.rs` |
 
-**Observaciones**: Gestión básica de usuarios implementada. El sistema avanzado de roles y permisos está pendiente de implementación completa.
+**Observaciones**: Gestión completa de usuarios implementada, incluyendo sistema de roles y permisos compatible con el frontend actual.
 
 ### Búsqueda
 
@@ -252,11 +253,11 @@ Este documento analiza la compatibilidad entre las peticiones del frontend y las
 
 ## Conclusiones
 
-El backend migrado a Rust es capaz de responder a todas las peticiones que realiza el frontend actual. Las únicas áreas que requieren implementación adicional son:
+El backend migrado a Rust es capaz de responder a todas las peticiones que realiza el frontend actual. La única área que requiere implementación adicional es:
 
 1. **Sistema de Snapshots**: Se necesita completar la implementación del modelo de snapshots y su integración con las rutas correspondientes.
 
-2. **Sistema Avanzado de Roles y Permisos**: Se requiere implementar un sistema más granular de permisos por recurso y acción, así como la asignación de permisos a roles.
+Se ha completado con éxito la implementación del sistema avanzado de roles y permisos, haciendo que sea compatible con el sistema utilizado actualmente por el frontend.
 
 Todas las demás funcionalidades del frontend están completamente soportadas por el backend migrado, lo que garantiza la compatibilidad entre ambos componentes.
 
@@ -264,14 +265,14 @@ Todas las demás funcionalidades del frontend están completamente soportadas po
 
 1. Priorizar la implementación del sistema de snapshots para completar la funcionalidad de inventario.
 
-2. Desarrollar el sistema avanzado de roles y permisos para mejorar la seguridad y el control de acceso.
+2. Implementar pruebas automatizadas para verificar la correcta integración entre frontend y backend.
 
-3. Implementar pruebas automatizadas para verificar la correcta integración entre frontend y backend.
+3. Realizar pruebas de rendimiento para asegurar que el backend en Rust proporciona el rendimiento esperado bajo carga.
 
-4. Realizar pruebas de rendimiento para asegurar que el backend en Rust proporciona el rendimiento esperado bajo carga.
+4. Desarrollar una suite de tests de integración que valide todas las rutas API y sus respuestas.
 
-5. Desarrollar una suite de tests de integración que valide todas las rutas API y sus respuestas.
+5. Implementar monitoreo y logs detallados para detectar y solucionar problemas en producción.
 
-6. Implementar monitoreo y logs detallados para detectar y solucionar problemas en producción.
+6. Realizar pruebas de estrés para verificar la estabilidad del sistema bajo condiciones de carga elevada.
 
-7. Realizar pruebas de estrés para verificar la estabilidad del sistema bajo condiciones de carga elevada.
+7. Validar específicamente el funcionamiento del sistema de roles y permisos para asegurar que los controles de acceso se aplican correctamente.

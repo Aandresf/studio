@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::lib::authorize::Authorize;
 use crate::database_manager::DbPool;
 use crate::models::user::{User, NewUser, UserUpdate, UserResponse};
+use crate::models::role_permission::{Role, get_user_permissions};
 use log::{debug, error};
 use serde_json::json;
 
@@ -34,6 +35,18 @@ async fn get_users(pool: web::Data<DbPool>) -> impl Responder {
         }
     };
     
+    // Obtener roles
+    let roles = match Role::find_all(&conn) {
+        Ok(r) => r,
+        Err(e) => {
+            error!("Error al obtener roles: {}", e);
+            return HttpResponse::InternalServerError().json(json!({
+                "error": "Error al obtener roles",
+                "details": e.to_string()
+            }));
+        }
+    };
+    
     match User::find_all(&conn) {
         Ok(users) => {
             // Convertir a UserResponse para no exponer datos sensibles
@@ -48,7 +61,10 @@ async fn get_users(pool: web::Data<DbPool>) -> impl Responder {
                 })
                 .collect();
                 
-            HttpResponse::Ok().json(user_responses)
+            HttpResponse::Ok().json(json!({
+                "users": user_responses,
+                "roles": roles
+            }))
         },
         Err(e) => {
             error!("Error al obtener usuarios: {}", e);
@@ -74,6 +90,15 @@ async fn get_user(path: web::Path<String>, pool: web::Data<DbPool>) -> impl Resp
     
     match User::find_by_id(&conn, &user_id) {
         Ok(user) => {
+            // Obtener permisos del usuario
+            let permissions = match get_user_permissions(&conn, &user_id) {
+                Ok(perms) => perms,
+                Err(e) => {
+                    error!("Error al obtener permisos del usuario: {}", e);
+                    vec![] // Si hay error, retornamos una lista vacía
+                }
+            };
+            
             let user_response = UserResponse {
                 id: user.id,
                 username: user.username,
@@ -83,7 +108,10 @@ async fn get_user(path: web::Path<String>, pool: web::Data<DbPool>) -> impl Resp
                 status: user.status,
             };
             
-            HttpResponse::Ok().json(user_response)
+            HttpResponse::Ok().json(json!({
+                "user": user_response,
+                "permissions": permissions
+            }))
         },
         Err(e) => {
             if let rusqlite::Error::QueryReturnedNoRows = e {

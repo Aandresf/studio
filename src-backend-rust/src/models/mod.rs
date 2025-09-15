@@ -12,6 +12,7 @@ pub mod search;
 pub mod setting;
 pub mod stat;
 pub mod report;
+pub mod role_permission;
 
 // Exportamos los modelos para facilitar su importación
 pub use user::{User, NewUser, UserUpdate, AuthRequest, AuthResponse, UserResponse};
