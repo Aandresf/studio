@@ -1,19 +1,12 @@
 // src-backend-rust/src/routes/users.rs
 
-use actix_web::{web, HttpResponse, Responder};
+use actix_web::{web, HttpResponse, Responder, http::StatusCode};
 use serde::{Deserialize, Serialize};
 use crate::lib::authorize::Authorize;
-use nanoid::nanoid;
+use crate::database_manager::DbPool;
+use crate::models::user::{User, NewUser, UserUpdate, UserResponse};
+use log::{debug, error};
 use serde_json::json;
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct User {
-    id: Option<String>,
-    username: String,
-    password: Option<String>,
-    display_name: Option<String>,
-    role_id: String,
-}
 
 // Configuración de rutas para usuarios
 pub fn init(cfg: &mut web::ServiceConfig) {
@@ -24,75 +17,256 @@ pub fn init(cfg: &mut web::ServiceConfig) {
             .route("", web::post().to(create_user))
             .route("/{id}", web::put().to(update_user))
             .route("/{id}", web::delete().to(delete_user))
+            .route("/count", web::get().to(count_users))
     );
 }
 
 // Controladores
 
-async fn get_users() -> impl Responder {
-    // En una implementación real, consultaríamos la base de datos
-    HttpResponse::Ok().json(json!([
-        {
-            "id": "1",
-            "username": "admin",
-            "display_name": "Administrador",
-            "role_id": "admin"
-        },
-        {
-            "id": "2",
-            "username": "vendedor",
-            "display_name": "Vendedor",
-            "role_id": "sales"
+async fn get_users(pool: web::Data<DbPool>) -> impl Responder {
+    let conn = match pool.get() {
+        Ok(conn) => conn,
+        Err(e) => {
+            error!("Error al obtener conexión del pool: {}", e);
+            return HttpResponse::InternalServerError().json(json!({
+                "error": "Error de conexión a la base de datos"
+            }));
         }
-    ]))
+    };
+    
+    match User::find_all(&conn) {
+        Ok(users) => {
+            // Convertir a UserResponse para no exponer datos sensibles
+            let user_responses: Vec<UserResponse> = users.into_iter()
+                .map(|user| UserResponse {
+                    id: user.id,
+                    username: user.username,
+                    display_name: user.display_name,
+                    email: user.email,
+                    role_id: user.role_id,
+                    status: user.status,
+                })
+                .collect();
+                
+            HttpResponse::Ok().json(user_responses)
+        },
+        Err(e) => {
+            error!("Error al obtener usuarios: {}", e);
+            HttpResponse::InternalServerError().json(json!({
+                "error": "Error al obtener usuarios",
+                "details": e.to_string()
+            }))
+        }
+    }
 }
 
-async fn get_user(path: web::Path<String>) -> impl Responder {
+async fn get_user(path: web::Path<String>, pool: web::Data<DbPool>) -> impl Responder {
     let user_id = path.into_inner();
+    let conn = match pool.get() {
+        Ok(conn) => conn,
+        Err(e) => {
+            error!("Error al obtener conexión del pool: {}", e);
+            return HttpResponse::InternalServerError().json(json!({
+                "error": "Error de conexión a la base de datos"
+            }));
+        }
+    };
     
-    // En una implementación real, consultaríamos la base de datos por ID
-    HttpResponse::Ok().json(json!({
-        "id": user_id,
-        "username": "usuario_ejemplo",
-        "display_name": "Usuario de Ejemplo",
-        "role_id": "staff"
-    }))
+    match User::find_by_id(&conn, &user_id) {
+        Ok(user) => {
+            let user_response = UserResponse {
+                id: user.id,
+                username: user.username,
+                display_name: user.display_name,
+                email: user.email,
+                role_id: user.role_id,
+                status: user.status,
+            };
+            
+            HttpResponse::Ok().json(user_response)
+        },
+        Err(e) => {
+            if let rusqlite::Error::QueryReturnedNoRows = e {
+                HttpResponse::NotFound().json(json!({
+                    "error": "Usuario no encontrado"
+                }))
+            } else {
+                error!("Error al obtener usuario: {}", e);
+                HttpResponse::InternalServerError().json(json!({
+                    "error": "Error al obtener usuario",
+                    "details": e.to_string()
+                }))
+            }
+        }
+    }
+}
 }
 
-async fn create_user(user: web::Json<User>) -> impl Responder {
-    // En una implementación real, insertaríamos en la base de datos
-    // y hashearíamos la contraseña
+async fn create_user(user: web::Json<NewUser>, pool: web::Data<DbPool>) -> impl Responder {
+    let conn = match pool.get() {
+        Ok(conn) => conn,
+        Err(e) => {
+            error!("Error al obtener conexión del pool: {}", e);
+            return HttpResponse::InternalServerError().json(json!({
+                "error": "Error de conexión a la base de datos"
+            }));
+        }
+    };
     
-    let id = nanoid!(10);
-    
-    HttpResponse::Created().json(json!({
-        "id": id,
-        "username": user.username,
-        "display_name": user.display_name,
-        "role_id": user.role_id,
-        "created": true
-    }))
+    match User::create(&conn, &user.into_inner()) {
+        Ok(user_id) => {
+            // Obtener el usuario recién creado para devolverlo en la respuesta
+            match User::find_by_id(&conn, &user_id) {
+                Ok(user) => {
+                    let user_response = UserResponse {
+                        id: user.id,
+                        username: user.username,
+                        display_name: user.display_name,
+                        email: user.email,
+                        role_id: user.role_id,
+                        status: user.status,
+                    };
+                    
+                    HttpResponse::Created().json(user_response)
+                },
+                Err(e) => {
+                    error!("Error al obtener el usuario recién creado: {}", e);
+                    HttpResponse::Ok().json(json!({
+                        "id": user_id,
+                        "created": true
+                    }))
+                }
+            }
+        },
+        Err(e) => {
+            error!("Error al crear usuario: {}", e);
+            HttpResponse::InternalServerError().json(json!({
+                "error": "Error al crear usuario",
+                "details": e.to_string()
+            }))
+        }
+    }
 }
 
-async fn update_user(path: web::Path<String>, user: web::Json<User>) -> impl Responder {
+async fn update_user(path: web::Path<String>, user: web::Json<UserUpdate>, pool: web::Data<DbPool>) -> impl Responder {
     let user_id = path.into_inner();
+    let conn = match pool.get() {
+        Ok(conn) => conn,
+        Err(e) => {
+            error!("Error al obtener conexión del pool: {}", e);
+            return HttpResponse::InternalServerError().json(json!({
+                "error": "Error de conexión a la base de datos"
+            }));
+        }
+    };
     
-    // En una implementación real, actualizaríamos en la base de datos
-    HttpResponse::Ok().json(json!({
-        "id": user_id,
-        "username": user.username,
-        "display_name": user.display_name,
-        "role_id": user.role_id,
-        "updated": true
-    }))
+    match User::update(&conn, &user_id, &user.into_inner()) {
+        Ok(rows_affected) => {
+            if rows_affected == 0 {
+                return HttpResponse::NotFound().json(json!({
+                    "error": "Usuario no encontrado o no se realizaron cambios"
+                }));
+            }
+            
+            // Obtener el usuario actualizado
+            match User::find_by_id(&conn, &user_id) {
+                Ok(user) => {
+                    let user_response = UserResponse {
+                        id: user.id,
+                        username: user.username,
+                        display_name: user.display_name,
+                        email: user.email,
+                        role_id: user.role_id,
+                        status: user.status,
+                    };
+                    
+                    HttpResponse::Ok().json(user_response)
+                },
+                Err(e) => {
+                    error!("Error al obtener usuario actualizado: {}", e);
+                    HttpResponse::Ok().json(json!({
+                        "id": user_id,
+                        "updated": true
+                    }))
+                }
+            }
+        },
+        Err(e) => {
+            error!("Error al actualizar usuario: {}", e);
+            HttpResponse::InternalServerError().json(json!({
+                "error": "Error al actualizar usuario",
+                "details": e.to_string()
+            }))
+        }
+    }
+}
 }
 
-async fn delete_user(path: web::Path<String>) -> impl Responder {
+async fn delete_user(path: web::Path<String>, pool: web::Data<DbPool>) -> impl Responder {
     let user_id = path.into_inner();
+    let conn = match pool.get() {
+        Ok(conn) => conn,
+        Err(e) => {
+            error!("Error al obtener conexión del pool: {}", e);
+            return HttpResponse::InternalServerError().json(json!({
+                "error": "Error de conexión a la base de datos"
+            }));
+        }
+    };
     
-    // En una implementación real, eliminaríamos o desactivaríamos en la base de datos
-    HttpResponse::Ok().json(json!({
-        "id": user_id,
-        "deleted": true
-    }))
+    // En lugar de hard delete, hacemos soft delete
+    // En un caso real, necesitaríamos obtener el ID del usuario que realiza la acción
+    // Aquí usamos "system" como ejemplo
+    match User::soft_delete(&conn, &user_id, "system") {
+        Ok(rows_affected) => {
+            if rows_affected == 0 {
+                HttpResponse::NotFound().json(json!({
+                    "error": "Usuario no encontrado"
+                }))
+            } else {
+                HttpResponse::Ok().json(json!({
+                    "id": user_id,
+                    "deleted": true
+                }))
+            }
+        },
+        Err(e) => {
+            error!("Error al eliminar usuario: {}", e);
+            HttpResponse::InternalServerError().json(json!({
+                "error": "Error al eliminar usuario",
+                "details": e.to_string()
+            }))
+        }
+    }
+}
+
+async fn count_users(pool: web::Data<DbPool>) -> impl Responder {
+    let conn = match pool.get() {
+        Ok(conn) => conn,
+        Err(e) => {
+            error!("Error al obtener conexión del pool: {}", e);
+            return HttpResponse::InternalServerError().json(json!({
+                "error": "Error de conexión a la base de datos"
+            }));
+        }
+    };
+    
+    let count = conn.query_row(
+        "SELECT COUNT(*) FROM users WHERE status != 'Eliminado'", 
+        [],
+        |row| row.get::<_, i64>(0)
+    );
+    
+    match count {
+        Ok(count) => HttpResponse::Ok().json(json!({
+            "count": count
+        })),
+        Err(e) => {
+            error!("Error al contar usuarios: {}", e);
+            HttpResponse::InternalServerError().json(json!({
+                "error": "Error al contar usuarios",
+                "details": e.to_string()
+            }))
+        }
+    }
 }

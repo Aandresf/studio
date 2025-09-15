@@ -123,10 +123,13 @@ src-backend-rust/
 - Implementar modelos para productos, departamentos, etc. (Completado ✅)
 - Actualizar el esquema de la base de datos (Completado ✅)
 
-### Fase 4: Integración de Funcionalidad (Pendiente ⏳)
-- Integrar funcionalidad real en cada ruta
-- Implementar reportes y exportación a Excel
-- Integrar búsqueda y filtros
+### Fase 4: Integración de Funcionalidad (En progreso 🔄)
+- Integrar funcionalidad real en cada ruta (En progreso 🔄)
+  - ✅ Usuarios: Integración completa con manejo de errores y validaciones
+  - ✅ Productos: Integración completa con manejo de errores y validaciones
+  - ⏳ Resto de rutas: Pendiente de integrar con sus modelos correspondientes
+- Implementar reportes y exportación a Excel (Pendiente ⏳)
+- Integrar búsqueda y filtros (Pendiente ⏳)
 
 ### Fase 5: Optimización y Pruebas (Pendiente ⏳)
 - Añadir pruebas unitarias
@@ -135,33 +138,64 @@ src-backend-rust/
 
 ## Librerías de Rust Instaladas (Dependencias en `Cargo.toml`)
 
-*   **actix-web**: Para el servidor web (framework principal)
-*   **actix-cors**: Para el manejo de CORS
-*   **tokio**: Para el runtime asíncrono
-*   **serde, serde_json**: Para serialización y deserialización de datos (JSON)
-*   **rusqlite**: Para la base de datos SQLite
-*   **r2d2, r2d2_sqlite**: Para el pool de conexiones a la base de datos
-*   **chrono**: Para manejo de fechas y horas
-*   **jsonwebtoken**: Para manejar JWT (JSON Web Tokens)
-*   **bcrypt**: Para el hashing de contraseñas
-*   **config**: Para la gestión de configuración
-*   **env_logger, log**: Para logging
-*   **nanoid**: Para generación de IDs únicos
-*   **rust_xlsxwriter**: Para generación de archivos Excel
-*   **config**: Para gestionar la configuración desde archivos.
-*   **env_logger**: Para logging.
-*   **rust_xlsxwriter**: Para trabajar con archivos Excel.
-*   **nanoid**: Para generar IDs únicos.
+### Web y Servidor
+* **actix-web** (v4.3.1): Framework web para construir el servidor HTTP/HTTPS
+* **actix-cors** (v0.6.4): Middleware para gestionar Cross-Origin Resource Sharing
+* **tokio** (v1.31.0): Runtime asíncrono para operaciones concurrentes
+
+### Base de Datos y Persistencia
+* **rusqlite** (v0.29.0): Driver nativo de SQLite para Rust
+* **r2d2** (v0.8.10): Biblioteca para pool de conexiones genérico
+* **r2d2_sqlite** (v0.22.0): Integración de SQLite con r2d2
+
+### Serialización y Datos
+* **serde** (v1.0.183): Framework de serialización/deserialización
+* **serde_json** (v1.0.105): Implementación JSON para serde
+
+### Seguridad y Autenticación
+* **jsonwebtoken** (v8.3.0): Implementación de JSON Web Tokens (JWT)
+* **bcrypt** (v0.15.0): Biblioteca para hashing seguro de contraseñas
+
+### Utilidades
+* **chrono** (v0.4.26): Biblioteca para manejo de fechas y horas
+* **rust_xlsxwriter** (v0.46.0): Generación de archivos Excel
+* **nanoid** (v0.4.0): Generador de IDs únicos alfanuméricos
+* **dotenv** (v0.15.0): Carga de variables de entorno desde archivos .env
+
+### Configuración y Logging
+* **config** (v0.13.3): Gestión centralizada de configuración
+* **env_logger** (v0.10.0): Logger configurable mediante variables de entorno
+* **log** (v0.4.19): Fachada de logging para Rust
 
 ## Próximos Pasos
 
-Ahora que hemos completado la implementación de todos los modelos y la migración de todos los archivos del backend, los próximos pasos son:
+Con la implementación de todos los modelos y la integración de las rutas de usuarios y productos, los próximos pasos son:
 
-1. **Implementar Integración con Base de Datos**: Reemplazar respuestas simuladas con consultas reales a la BD utilizando los modelos implementados.
-2. **Integrar Modelos con Rutas**: Conectar los modelos implementados con las rutas API existentes.
-3. **Pruebas Unitarias**: Escribir pruebas para cada módulo.
-4. **Pruebas de Integración**: Verificar que todos los componentes funcionan juntos correctamente.
-5. **Optimización**: Mejorar el rendimiento y uso de recursos.
-6. **Documentación**: Completar la documentación de la API y el código.
-7. **Implementar Websockets**: Para notificaciones en tiempo real.
-8. **Refactorización**: Mejorar la estructura del código y eliminar duplicaciones.
+1. **Continuar la Integración de Rutas**: Continuar reemplazando las respuestas simuladas por consultas reales en las rutas restantes:
+   - Priorizar rutas críticas: attributes, brands, departments, inventory
+   - Implementar rutas de operaciones: sales, purchases
+   - Completar rutas auxiliares: stats, settings, search
+
+2. **Implementación de Reportes**:
+   - Integrar el generador de Excel con las rutas de reportes
+   - Implementar la exportación de datos en varios formatos
+
+3. **Pruebas y Validación**:
+   - Crear pruebas unitarias para cada modelo y ruta
+   - Implementar pruebas de integración para flujos completos
+   - Validar la compatibilidad con el frontend actual
+
+4. **Optimización y Seguridad**:
+   - Revisar y optimizar consultas a la base de datos
+   - Implementar caché donde sea beneficioso
+   - Fortalecer la seguridad y el control de acceso
+
+5. **Funcionalidades Avanzadas**:
+   - Websockets para notificaciones en tiempo real
+   - Sincronización entre múltiples instancias
+   - Sistema de logs detallado para auditoría
+
+6. **Documentación y Finalización**:
+   - Completar la documentación de la API
+   - Crear guías de despliegue y mantenimiento
+   - Preparar para la puesta en producción

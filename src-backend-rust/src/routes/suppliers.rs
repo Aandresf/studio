@@ -1,21 +1,11 @@
 // src-backend-rust/src/routes/suppliers.rs
 
-use actix_web::{web, HttpResponse, Responder};
+use actix_web::{web, HttpResponse, Responder, http::StatusCode};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use nanoid::nanoid;
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Supplier {
-    id: Option<String>,
-    name: String,
-    tax_id: Option<String>,
-    email: Option<String>,
-    phone: Option<String>,
-    address: Option<String>,
-    contact_person: Option<String>,
-    notes: Option<String>,
-}
+use log::{debug, error};
+use crate::database_manager::DbPool;
+use crate::models::customer_supplier::{Supplier, NewSupplier, UpdateSupplier};
 
 // Configuración de rutas para proveedores
 pub fn init(cfg: &mut web::ServiceConfig) {
@@ -26,93 +16,160 @@ pub fn init(cfg: &mut web::ServiceConfig) {
             .route("", web::post().to(create_supplier))
             .route("/{id}", web::put().to(update_supplier))
             .route("/{id}", web::delete().to(delete_supplier))
+            .route("/search/{name}", web::get().to(search_suppliers))
     );
 }
 
 // Controladores
 
-async fn get_suppliers() -> impl Responder {
-    // En una implementación real, consultaríamos la base de datos
-    HttpResponse::Ok().json(json!([
-        {
-            "id": "1",
-            "name": "Proveedor Ejemplo",
-            "tax_id": "12345678-9",
-            "email": "proveedor@ejemplo.com",
-            "phone": "123456789",
-            "address": "Calle Proveedor 123",
-            "contact_person": "Juan Pérez",
-            "notes": null
+async fn get_suppliers(web::Query(params): web::Query<serde_json::Value>, pool: web::Data<DbPool>) -> impl Responder {
+    // Extraer parámetros de paginación
+    let limit = params["limit"].as_i64();
+    let offset = params["offset"].as_i64();
+    
+    match Supplier::find_all(&pool, limit, offset) {
+        Ok(suppliers) => {
+            HttpResponse::Ok().json(suppliers)
         },
-        {
-            "id": "2",
-            "name": "Otro Proveedor",
-            "tax_id": "98765432-1",
-            "email": "otro@proveedor.com",
-            "phone": "987654321",
-            "address": "Avenida Proveedor 456",
-            "contact_person": "María Rodríguez",
-            "notes": null
+        Err(e) => {
+            error!("Error al obtener proveedores: {}", e);
+            HttpResponse::InternalServerError().json(json!({
+                "error": "Error al obtener proveedores",
+                "details": e.to_string()
+            }))
         }
-    ]))
+    }
 }
 
-async fn get_supplier(path: web::Path<String>) -> impl Responder {
+async fn get_supplier(path: web::Path<i64>, pool: web::Data<DbPool>) -> impl Responder {
     let supplier_id = path.into_inner();
     
-    // En una implementación real, consultaríamos la base de datos por ID
-    HttpResponse::Ok().json(json!({
-        "id": supplier_id,
-        "name": "Proveedor Ejemplo",
-        "tax_id": "12345678-9",
-        "email": "proveedor@ejemplo.com",
-        "phone": "123456789",
-        "address": "Calle Proveedor 123",
-        "contact_person": "Juan Pérez",
-        "notes": null
-    }))
+    match Supplier::find_by_id(&pool, supplier_id) {
+        Ok(supplier_opt) => {
+            match supplier_opt {
+                Some(supplier) => HttpResponse::Ok().json(supplier),
+                None => HttpResponse::NotFound().json(json!({
+                    "error": "Proveedor no encontrado"
+                }))
+            }
+        },
+        Err(e) => {
+            error!("Error al obtener proveedor: {}", e);
+            HttpResponse::InternalServerError().json(json!({
+                "error": "Error al obtener proveedor",
+                "details": e.to_string()
+            }))
+        }
+    }
 }
 
-async fn create_supplier(supplier: web::Json<Supplier>) -> impl Responder {
-    // En una implementación real, insertaríamos en la base de datos
-    let id = nanoid!(10);
-    
-    HttpResponse::Created().json(json!({
-        "id": id,
-        "name": supplier.name,
-        "tax_id": supplier.tax_id,
-        "email": supplier.email,
-        "phone": supplier.phone,
-        "address": supplier.address,
-        "contact_person": supplier.contact_person,
-        "notes": supplier.notes,
-        "created": true
-    }))
+async fn create_supplier(supplier: web::Json<NewSupplier>, pool: web::Data<DbPool>) -> impl Responder {
+    match Supplier::create(&pool, supplier.into_inner()) {
+        Ok(created_supplier) => {
+            HttpResponse::Created().json(created_supplier)
+        },
+        Err(e) => {
+            // Verificar si es un error de restricción
+            if let rusqlite::Error::SqliteFailure(_, Some(msg)) = &e {
+                if msg.contains("UNIQUE constraint failed") {
+                    return HttpResponse::BadRequest().json(json!({
+                        "error": "Ya existe un proveedor con ese RFC"
+                    }));
+                }
+            }
+            
+            error!("Error al crear proveedor: {}", e);
+            HttpResponse::InternalServerError().json(json!({
+                "error": "Error al crear proveedor",
+                "details": e.to_string()
+            }))
+        }
+    }
 }
 
-async fn update_supplier(path: web::Path<String>, supplier: web::Json<Supplier>) -> impl Responder {
+async fn update_supplier(path: web::Path<i64>, supplier: web::Json<UpdateSupplier>, pool: web::Data<DbPool>) -> impl Responder {
     let supplier_id = path.into_inner();
     
-    // En una implementación real, actualizaríamos en la base de datos
-    HttpResponse::Ok().json(json!({
-        "id": supplier_id,
-        "name": supplier.name,
-        "tax_id": supplier.tax_id,
-        "email": supplier.email,
-        "phone": supplier.phone,
-        "address": supplier.address,
-        "contact_person": supplier.contact_person,
-        "notes": supplier.notes,
-        "updated": true
-    }))
+    match Supplier::update(&pool, supplier_id, supplier.into_inner()) {
+        Ok(updated_supplier) => {
+            HttpResponse::Ok().json(updated_supplier)
+        },
+        Err(e) => {
+            // Verificar si es un error de proveedor no encontrado
+            if let rusqlite::Error::QueryReturnedNoRows = e {
+                return HttpResponse::NotFound().json(json!({
+                    "error": "Proveedor no encontrado"
+                }));
+            }
+            
+            // Verificar si es un error de restricción
+            if let rusqlite::Error::SqliteFailure(_, Some(msg)) = &e {
+                if msg.contains("UNIQUE constraint failed") {
+                    return HttpResponse::BadRequest().json(json!({
+                        "error": "Ya existe un proveedor con ese RFC"
+                    }));
+                }
+            }
+            
+            error!("Error al actualizar proveedor: {}", e);
+            HttpResponse::InternalServerError().json(json!({
+                "error": "Error al actualizar proveedor",
+                "details": e.to_string()
+            }))
+        }
+    }
 }
 
-async fn delete_supplier(path: web::Path<String>) -> impl Responder {
+async fn delete_supplier(path: web::Path<i64>, pool: web::Data<DbPool>) -> impl Responder {
     let supplier_id = path.into_inner();
     
-    // En una implementación real, eliminaríamos en la base de datos
-    HttpResponse::Ok().json(json!({
-        "id": supplier_id,
-        "deleted": true
-    }))
+    // En un caso real, necesitaríamos obtener el ID del usuario que realiza la acción
+    match Supplier::delete(&pool, supplier_id, Some("system".to_string())) {
+        Ok(_) => {
+            HttpResponse::Ok().json(json!({
+                "id": supplier_id,
+                "deleted": true
+            }))
+        },
+        Err(e) => {
+            // Verificar si es un error de proveedor no encontrado
+            if let rusqlite::Error::QueryReturnedNoRows = e {
+                return HttpResponse::NotFound().json(json!({
+                    "error": "Proveedor no encontrado"
+                }));
+            }
+            
+            // Verificar si es un error de restricción (compras asociadas)
+            if let rusqlite::Error::SqliteFailure(_, Some(msg)) = &e {
+                if msg.contains("No se puede eliminar el proveedor porque tiene compras asociadas") {
+                    return HttpResponse::BadRequest().json(json!({
+                        "error": "No se puede eliminar el proveedor porque tiene compras asociadas"
+                    }));
+                }
+            }
+            
+            error!("Error al eliminar proveedor: {}", e);
+            HttpResponse::InternalServerError().json(json!({
+                "error": "Error al eliminar proveedor",
+                "details": e.to_string()
+            }))
+        }
+    }
+}
+
+async fn search_suppliers(path: web::Path<String>, pool: web::Data<DbPool>) -> impl Responder {
+    let name = path.into_inner();
+    
+    match Supplier::search_by_name(&pool, &name) {
+        Ok(suppliers) => {
+            HttpResponse::Ok().json(suppliers)
+        },
+        Err(e) => {
+            error!("Error al buscar proveedores: {}", e);
+            HttpResponse::InternalServerError().json(json!({
+                "error": "Error al buscar proveedores",
+                "details": e.to_string()
+            }))
+        }
+    }
 }

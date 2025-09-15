@@ -7,6 +7,9 @@ pub mod attribute;
 pub mod product;
 pub mod customer_supplier;
 pub mod inventory_movement;
+pub mod transaction;
+pub mod search;
+pub mod setting;
 
 // Exportamos los modelos para facilitar su importación
 pub use user::{User, NewUser, UserUpdate, AuthRequest, AuthResponse, UserResponse};

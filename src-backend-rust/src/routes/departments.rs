@@ -1,24 +1,12 @@
 // src-backend-rust/src/routes/departments.rs
 
-use actix_web::{web, HttpResponse, Responder};
+use actix_web::{web, HttpResponse, Responder, http::StatusCode};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use nanoid::nanoid;
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Department {
-    id: Option<String>,
-    name: String,
-    description: Option<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Subdepartment {
-    id: Option<String>,
-    name: String,
-    description: Option<String>,
-    department_id: String,
-}
+use log::{debug, error};
+use crate::database_manager::DbPool;
+use crate::models::department::{Department, NewDepartment, UpdateDepartment};
+use crate::models::department::{Subdepartment, NewSubdepartment, UpdateSubdepartment};
 
 // Configuración de rutas para departamentos
 pub fn init(cfg: &mut web::ServiceConfig) {
@@ -29,6 +17,7 @@ pub fn init(cfg: &mut web::ServiceConfig) {
             .route("", web::post().to(create_department))
             .route("/{id}", web::put().to(update_department))
             .route("/{id}", web::delete().to(delete_department))
+            .route("/search/{name}", web::get().to(search_departments))
             .route("/{id}/subdepartments", web::get().to(get_subdepartments))
             .route("/{id}/subdepartments", web::post().to(create_subdepartment))
             .service(
@@ -36,141 +25,331 @@ pub fn init(cfg: &mut web::ServiceConfig) {
                     .route("/{id}", web::get().to(get_subdepartment))
                     .route("/{id}", web::put().to(update_subdepartment))
                     .route("/{id}", web::delete().to(delete_subdepartment))
+                    .route("/search/{name}", web::get().to(search_subdepartments))
             )
     );
 }
 
 // Controladores para departamentos
 
-async fn get_departments() -> impl Responder {
-    // En una implementación real, consultaríamos la base de datos
-    HttpResponse::Ok().json(json!([
-        {
-            "id": "1",
-            "name": "Electrónica",
-            "description": "Productos electrónicos"
+async fn get_departments(pool: web::Data<DbPool>) -> impl Responder {
+    match Department::find_all(&pool) {
+        Ok(departments) => {
+            HttpResponse::Ok().json(departments)
         },
-        {
-            "id": "2",
-            "name": "Ropa",
-            "description": "Productos de vestir"
+        Err(e) => {
+            error!("Error al obtener departamentos: {}", e);
+            HttpResponse::InternalServerError().json(json!({
+                "error": "Error al obtener departamentos",
+                "details": e.to_string()
+            }))
         }
-    ]))
+    }
 }
 
-async fn get_department(path: web::Path<String>) -> impl Responder {
+async fn get_department(path: web::Path<i64>, pool: web::Data<DbPool>) -> impl Responder {
     let department_id = path.into_inner();
     
-    // En una implementación real, consultaríamos la base de datos por ID
-    HttpResponse::Ok().json(json!({
-        "id": department_id,
-        "name": "Electrónica",
-        "description": "Productos electrónicos"
-    }))
+    match Department::find_by_id(&pool, department_id) {
+        Ok(department_opt) => {
+            match department_opt {
+                Some(department) => HttpResponse::Ok().json(department),
+                None => HttpResponse::NotFound().json(json!({
+                    "error": "Departamento no encontrado"
+                }))
+            }
+        },
+        Err(e) => {
+            error!("Error al obtener departamento: {}", e);
+            HttpResponse::InternalServerError().json(json!({
+                "error": "Error al obtener departamento",
+                "details": e.to_string()
+            }))
+        }
+    }
 }
 
-async fn create_department(department: web::Json<Department>) -> impl Responder {
-    // En una implementación real, insertaríamos en la base de datos
-    let id = nanoid!(10);
-    
-    HttpResponse::Created().json(json!({
-        "id": id,
-        "name": department.name,
-        "description": department.description,
-        "created": true
-    }))
+async fn create_department(department: web::Json<NewDepartment>, pool: web::Data<DbPool>) -> impl Responder {
+    match Department::create(&pool, department.into_inner()) {
+        Ok(created_department) => {
+            HttpResponse::Created().json(created_department)
+        },
+        Err(e) => {
+            // Verificar si es un error de restricción (nombre duplicado)
+            if let rusqlite::Error::SqliteFailure(_, Some(msg)) = &e {
+                if msg.contains("Ya existe un departamento con ese nombre") {
+                    return HttpResponse::BadRequest().json(json!({
+                        "error": "Ya existe un departamento con ese nombre"
+                    }));
+                } else if msg.contains("Ya existe un departamento con esa abreviatura") {
+                    return HttpResponse::BadRequest().json(json!({
+                        "error": "Ya existe un departamento con esa abreviatura"
+                    }));
+                }
+            }
+            
+            error!("Error al crear departamento: {}", e);
+            HttpResponse::InternalServerError().json(json!({
+                "error": "Error al crear departamento",
+                "details": e.to_string()
+            }))
+        }
+    }
 }
 
-async fn update_department(path: web::Path<String>, department: web::Json<Department>) -> impl Responder {
+async fn update_department(path: web::Path<i64>, department: web::Json<UpdateDepartment>, pool: web::Data<DbPool>) -> impl Responder {
     let department_id = path.into_inner();
     
-    // En una implementación real, actualizaríamos en la base de datos
-    HttpResponse::Ok().json(json!({
-        "id": department_id,
-        "name": department.name,
-        "description": department.description,
-        "updated": true
-    }))
+    match Department::update(&pool, department_id, department.into_inner()) {
+        Ok(updated_department) => {
+            HttpResponse::Ok().json(updated_department)
+        },
+        Err(e) => {
+            // Verificar si es un error de departamento no encontrado
+            if let rusqlite::Error::QueryReturnedNoRows = e {
+                return HttpResponse::NotFound().json(json!({
+                    "error": "Departamento no encontrado"
+                }));
+            }
+            
+            // Verificar si es un error de restricción (nombre duplicado)
+            if let rusqlite::Error::SqliteFailure(_, Some(msg)) = &e {
+                if msg.contains("Ya existe un departamento con ese nombre") {
+                    return HttpResponse::BadRequest().json(json!({
+                        "error": "Ya existe un departamento con ese nombre"
+                    }));
+                } else if msg.contains("Ya existe un departamento con esa abreviatura") {
+                    return HttpResponse::BadRequest().json(json!({
+                        "error": "Ya existe un departamento con esa abreviatura"
+                    }));
+                }
+            }
+            
+            error!("Error al actualizar departamento: {}", e);
+            HttpResponse::InternalServerError().json(json!({
+                "error": "Error al actualizar departamento",
+                "details": e.to_string()
+            }))
+        }
+    }
 }
 
-async fn delete_department(path: web::Path<String>) -> impl Responder {
+async fn delete_department(path: web::Path<i64>, pool: web::Data<DbPool>) -> impl Responder {
     let department_id = path.into_inner();
     
-    // En una implementación real, eliminaríamos en la base de datos
-    HttpResponse::Ok().json(json!({
-        "id": department_id,
-        "deleted": true
-    }))
+    // En un caso real, necesitaríamos obtener el ID del usuario que realiza la acción
+    match Department::delete(&pool, department_id, Some("system".to_string())) {
+        Ok(_) => {
+            HttpResponse::Ok().json(json!({
+                "id": department_id,
+                "deleted": true
+            }))
+        },
+        Err(e) => {
+            // Verificar si es un error de departamento no encontrado
+            if let rusqlite::Error::QueryReturnedNoRows = e {
+                return HttpResponse::NotFound().json(json!({
+                    "error": "Departamento no encontrado"
+                }));
+            }
+            
+            // Verificar si es un error de restricción (subdepartamentos asociados)
+            if let rusqlite::Error::SqliteFailure(_, Some(msg)) = &e {
+                if msg.contains("No se puede eliminar el departamento porque tiene subdepartamentos asociados") {
+                    return HttpResponse::BadRequest().json(json!({
+                        "error": "No se puede eliminar el departamento porque tiene subdepartamentos asociados"
+                    }));
+                }
+            }
+            
+            error!("Error al eliminar departamento: {}", e);
+            HttpResponse::InternalServerError().json(json!({
+                "error": "Error al eliminar departamento",
+                "details": e.to_string()
+            }))
+        }
+    }
+}
+
+async fn search_departments(path: web::Path<String>, pool: web::Data<DbPool>) -> impl Responder {
+    let name = path.into_inner();
+    
+    match Department::search_by_name(&pool, &name) {
+        Ok(departments) => {
+            HttpResponse::Ok().json(departments)
+        },
+        Err(e) => {
+            error!("Error al buscar departamentos: {}", e);
+            HttpResponse::InternalServerError().json(json!({
+                "error": "Error al buscar departamentos",
+                "details": e.to_string()
+            }))
+        }
+    }
 }
 
 // Controladores para subdepartamentos
 
-async fn get_subdepartments(path: web::Path<String>) -> impl Responder {
+async fn get_subdepartments(path: web::Path<i64>, pool: web::Data<DbPool>) -> impl Responder {
     let department_id = path.into_inner();
     
-    // En una implementación real, consultaríamos los subdepartamentos de un departamento
-    HttpResponse::Ok().json(json!([
-        {
-            "id": "1",
-            "name": "Teléfonos",
-            "description": "Teléfonos móviles",
-            "department_id": department_id
+    match Subdepartment::find_by_department(&pool, department_id) {
+        Ok(subdepartments) => {
+            HttpResponse::Ok().json(subdepartments)
         },
-        {
-            "id": "2",
-            "name": "Computadoras",
-            "description": "Laptops y computadoras de escritorio",
-            "department_id": department_id
+        Err(e) => {
+            error!("Error al obtener subdepartamentos: {}", e);
+            HttpResponse::InternalServerError().json(json!({
+                "error": "Error al obtener subdepartamentos",
+                "details": e.to_string()
+            }))
         }
-    ]))
+    }
 }
 
-async fn get_subdepartment(path: web::Path<String>) -> impl Responder {
+async fn get_subdepartment(path: web::Path<i64>, pool: web::Data<DbPool>) -> impl Responder {
     let subdepartment_id = path.into_inner();
     
-    // En una implementación real, consultaríamos la base de datos por ID
-    HttpResponse::Ok().json(json!({
-        "id": subdepartment_id,
-        "name": "Teléfonos",
-        "description": "Teléfonos móviles",
-        "department_id": "1"
-    }))
+    match Subdepartment::find_by_id(&pool, subdepartment_id) {
+        Ok(subdepartment_opt) => {
+            match subdepartment_opt {
+                Some(subdepartment) => HttpResponse::Ok().json(subdepartment),
+                None => HttpResponse::NotFound().json(json!({
+                    "error": "Subdepartamento no encontrado"
+                }))
+            }
+        },
+        Err(e) => {
+            error!("Error al obtener subdepartamento: {}", e);
+            HttpResponse::InternalServerError().json(json!({
+                "error": "Error al obtener subdepartamento",
+                "details": e.to_string()
+            }))
+        }
+    }
 }
 
-async fn create_subdepartment(path: web::Path<String>, subdepartment: web::Json<Subdepartment>) -> impl Responder {
+async fn create_subdepartment(path: web::Path<i64>, subdepartment: web::Json<NewSubdepartment>, pool: web::Data<DbPool>) -> impl Responder {
     let department_id = path.into_inner();
     
-    // En una implementación real, insertaríamos en la base de datos
-    let id = nanoid!(10);
+    // Asegurarse de que el department_id en la ruta coincida con el del cuerpo
+    let mut subdepartment_data = subdepartment.into_inner();
+    subdepartment_data.department_id = department_id;
     
-    HttpResponse::Created().json(json!({
-        "id": id,
-        "name": subdepartment.name,
-        "description": subdepartment.description,
-        "department_id": department_id,
-        "created": true
-    }))
+    match Subdepartment::create(&pool, subdepartment_data) {
+        Ok(created_subdepartment) => {
+            HttpResponse::Created().json(created_subdepartment)
+        },
+        Err(e) => {
+            // Verificar si es un error de restricción (nombre duplicado o departamento inexistente)
+            if let rusqlite::Error::SqliteFailure(_, Some(msg)) = &e {
+                if msg.contains("Ya existe un subdepartamento con ese nombre en este departamento") {
+                    return HttpResponse::BadRequest().json(json!({
+                        "error": "Ya existe un subdepartamento con ese nombre en este departamento"
+                    }));
+                } else if msg.contains("El departamento especificado no existe") {
+                    return HttpResponse::BadRequest().json(json!({
+                        "error": "El departamento especificado no existe"
+                    }));
+                }
+            }
+            
+            error!("Error al crear subdepartamento: {}", e);
+            HttpResponse::InternalServerError().json(json!({
+                "error": "Error al crear subdepartamento",
+                "details": e.to_string()
+            }))
+        }
+    }
 }
 
-async fn update_subdepartment(path: web::Path<String>, subdepartment: web::Json<Subdepartment>) -> impl Responder {
+async fn update_subdepartment(path: web::Path<i64>, subdepartment: web::Json<UpdateSubdepartment>, pool: web::Data<DbPool>) -> impl Responder {
     let subdepartment_id = path.into_inner();
     
-    // En una implementación real, actualizaríamos en la base de datos
-    HttpResponse::Ok().json(json!({
-        "id": subdepartment_id,
-        "name": subdepartment.name,
-        "description": subdepartment.description,
-        "department_id": subdepartment.department_id,
-        "updated": true
-    }))
+    match Subdepartment::update(&pool, subdepartment_id, subdepartment.into_inner()) {
+        Ok(updated_subdepartment) => {
+            HttpResponse::Ok().json(updated_subdepartment)
+        },
+        Err(e) => {
+            // Verificar si es un error de subdepartamento no encontrado
+            if let rusqlite::Error::QueryReturnedNoRows = e {
+                return HttpResponse::NotFound().json(json!({
+                    "error": "Subdepartamento no encontrado"
+                }));
+            }
+            
+            // Verificar si es un error de restricción (nombre duplicado o departamento inexistente)
+            if let rusqlite::Error::SqliteFailure(_, Some(msg)) = &e {
+                if msg.contains("Ya existe un subdepartamento con ese nombre en este departamento") {
+                    return HttpResponse::BadRequest().json(json!({
+                        "error": "Ya existe un subdepartamento con ese nombre en este departamento"
+                    }));
+                } else if msg.contains("El departamento especificado no existe") {
+                    return HttpResponse::BadRequest().json(json!({
+                        "error": "El departamento especificado no existe"
+                    }));
+                }
+            }
+            
+            error!("Error al actualizar subdepartamento: {}", e);
+            HttpResponse::InternalServerError().json(json!({
+                "error": "Error al actualizar subdepartamento",
+                "details": e.to_string()
+            }))
+        }
+    }
 }
 
-async fn delete_subdepartment(path: web::Path<String>) -> impl Responder {
+async fn delete_subdepartment(path: web::Path<i64>, pool: web::Data<DbPool>) -> impl Responder {
     let subdepartment_id = path.into_inner();
     
-    // En una implementación real, eliminaríamos en la base de datos
-    HttpResponse::Ok().json(json!({
-        "id": subdepartment_id,
-        "deleted": true
-    }))
+    // En un caso real, necesitaríamos obtener el ID del usuario que realiza la acción
+    match Subdepartment::delete(&pool, subdepartment_id, Some("system".to_string())) {
+        Ok(_) => {
+            HttpResponse::Ok().json(json!({
+                "id": subdepartment_id,
+                "deleted": true
+            }))
+        },
+        Err(e) => {
+            // Verificar si es un error de subdepartamento no encontrado
+            if let rusqlite::Error::QueryReturnedNoRows = e {
+                return HttpResponse::NotFound().json(json!({
+                    "error": "Subdepartamento no encontrado"
+                }));
+            }
+            
+            // Verificar si es un error de restricción (productos asociados)
+            if let rusqlite::Error::SqliteFailure(_, Some(msg)) = &e {
+                if msg.contains("No se puede eliminar el subdepartamento porque tiene productos asociados") {
+                    return HttpResponse::BadRequest().json(json!({
+                        "error": "No se puede eliminar el subdepartamento porque tiene productos asociados"
+                    }));
+                }
+            }
+            
+            error!("Error al eliminar subdepartamento: {}", e);
+            HttpResponse::InternalServerError().json(json!({
+                "error": "Error al eliminar subdepartamento",
+                "details": e.to_string()
+            }))
+        }
+    }
+}
+
+async fn search_subdepartments(path: web::Path<String>, pool: web::Data<DbPool>) -> impl Responder {
+    let name = path.into_inner();
+    
+    match Subdepartment::search_by_name(&pool, &name) {
+        Ok(subdepartments) => {
+            HttpResponse::Ok().json(subdepartments)
+        },
+        Err(e) => {
+            error!("Error al buscar subdepartamentos: {}", e);
+            HttpResponse::InternalServerError().json(json!({
+                "error": "Error al buscar subdepartamentos",
+                "details": e.to_string()
+            }))
+        }
+    }
 }
