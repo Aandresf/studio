@@ -22,6 +22,9 @@ Este documento analiza la compatibilidad entre las peticiones del frontend y las
 | Búsqueda | ✅ Completo | Búsqueda global |
 | Snapshots | ⚠️ Parcial | Pendiente implementación completa |
 | Roles y Permisos | ⚠️ Parcial | Pendiente implementación avanzada |
+| Transacciones Pendientes | ✅ Completo | Gestión de transacciones temporales |
+| Gestión de Tiendas | ✅ Completo | Múltiples tiendas y cambio de contexto |
+| Usuarios | ✅ Completo | Administración de usuarios |
 
 ## Análisis Detallado por Categoría
 
@@ -34,6 +37,17 @@ Este documento analiza la compatibilidad entre las peticiones del frontend y las
 | `/api/auth/me` | GET | ✅ | `src-backend-rust/src/routes/auth.rs` |
 
 **Observaciones**: El sistema de autenticación está completamente implementado con soporte para JWT.
+
+### Productos
+
+| Endpoint | Método | Estado | Ruta Backend Rust |
+|----------|--------|--------|------------------|
+| `/api/products` | GET | ✅ | `src-backend-rust/src/routes/products.rs` |
+| `/api/products` | POST | ✅ | `src-backend-rust/src/routes/products.rs` |
+| `/api/products/:id` | PUT | ✅ | `src-backend-rust/src/routes/products.rs` |
+| `/api/products/:id` | DELETE | ✅ | `src-backend-rust/src/routes/products.rs` |
+| `/api/variants/:id/movements` | GET | ✅ | `src-backend-rust/src/routes/inventory.rs` |
+| `/api/sku/preview` | GET | ✅ | `src-backend-rust/src/routes/products.rs` |
 
 ### Productos
 
@@ -228,6 +242,14 @@ Este documento analiza la compatibilidad entre las peticiones del frontend y las
 
 **Observaciones**: Sistema de transacciones pendientes completamente implementado.
 
+### Aplicación
+
+| Endpoint | Método | Estado | Ruta Backend Rust |
+|----------|--------|--------|------------------|
+| `/api/app/quit` | POST | ✅ | `src-backend-rust/src/routes/admin.rs` |
+
+**Observaciones**: Endpoint para cerrar la aplicación correctamente implementado.
+
 ## Conclusiones
 
 El backend migrado a Rust es capaz de responder a todas las peticiones que realiza el frontend actual. Las únicas áreas que requieren implementación adicional son:
@@ -247,3 +269,9 @@ Todas las demás funcionalidades del frontend están completamente soportadas po
 3. Implementar pruebas automatizadas para verificar la correcta integración entre frontend y backend.
 
 4. Realizar pruebas de rendimiento para asegurar que el backend en Rust proporciona el rendimiento esperado bajo carga.
+
+5. Desarrollar una suite de tests de integración que valide todas las rutas API y sus respuestas.
+
+6. Implementar monitoreo y logs detallados para detectar y solucionar problemas en producción.
+
+7. Realizar pruebas de estrés para verificar la estabilidad del sistema bajo condiciones de carga elevada.
