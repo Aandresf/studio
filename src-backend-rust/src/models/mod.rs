@@ -10,6 +10,8 @@ pub mod inventory_movement;
 pub mod transaction;
 pub mod search;
 pub mod setting;
+pub mod stat;
+pub mod report;
 
 // Exportamos los modelos para facilitar su importación
 pub use user::{User, NewUser, UserUpdate, AuthRequest, AuthResponse, UserResponse};
@@ -58,3 +60,6 @@ pub use customer_supplier::UpdateSupplier;
 pub use inventory_movement::InventoryMovement;
 pub use inventory_movement::NewInventoryMovement;
 pub use inventory_movement::InventoryMovementDetail;
+
+// Reportes
+pub use report::{SalesReport, ProductReport, InventoryReport, CustomerReport, ReportParameters};

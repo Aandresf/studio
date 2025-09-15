@@ -4,15 +4,6 @@ Este documento detalla los componentes y funcionalidades que aún están pendien
 
 ## Rutas API con Integración Pendiente
 
-### Reportes Avanzados
-- **Archivo**: `src-backend-rust/src/routes/reports.rs`
-- **Estado**: Estructura base implementada, pendiente integración completa
-- **Pendiente**:
-  - Integrar con el generador de Excel para exportación de reportes
-  - Implementar filtros avanzados por fecha, producto, cliente, etc.
-  - Añadir reportes de rentabilidad con análisis de costos vs. ventas
-  - Implementar reportes de inventario valorizado
-
 ### Snapshots de Inventario
 - **Archivo**: `src-backend-rust/src/routes/snapshots.rs`
 - **Estado**: Estructura base implementada, pendiente integración completa

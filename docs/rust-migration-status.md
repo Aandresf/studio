@@ -96,7 +96,7 @@ src-backend-rust/
 - ✅ `routes/departments.rs` - CRUD de departamentos (solo estructura básica)
 - ✅ `routes/inventory.rs` - Gestión de inventario (integrado con modelo inventory_movement.rs)
 - ✅ `routes/purchases.rs` - Gestión de compras (integrado con modelo transaction.rs)
-- ✅ `routes/reports.rs` - Generación de reportes (estructura básica)
+- ✅ `routes/reports.rs` - Generación de reportes (integrado con modelo report.rs y excel_generator.rs)
 - ✅ `routes/role_permissions.rs` - Gestión de roles y permisos (estructura básica)
 - ✅ `routes/sales.rs` - Gestión de ventas (integrado con modelo transaction.rs)
 - ✅ `routes/search.rs` - Búsqueda global (integrado con modelo search.rs)
@@ -156,6 +156,7 @@ src-backend-rust/
 - ✅ `models/search.rs` - Modelo para búsqueda global
 - ✅ `models/setting.rs` - Modelo para configuraciones del sistema
 - ✅ `models/stat.rs` - Modelo para estadísticas y reportes
+- ✅ `models/report.rs` - Modelo para generación de reportes
 
 ## Dependencias de Rust Instaladas y Configuradas
 

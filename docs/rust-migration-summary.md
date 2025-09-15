@@ -24,6 +24,7 @@ A la fecha (15 de septiembre de 2025), hemos completado la migración de todos l
 - ✅ Búsqueda (`search.rs`)
 - ✅ Configuración (`setting.rs`)
 - ✅ Estadísticas (`stat.rs`)
+- ✅ Reportes (`report.rs`)
 
 ### APIs Integradas con sus Respectivos Modelos
 - ✅ Autenticación y usuarios
@@ -33,12 +34,11 @@ A la fecha (15 de septiembre de 2025), hemos completado la migración de todos l
 - ✅ Ventas y compras
 - ✅ Búsqueda global
 - ✅ Configuraciones del sistema
-- ✅ Estadísticas y reportes básicos
+- ✅ Estadísticas y reportes
 
 ## Pendiente por Completar
 
-### Integración de Funcionalidades Secundarias (70% completado)
-- ⏳ Reportes avanzados con generación de Excel
+### Integración de Funcionalidades Secundarias (85% completado)
 - ⏳ Snapshots de inventario
 - ⏳ Gestión avanzada de roles y permisos
 
@@ -54,10 +54,9 @@ A la fecha (15 de septiembre de 2025), hemos completado la migración de todos l
 
 ## Plan para Completar la Migración
 
-### Fase Final de Integración (Estimado: 3 semanas)
-1. Completar la integración de reportes con exportación a Excel
-2. Finalizar la implementación de snapshots de inventario
-3. Implementar gestión avanzada de roles y permisos
+### Fase Final de Integración (Estimado: 2 semanas)
+1. Finalizar la implementación de snapshots de inventario
+2. Implementar gestión avanzada de roles y permisos
 
 ### Fase de Pruebas (Estimado: 4 semanas)
 1. Desarrollar pruebas unitarias para todos los modelos y rutas
@@ -80,4 +79,4 @@ El proyecto de migración a Rust ha avanzado significativamente, con todos los c
 
 Las principales funcionalidades del sistema (gestión de usuarios, productos, inventario, ventas y compras) están completamente operativas en el nuevo backend. Las pruebas manuales realizadas hasta ahora muestran un rendimiento satisfactorio y compatibilidad con el frontend existente.
 
-Se estima que la migración completa, incluyendo pruebas automatizadas y optimizaciones, estará finalizada en aproximadamente 10 semanas, para finales de noviembre de 2025.
+Se estima que la migración completa, incluyendo pruebas automatizadas y optimizaciones, estará finalizada en aproximadamente 9 semanas, para mediados de noviembre de 2025.

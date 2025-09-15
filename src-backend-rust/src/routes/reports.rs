@@ -1,145 +1,226 @@
 // src-backend-rust/src/routes/reports.rs
 
 use actix_web::{web, HttpResponse, Responder, http::header};
+use crate::database_manager::DbPool;
+use crate::models::{SalesReport, ProductReport, InventoryReport, CustomerReport, ReportParameters};
 use serde::{Deserialize, Serialize};
-use chrono::{DateTime, Utc};
-use serde_json::json;
-use crate::excel_generator::ExcelGenerator;
+use log::{error, info};
+use std::collections::HashMap;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ReportQuery {
-    start_date: Option<DateTime<Utc>>,
-    end_date: Option<DateTime<Utc>>,
-    report_type: Option<String>,
+    start_date: Option<String>,
+    end_date: Option<String>,
+    period: Option<String>,
+    entity_id: Option<i64>,
     format: Option<String>,
+    #[serde(flatten)]
+    filters: HashMap<String, String>,
 }
 
 // Configuración de rutas para reportes
 pub fn init(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::scope("/api/reports")
-            .route("/sales", web::get().to(sales_report))
-            .route("/inventory", web::get().to(inventory_report))
-            .route("/purchases", web::get().to(purchases_report))
-            .route("/profits", web::get().to(profits_report))
+            .route("/sales", web::get().to(get_sales_report))
+            .route("/products", web::get().to(get_product_report))
+            .route("/inventory", web::get().to(get_inventory_report))
+            .route("/customers", web::get().to(get_customer_report))
     );
 }
 
 // Controladores
-
-async fn sales_report(query: web::Query<ReportQuery>) -> impl Responder {
-    // En una implementación real, consultaríamos la base de datos
-    // y formatearíamos los datos según el tipo de reporte solicitado
+async fn get_sales_report(query: web::Query<ReportQuery>, pool: web::Data<DbPool>) -> impl Responder {
+    info!("Generando reporte de ventas con parámetros: {:?}", query);
     
-    // Ejemplo de datos para el reporte
-    let data = json!([
-        {
-            "date": "2023-09-01",
-            "sales_count": 12,
-            "total": 15000.0
-        },
-        {
-            "date": "2023-09-02",
-            "sales_count": 8,
-            "total": 9500.0
-        },
-        {
-            "date": "2023-09-03",
-            "sales_count": 15,
-            "total": 18200.0
-        }
-    ]);
+    let params = ReportParameters {
+        start_date: query.start_date.clone(),
+        end_date: query.end_date.clone(),
+        period: query.period.clone(),
+        entity_id: query.entity_id,
+        format: query.format.clone(),
+        filters: Some(query.filters.clone()),
+    };
     
-    // Si se solicita formato Excel, generaríamos el archivo
-    if let Some(format) = &query.format {
-        if format == "excel" {
-            // En una implementación real, usaríamos ExcelGenerator
-            // para crear un archivo Excel y devolverlo
-            return HttpResponse::Ok()
-                .append_header(("Content-Disposition", "attachment; filename=\"sales_report.xlsx\""))
-                .json(json!({
-                    "message": "La generación de Excel aún no está implementada en esta versión de Rust"
-                }));
-        }
+    match query.format.as_deref() {
+        Some("excel") => {
+            match SalesReport::export_to_excel(&pool, params) {
+                Ok(excel_data) => {
+                    HttpResponse::Ok()
+                        .content_type("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                        .insert_header(header::ContentDisposition {
+                            disposition: header::DispositionType::Attachment,
+                            parameters: vec![header::DispositionParam::Filename(
+                                header::Charset::Ext("UTF-8".into()),
+                                None,
+                                "reporte_ventas.xlsx".as_bytes().to_vec(),
+                            )],
+                        })
+                        .body(excel_data)
+                },
+                Err(e) => {
+                    error!("Error al exportar reporte de ventas a Excel: {}", e);
+                    HttpResponse::InternalServerError().json(serde_json::json!({"error": e}))
+                },
+            }
+        },
+        _ => {
+            // Formato JSON por defecto
+            match SalesReport::generate_report(&pool, params) {
+                Ok(report) => HttpResponse::Ok().json(report),
+                Err(e) => {
+                    error!("Error al generar reporte de ventas: {}", e);
+                    HttpResponse::InternalServerError().json(serde_json::json!({
+                        "error": format!("Error al generar reporte de ventas: {}", e)
+                    }))
+                },
+            }
+        },
     }
+async fn get_product_report(query: web::Query<ReportQuery>, pool: web::Data<DbPool>) -> impl Responder {
+    info!("Generando reporte de productos con parámetros: {:?}", query);
     
-    // Por defecto, devolver JSON
-    HttpResponse::Ok().json(data)
-}
-
-async fn inventory_report(query: web::Query<ReportQuery>) -> impl Responder {
-    // En una implementación real, consultaríamos la base de datos
+    let params = ReportParameters {
+        start_date: query.start_date.clone(),
+        end_date: query.end_date.clone(),
+        period: query.period.clone(),
+        entity_id: query.entity_id,
+        format: query.format.clone(),
+        filters: Some(query.filters.clone()),
+    };
     
-    // Ejemplo de datos para el reporte
-    let data = json!([
-        {
-            "id": "P001",
-            "name": "Producto 1",
-            "sku": "SKU001",
-            "stock": 25.0,
-            "cost_price": 300.0,
-            "sales_price": 450.0,
-            "total_value": 7500.0
+    match query.format.as_deref() {
+        Some("excel") => {
+            match ProductReport::export_to_excel(&pool, params) {
+                Ok(excel_data) => {
+                    HttpResponse::Ok()
+                        .content_type("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                        .insert_header(header::ContentDisposition {
+                            disposition: header::DispositionType::Attachment,
+                            parameters: vec![header::DispositionParam::Filename(
+                                header::Charset::Ext("UTF-8".into()),
+                                None,
+                                "reporte_productos.xlsx".as_bytes().to_vec(),
+                            )],
+                        })
+                        .body(excel_data)
+                },
+                Err(e) => {
+                    error!("Error al exportar reporte de productos a Excel: {}", e);
+                    HttpResponse::InternalServerError().json(serde_json::json!({"error": e}))
+                },
+            }
         },
-        {
-            "id": "P002",
-            "name": "Producto 2",
-            "sku": "SKU002",
-            "stock": 15.0,
-            "cost_price": 400.0,
-            "sales_price": 600.0,
-            "total_value": 6000.0
-        }
-    ]);
-    
-    // Si se solicita formato Excel, generaríamos el archivo
-    if let Some(format) = &query.format {
-        if format == "excel" {
-            // En una implementación real, usaríamos ExcelGenerator
-            return HttpResponse::Ok()
-                .append_header(("Content-Disposition", "attachment; filename=\"inventory_report.xlsx\""))
-                .json(json!({
-                    "message": "La generación de Excel aún no está implementada en esta versión de Rust"
-                }));
-        }
+        _ => {
+            // Formato JSON por defecto
+            match ProductReport::generate_report(&pool, params) {
+                Ok(report) => HttpResponse::Ok().json(report),
+                Err(e) => {
+                    error!("Error al generar reporte de productos: {}", e);
+                    HttpResponse::InternalServerError().json(serde_json::json!({
+                        "error": format!("Error al generar reporte de productos: {}", e)
+                    }))
+                },
+            }
+        },
     }
+}
+
+async fn get_inventory_report(query: web::Query<ReportQuery>, pool: web::Data<DbPool>) -> impl Responder {
+    info!("Generando reporte de inventario con parámetros: {:?}", query);
     
-    // Por defecto, devolver JSON
-    HttpResponse::Ok().json(data)
+    let params = ReportParameters {
+        start_date: query.start_date.clone(),
+        end_date: query.end_date.clone(),
+        period: query.period.clone(),
+        entity_id: query.entity_id,
+        format: query.format.clone(),
+        filters: Some(query.filters.clone()),
+    };
+    
+    match query.format.as_deref() {
+        Some("excel") => {
+            match InventoryReport::export_to_excel(&pool, params) {
+                Ok(excel_data) => {
+                    HttpResponse::Ok()
+                        .content_type("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                        .insert_header(header::ContentDisposition {
+                            disposition: header::DispositionType::Attachment,
+                            parameters: vec![header::DispositionParam::Filename(
+                                header::Charset::Ext("UTF-8".into()),
+                                None,
+                                "reporte_inventario.xlsx".as_bytes().to_vec(),
+                            )],
+                        })
+                        .body(excel_data)
+                },
+                Err(e) => {
+                    error!("Error al exportar reporte de inventario a Excel: {}", e);
+                    HttpResponse::InternalServerError().json(serde_json::json!({"error": e}))
+                },
+            }
+        },
+        _ => {
+            // Formato JSON por defecto
+            match InventoryReport::generate_report(&pool, params) {
+                Ok(report) => HttpResponse::Ok().json(report),
+                Err(e) => {
+                    error!("Error al generar reporte de inventario: {}", e);
+                    HttpResponse::InternalServerError().json(serde_json::json!({
+                        "error": format!("Error al generar reporte de inventario: {}", e)
+                    }))
+                },
+            }
+        },
+    }
 }
 
-async fn purchases_report(query: web::Query<ReportQuery>) -> impl Responder {
-    // Implementación similar a los otros reportes
-    HttpResponse::Ok().json(json!([
-        {
-            "date": "2023-09-01",
-            "purchases_count": 3,
-            "total": 12000.0
+async fn get_customer_report(query: web::Query<ReportQuery>, pool: web::Data<DbPool>) -> impl Responder {
+    info!("Generando reporte de clientes con parámetros: {:?}", query);
+    
+    let params = ReportParameters {
+        start_date: query.start_date.clone(),
+        end_date: query.end_date.clone(),
+        period: query.period.clone(),
+        entity_id: query.entity_id,
+        format: query.format.clone(),
+        filters: Some(query.filters.clone()),
+    };
+    
+    match query.format.as_deref() {
+        Some("excel") => {
+            match CustomerReport::export_to_excel(&pool, params) {
+                Ok(excel_data) => {
+                    HttpResponse::Ok()
+                        .content_type("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                        .insert_header(header::ContentDisposition {
+                            disposition: header::DispositionType::Attachment,
+                            parameters: vec![header::DispositionParam::Filename(
+                                header::Charset::Ext("UTF-8".into()),
+                                None,
+                                "reporte_clientes.xlsx".as_bytes().to_vec(),
+                            )],
+                        })
+                        .body(excel_data)
+                },
+                Err(e) => {
+                    error!("Error al exportar reporte de clientes a Excel: {}", e);
+                    HttpResponse::InternalServerError().json(serde_json::json!({"error": e}))
+                },
+            }
         },
-        {
-            "date": "2023-09-10",
-            "purchases_count": 2,
-            "total": 8500.0
-        }
-    ]))
+        _ => {
+            // Formato JSON por defecto
+            match CustomerReport::generate_report(&pool, params) {
+                Ok(report) => HttpResponse::Ok().json(report),
+                Err(e) => {
+                    error!("Error al generar reporte de clientes: {}", e);
+                    HttpResponse::InternalServerError().json(serde_json::json!({
+                        "error": format!("Error al generar reporte de clientes: {}", e)
+                    }))
+                },
+            }
+        },
+    }
 }
-
-async fn profits_report(query: web::Query<ReportQuery>) -> impl Responder {
-    // Implementación similar a los otros reportes
-    HttpResponse::Ok().json(json!([
-        {
-            "date": "2023-09-01",
-            "sales_total": 15000.0,
-            "cost_total": 10000.0,
-            "profit": 5000.0,
-            "margin": 33.33
-        },
-        {
-            "date": "2023-09-02",
-            "sales_total": 9500.0,
-            "cost_total": 6300.0,
-            "profit": 3200.0,
-            "margin": 33.68
-        }
-    ]))
 }
