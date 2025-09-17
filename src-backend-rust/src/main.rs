@@ -54,12 +54,15 @@ async fn main() -> std::io::Result<()> {
     }
     
     let db_manager_data = web::Data::new(db_manager.clone());
+    let settings_data = web::Data::new(settings.clone());
 
     // Iniciar el servidor HTTP
     HttpServer::new(move || {
         App::new()
             // Agregar el administrador de BD al contexto de la aplicación
             .app_data(db_manager_data.clone())
+            // Agregar la configuración al contexto de la aplicación
+            .app_data(settings_data.clone())
             
             // Middleware de logging
             .wrap(Logger::default())

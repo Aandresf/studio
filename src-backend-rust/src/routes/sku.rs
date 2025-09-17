@@ -6,7 +6,8 @@ use serde_json::json;
 use log::{error, debug};
 use rusqlite::params;
 use crate::database_manager::DbPool;
-use crate::lib::authorize::{Authorize, Permission};
+use crate::lib::authorize::{Authorize, permissions};
+use crate::models::role_permission::{Permission};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SkuQuery {
@@ -36,7 +37,7 @@ async fn get_next_sku(
     authorize: Authorize
 ) -> impl Responder {
     // Verificar permisos
-    if !authorize.has_permission(&Permission::ProductsCreate) {
+    if !authorize.has_permission(&permissions::PRODUCTS_CREATE) {
         return HttpResponse::Forbidden().json(json!({
             "error": "No tiene permisos para generar códigos SKU"
         }));
@@ -174,7 +175,7 @@ async fn preview_sku(
     authorize: Authorize
 ) -> impl Responder {
     // Verificar permisos
-    if !authorize.has_permission(&Permission::ProductsRead) {
+    if !authorize.has_permission(&permissions::PRODUCTS_READ) {
         return HttpResponse::Forbidden().json(json!({
             "error": "No tiene permisos para previsualizar códigos SKU"
         }));

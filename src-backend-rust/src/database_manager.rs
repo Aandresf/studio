@@ -8,7 +8,7 @@ use r2d2_sqlite::SqliteConnectionManager;
 use std::fs;
 use log::{info, error, debug};
 
-type DbPool = Pool<SqliteConnectionManager>;
+pub type DbPool = Pool<SqliteConnectionManager>;
 type DbConnection = PooledConnection<SqliteConnectionManager>;
 
 #[derive(Clone)]
@@ -151,6 +151,15 @@ impl DatabaseManager {
         match &*pool_guard {
             Some(pool) => pool.get()
                 .map_err(|e| format!("Error al obtener conexión del pool: {}", e)),
+            None => Err("El pool de conexiones no ha sido inicializado".into())
+        }
+    }
+
+    /// Obtener una referencia al pool de conexiones
+    pub fn get_pool(&self) -> Result<DbPool, String> {
+        let pool_guard = self.pool.lock().unwrap();
+        match &*pool_guard {
+            Some(pool) => Ok(pool.clone()),
             None => Err("El pool de conexiones no ha sido inicializado".into())
         }
     }

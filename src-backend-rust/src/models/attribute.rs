@@ -9,7 +9,7 @@ use log::{debug, error};
 pub struct Attribute {
     pub id: i64,
     pub name: String,
-    pub description: Option<String>,
+    pub subdepartment_id: Option<i64>,
     pub status: String,
     pub deleted_at: Option<String>,
     pub deleted_by: Option<String>,
@@ -20,13 +20,13 @@ pub struct Attribute {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct NewAttribute {
     pub name: String,
-    pub description: Option<String>,
+    pub subdepartment_id: Option<i64>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UpdateAttribute {
     pub name: Option<String>,
-    pub description: Option<String>,
+    pub subdepartment_id: Option<i64>,
     pub status: Option<String>,
 }
 
@@ -39,7 +39,7 @@ impl Attribute {
         })?;
         
         let mut stmt = conn.prepare(
-            "SELECT id, name, description, status, deleted_at, deleted_by, created_at, updated_at 
+            "SELECT id, name, subdepartment_id, status, deleted_at, deleted_by, created_at, updated_at 
             FROM attributes 
             WHERE id = ? AND (status IS NULL OR status <> 'deleted')"
         )?;
@@ -48,7 +48,7 @@ impl Attribute {
             Ok(Attribute {
                 id: row.get(0)?,
                 name: row.get(1)?,
-                description: row.get(2)?,
+                subdepartment_id: row.get(2)?,
                 status: row.get(3)?,
                 deleted_at: row.get(4)?,
                 deleted_by: row.get(5)?,
@@ -77,7 +77,7 @@ impl Attribute {
         })?;
         
         let mut stmt = conn.prepare(
-            "SELECT id, name, description, status, deleted_at, deleted_by, created_at, updated_at 
+            "SELECT id, name, subdepartment_id, status, deleted_at, deleted_by, created_at, updated_at 
             FROM attributes 
             WHERE (status IS NULL OR status <> 'deleted')
             ORDER BY name ASC"
@@ -87,7 +87,7 @@ impl Attribute {
             Ok(Attribute {
                 id: row.get(0)?,
                 name: row.get(1)?,
-                description: row.get(2)?,
+                subdepartment_id: row.get(2)?,
                 status: row.get(3)?,
                 deleted_at: row.get(4)?,
                 deleted_by: row.get(5)?,
@@ -124,9 +124,9 @@ impl Attribute {
         
         // Insertar el nuevo atributo
         conn.execute(
-            "INSERT INTO attributes (name, description, status, created_at, updated_at) 
+            "INSERT INTO attributes (name, subdepartment_id, status, created_at, updated_at) 
             VALUES (?, ?, 'Activo', strftime('%Y-%m-%d %H:%M:%S', 'now'), strftime('%Y-%m-%d %H:%M:%S', 'now'))",
-            params![attribute.name, attribute.description],
+            params![attribute.name, attribute.subdepartment_id],
         )?;
         
         let id = conn.last_insert_rowid();
@@ -176,11 +176,6 @@ impl Attribute {
         if let Some(name) = update.name {
             query.push_str("name = ?, ");
             params_values.push(Box::new(name));
-        }
-        
-        if let Some(description) = update.description {
-            query.push_str("description = ?, ");
-            params_values.push(Box::new(description));
         }
         
         if let Some(status) = update.status {
@@ -250,7 +245,7 @@ impl Attribute {
         let search_pattern = format!("%{}%", name);
         
         let mut stmt = conn.prepare(
-            "SELECT id, name, description, status, deleted_at, deleted_by, created_at, updated_at 
+            "SELECT id, name, subdepartment_id, status, deleted_at, deleted_by, created_at, updated_at 
             FROM attributes 
             WHERE (status IS NULL OR status <> 'deleted') AND name LIKE ?
             ORDER BY name ASC"
@@ -260,7 +255,7 @@ impl Attribute {
             Ok(Attribute {
                 id: row.get(0)?,
                 name: row.get(1)?,
-                description: row.get(2)?,
+                subdepartment_id: row.get(2)?,
                 status: row.get(3)?,
                 deleted_at: row.get(4)?,
                 deleted_by: row.get(5)?,
@@ -459,7 +454,7 @@ impl AttributeValue {
                 SqliteError::QueryReturnedNoRows
             })
     }
-    
+
     // Actualizar un valor de atributo existente
     pub fn update(pool: &DbPool, id: i64, update: UpdateAttributeValue) -> SqliteResult<AttributeValue> {
         let conn = pool.get().map_err(|e| {
@@ -604,54 +599,57 @@ impl AttributeValue {
         })?;
         
         let search_pattern = format!("%{}%", value);
+        let mut attribute_values: Vec<AttributeValue> = Vec::new();
         
-        let query = match attribute_id {
-            Some(_) => {
-                "SELECT id, value, attribute_id, status, deleted_at, deleted_by, created_at, updated_at 
-                FROM attribute_values 
-                WHERE (status IS NULL OR status <> 'deleted') AND value LIKE ? AND attribute_id = ?
-                ORDER BY value ASC"
+        match attribute_id {
+            Some(attr_id) => {
+                let mut stmt = conn.prepare(
+                    "SELECT id, value, attribute_id, status, deleted_at, deleted_by, created_at, updated_at 
+                    FROM attribute_values 
+                    WHERE (status IS NULL OR status <> 'deleted') AND value LIKE ? AND attribute_id = ?
+                    ORDER BY value ASC"
+                )?;
+                let rows = stmt.query_map(params![search_pattern, attr_id], |row| {
+                    Ok(AttributeValue {
+                        id: row.get(0)?,
+                        value: row.get(1)?,
+                        attribute_id: row.get(2)?,
+                        status: row.get(3)?,
+                        deleted_at: row.get(4)?,
+                        deleted_by: row.get(5)?,
+                        created_at: row.get(6)?,
+                        updated_at: row.get(7)?,
+                    })
+                })?;
+                
+                for row in rows {
+                    attribute_values.push(row?);
+                }
             },
             None => {
-                "SELECT id, value, attribute_id, status, deleted_at, deleted_by, created_at, updated_at 
-                FROM attribute_values 
-                WHERE (status IS NULL OR status <> 'deleted') AND value LIKE ?
-                ORDER BY value ASC"
+                let mut stmt = conn.prepare(
+                    "SELECT id, value, attribute_id, status, deleted_at, deleted_by, created_at, updated_at 
+                    FROM attribute_values 
+                    WHERE (status IS NULL OR status <> 'deleted') AND value LIKE ?
+                    ORDER BY value ASC"
+                )?;
+                let rows = stmt.query_map(params![search_pattern], |row| {
+                    Ok(AttributeValue {
+                        id: row.get(0)?,
+                        value: row.get(1)?,
+                        attribute_id: row.get(2)?,
+                        status: row.get(3)?,
+                        deleted_at: row.get(4)?,
+                        deleted_by: row.get(5)?,
+                        created_at: row.get(6)?,
+                        updated_at: row.get(7)?,
+                    })
+                })?;
+                
+                for row in rows {
+                    attribute_values.push(row?);
+                }
             }
-        };
-        
-        let mut stmt = conn.prepare(query)?;
-        
-        let rows = match attribute_id {
-            Some(attr_id) => stmt.query_map(params![search_pattern, attr_id], |row| {
-                Ok(AttributeValue {
-                    id: row.get(0)?,
-                    value: row.get(1)?,
-                    attribute_id: row.get(2)?,
-                    status: row.get(3)?,
-                    deleted_at: row.get(4)?,
-                    deleted_by: row.get(5)?,
-                    created_at: row.get(6)?,
-                    updated_at: row.get(7)?,
-                })
-            })?,
-            None => stmt.query_map(params![search_pattern], |row| {
-                Ok(AttributeValue {
-                    id: row.get(0)?,
-                    value: row.get(1)?,
-                    attribute_id: row.get(2)?,
-                    status: row.get(3)?,
-                    deleted_at: row.get(4)?,
-                    deleted_by: row.get(5)?,
-                    created_at: row.get(6)?,
-                    updated_at: row.get(7)?,
-                })
-            })?
-        };
-        
-        let mut attribute_values: Vec<AttributeValue> = Vec::new();
-        for row in rows {
-            attribute_values.push(row?);
         }
         
         Ok(attribute_values)

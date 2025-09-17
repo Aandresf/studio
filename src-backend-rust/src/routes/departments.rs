@@ -3,8 +3,9 @@
 use actix_web::{web, HttpResponse, Responder, http::StatusCode};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use std::sync::Arc;
 use log::{debug, error};
-use crate::database_manager::DbPool;
+use crate::database_manager::DatabaseManager;
 use crate::models::department::{Department, NewDepartment, UpdateDepartment};
 use crate::models::department::{Subdepartment, NewSubdepartment, UpdateSubdepartment};
 
@@ -20,23 +21,35 @@ pub fn init(cfg: &mut web::ServiceConfig) {
             .route("/search/{name}", web::get().to(search_departments))
             .route("/{id}/subdepartments", web::get().to(get_subdepartments))
             .route("/{id}/subdepartments", web::post().to(create_subdepartment))
-            .service(
-                web::scope("/subdepartments")
-                    .route("/{id}", web::get().to(get_subdepartment))
-                    .route("/{id}", web::put().to(update_subdepartment))
-                    .route("/{id}", web::delete().to(delete_subdepartment))
-                    .route("/search/{name}", web::get().to(search_subdepartments))
-            )
+    );
+    
+    // Rutas adicionales para subdepartments directamente (compatibilidad frontend)
+    cfg.service(
+        web::scope("/api/subdepartments")
+            .route("", web::get().to(get_all_subdepartments))
+            .route("", web::post().to(create_subdepartment_direct))
+            .route("/{id}", web::get().to(get_subdepartment))
+            .route("/{id}", web::put().to(update_subdepartment))
+            .route("/{id}", web::delete().to(delete_subdepartment))
+            .route("/search/{name}", web::get().to(search_subdepartments))
     );
 }
 
 // Controladores para departamentos
 
-async fn get_departments(pool: web::Data<DbPool>) -> impl Responder {
+async fn get_departments(db_manager: web::Data<Arc<DatabaseManager>>) -> impl Responder {
+    let pool = match db_manager.get_pool() {
+        Ok(pool) => pool,
+        Err(e) => {
+            error!("Error al obtener pool de conexiones: {}", e);
+            return HttpResponse::InternalServerError().json(json!({
+                "error": "Error de conexión a base de datos"
+            }));
+        }
+    };
+
     match Department::find_all(&pool) {
-        Ok(departments) => {
-            HttpResponse::Ok().json(departments)
-        },
+        Ok(departments) => HttpResponse::Ok().json(departments),
         Err(e) => {
             error!("Error al obtener departamentos: {}", e);
             HttpResponse::InternalServerError().json(json!({
@@ -47,8 +60,18 @@ async fn get_departments(pool: web::Data<DbPool>) -> impl Responder {
     }
 }
 
-async fn get_department(path: web::Path<i64>, pool: web::Data<DbPool>) -> impl Responder {
+async fn get_department(path: web::Path<i64>, pool: web::Data<Arc<DatabaseManager>>) -> impl Responder {
     let department_id = path.into_inner();
+    
+    let pool = match pool.get_pool() {
+        Ok(pool) => pool,
+        Err(e) => {
+            error!("Error al obtener pool de conexiones: {}", e);
+            return HttpResponse::InternalServerError().json(json!({
+                "error": "Error de conexión a base de datos"
+            }));
+        }
+    };
     
     match Department::find_by_id(&pool, department_id) {
         Ok(department_opt) => {
@@ -69,7 +92,17 @@ async fn get_department(path: web::Path<i64>, pool: web::Data<DbPool>) -> impl R
     }
 }
 
-async fn create_department(department: web::Json<NewDepartment>, pool: web::Data<DbPool>) -> impl Responder {
+async fn create_department(department: web::Json<NewDepartment>, pool: web::Data<Arc<DatabaseManager>>) -> impl Responder {
+    let pool = match pool.get_pool() {
+        Ok(pool) => pool,
+        Err(e) => {
+            error!("Error al obtener pool de conexiones: {}", e);
+            return HttpResponse::InternalServerError().json(json!({
+                "error": "Error de conexión a base de datos"
+            }));
+        }
+    };
+    
     match Department::create(&pool, department.into_inner()) {
         Ok(created_department) => {
             HttpResponse::Created().json(created_department)
@@ -97,8 +130,18 @@ async fn create_department(department: web::Json<NewDepartment>, pool: web::Data
     }
 }
 
-async fn update_department(path: web::Path<i64>, department: web::Json<UpdateDepartment>, pool: web::Data<DbPool>) -> impl Responder {
+async fn update_department(path: web::Path<i64>, department: web::Json<UpdateDepartment>, pool: web::Data<Arc<DatabaseManager>>) -> impl Responder {
     let department_id = path.into_inner();
+    
+    let pool = match pool.get_pool() {
+        Ok(pool) => pool,
+        Err(e) => {
+            error!("Error al obtener pool de conexiones: {}", e);
+            return HttpResponse::InternalServerError().json(json!({
+                "error": "Error de conexión a base de datos"
+            }));
+        }
+    };
     
     match Department::update(&pool, department_id, department.into_inner()) {
         Ok(updated_department) => {
@@ -134,8 +177,18 @@ async fn update_department(path: web::Path<i64>, department: web::Json<UpdateDep
     }
 }
 
-async fn delete_department(path: web::Path<i64>, pool: web::Data<DbPool>) -> impl Responder {
+async fn delete_department(path: web::Path<i64>, pool: web::Data<Arc<DatabaseManager>>) -> impl Responder {
     let department_id = path.into_inner();
+    
+    let pool = match pool.get_pool() {
+        Ok(pool) => pool,
+        Err(e) => {
+            error!("Error al obtener pool de conexiones: {}", e);
+            return HttpResponse::InternalServerError().json(json!({
+                "error": "Error de conexión a base de datos"
+            }));
+        }
+    };
     
     // En un caso real, necesitaríamos obtener el ID del usuario que realiza la acción
     match Department::delete(&pool, department_id, Some("system".to_string())) {
@@ -171,8 +224,18 @@ async fn delete_department(path: web::Path<i64>, pool: web::Data<DbPool>) -> imp
     }
 }
 
-async fn search_departments(path: web::Path<String>, pool: web::Data<DbPool>) -> impl Responder {
+async fn search_departments(path: web::Path<String>, pool: web::Data<Arc<DatabaseManager>>) -> impl Responder {
     let name = path.into_inner();
+    
+    let pool = match pool.get_pool() {
+        Ok(pool) => pool,
+        Err(e) => {
+            error!("Error al obtener pool de conexiones: {}", e);
+            return HttpResponse::InternalServerError().json(json!({
+                "error": "Error de conexión a base de datos"
+            }));
+        }
+    };
     
     match Department::search_by_name(&pool, &name) {
         Ok(departments) => {
@@ -190,8 +253,18 @@ async fn search_departments(path: web::Path<String>, pool: web::Data<DbPool>) ->
 
 // Controladores para subdepartamentos
 
-async fn get_subdepartments(path: web::Path<i64>, pool: web::Data<DbPool>) -> impl Responder {
+async fn get_subdepartments(path: web::Path<i64>, pool: web::Data<Arc<DatabaseManager>>) -> impl Responder {
     let department_id = path.into_inner();
+    
+    let pool = match pool.get_pool() {
+        Ok(pool) => pool,
+        Err(e) => {
+            error!("Error al obtener pool de conexiones: {}", e);
+            return HttpResponse::InternalServerError().json(json!({
+                "error": "Error de conexión a base de datos"
+            }));
+        }
+    };
     
     match Subdepartment::find_by_department(&pool, department_id) {
         Ok(subdepartments) => {
@@ -207,8 +280,18 @@ async fn get_subdepartments(path: web::Path<i64>, pool: web::Data<DbPool>) -> im
     }
 }
 
-async fn get_subdepartment(path: web::Path<i64>, pool: web::Data<DbPool>) -> impl Responder {
+async fn get_subdepartment(path: web::Path<i64>, pool: web::Data<Arc<DatabaseManager>>) -> impl Responder {
     let subdepartment_id = path.into_inner();
+    
+    let pool = match pool.get_pool() {
+        Ok(pool) => pool,
+        Err(e) => {
+            error!("Error al obtener pool de conexiones: {}", e);
+            return HttpResponse::InternalServerError().json(json!({
+                "error": "Error de conexión a base de datos"
+            }));
+        }
+    };
     
     match Subdepartment::find_by_id(&pool, subdepartment_id) {
         Ok(subdepartment_opt) => {
@@ -229,12 +312,22 @@ async fn get_subdepartment(path: web::Path<i64>, pool: web::Data<DbPool>) -> imp
     }
 }
 
-async fn create_subdepartment(path: web::Path<i64>, subdepartment: web::Json<NewSubdepartment>, pool: web::Data<DbPool>) -> impl Responder {
+async fn create_subdepartment(path: web::Path<i64>, subdepartment: web::Json<NewSubdepartment>, pool: web::Data<Arc<DatabaseManager>>) -> impl Responder {
     let department_id = path.into_inner();
     
     // Asegurarse de que el department_id en la ruta coincida con el del cuerpo
     let mut subdepartment_data = subdepartment.into_inner();
     subdepartment_data.department_id = department_id;
+    
+    let pool = match pool.get_pool() {
+        Ok(pool) => pool,
+        Err(e) => {
+            error!("Error al obtener pool de conexiones: {}", e);
+            return HttpResponse::InternalServerError().json(json!({
+                "error": "Error de conexión a base de datos"
+            }));
+        }
+    };
     
     match Subdepartment::create(&pool, subdepartment_data) {
         Ok(created_subdepartment) => {
@@ -263,8 +356,18 @@ async fn create_subdepartment(path: web::Path<i64>, subdepartment: web::Json<New
     }
 }
 
-async fn update_subdepartment(path: web::Path<i64>, subdepartment: web::Json<UpdateSubdepartment>, pool: web::Data<DbPool>) -> impl Responder {
+async fn update_subdepartment(path: web::Path<i64>, subdepartment: web::Json<UpdateSubdepartment>, pool: web::Data<Arc<DatabaseManager>>) -> impl Responder {
     let subdepartment_id = path.into_inner();
+    
+    let pool = match pool.get_pool() {
+        Ok(pool) => pool,
+        Err(e) => {
+            error!("Error al obtener pool de conexiones: {}", e);
+            return HttpResponse::InternalServerError().json(json!({
+                "error": "Error de conexión a base de datos"
+            }));
+        }
+    };
     
     match Subdepartment::update(&pool, subdepartment_id, subdepartment.into_inner()) {
         Ok(updated_subdepartment) => {
@@ -300,8 +403,18 @@ async fn update_subdepartment(path: web::Path<i64>, subdepartment: web::Json<Upd
     }
 }
 
-async fn delete_subdepartment(path: web::Path<i64>, pool: web::Data<DbPool>) -> impl Responder {
+async fn delete_subdepartment(path: web::Path<i64>, pool: web::Data<Arc<DatabaseManager>>) -> impl Responder {
     let subdepartment_id = path.into_inner();
+    
+    let pool = match pool.get_pool() {
+        Ok(pool) => pool,
+        Err(e) => {
+            error!("Error al obtener pool de conexiones: {}", e);
+            return HttpResponse::InternalServerError().json(json!({
+                "error": "Error de conexión a base de datos"
+            }));
+        }
+    };
     
     // En un caso real, necesitaríamos obtener el ID del usuario que realiza la acción
     match Subdepartment::delete(&pool, subdepartment_id, Some("system".to_string())) {
@@ -337,10 +450,20 @@ async fn delete_subdepartment(path: web::Path<i64>, pool: web::Data<DbPool>) -> 
     }
 }
 
-async fn search_subdepartments(path: web::Path<String>, pool: web::Data<DbPool>) -> impl Responder {
+async fn search_subdepartments(path: web::Path<String>, pool: web::Data<Arc<DatabaseManager>>) -> impl Responder {
     let name = path.into_inner();
     
-    match Subdepartment::search_by_name(&pool, &name) {
+    let pool = match pool.get_pool() {
+        Ok(pool) => pool,
+        Err(e) => {
+            error!("Error al obtener pool de conexiones: {}", e);
+            return HttpResponse::InternalServerError().json(json!({
+                "error": "Error de conexión a base de datos"
+            }));
+        }
+    };
+    
+    match Subdepartment::search_by_name(&pool, &name, None) {
         Ok(subdepartments) => {
             HttpResponse::Ok().json(subdepartments)
         },
@@ -348,6 +471,61 @@ async fn search_subdepartments(path: web::Path<String>, pool: web::Data<DbPool>)
             error!("Error al buscar subdepartamentos: {}", e);
             HttpResponse::InternalServerError().json(json!({
                 "error": "Error al buscar subdepartamentos",
+                "details": e.to_string()
+            }))
+        }
+    }
+}
+
+// Funciones adicionales para compatibilidad con frontend
+
+async fn get_all_subdepartments(pool: web::Data<Arc<DatabaseManager>>) -> impl Responder {
+    let pool = match pool.get_pool() {
+        Ok(pool) => pool,
+        Err(e) => {
+            error!("Error al obtener pool de conexiones: {}", e);
+            return HttpResponse::InternalServerError().json(json!({
+                "error": "Error de conexión a base de datos"
+            }));
+        }
+    };
+    
+    match Subdepartment::find_all(&pool, None) {
+        Ok(subdepartments) => {
+            HttpResponse::Ok().json(subdepartments)
+        },
+        Err(e) => {
+            error!("Error al obtener subdepartamentos: {}", e);
+            HttpResponse::InternalServerError().json(json!({
+                "error": "Error al obtener subdepartamentos",
+                "details": e.to_string()
+            }))
+        }
+    }
+}
+
+async fn create_subdepartment_direct(
+    subdepartment: web::Json<NewSubdepartment>, 
+    pool: web::Data<Arc<DatabaseManager>>
+) -> impl Responder {
+    let pool = match pool.get_pool() {
+        Ok(pool) => pool,
+        Err(e) => {
+            error!("Error al obtener pool de conexiones: {}", e);
+            return HttpResponse::InternalServerError().json(json!({
+                "error": "Error de conexión a base de datos"
+            }));
+        }
+    };
+    
+    match Subdepartment::create(&pool, subdepartment.into_inner()) {
+        Ok(created_subdepartment) => {
+            HttpResponse::Created().json(created_subdepartment)
+        },
+        Err(e) => {
+            error!("Error al crear subdepartamento: {}", e);
+            HttpResponse::InternalServerError().json(json!({
+                "error": "Error al crear subdepartamento",
                 "details": e.to_string()
             }))
         }

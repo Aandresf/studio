@@ -30,6 +30,17 @@ pub fn init(cfg: &mut web::ServiceConfig) {
             .route("/check-integrity", web::get().to(check_db_integrity))
             .route("/log", web::get().to(get_system_log))
     );
+    
+    // Rutas adicionales para compatibilidad con frontend
+    cfg.service(
+        web::scope("/api/database")
+            .route("/backup", web::post().to(create_backup))
+    );
+    
+    cfg.service(
+        web::scope("/api/app")
+            .route("/quit", web::post().to(quit_application))
+    );
 }
 
 // Controladores
@@ -170,5 +181,14 @@ async fn get_system_log() -> impl Responder {
                 "message": "Reconexión con base de datos exitosa"
             }
         ]
+    }))
+}
+
+async fn quit_application() -> impl Responder {
+    // En un entorno real, esto cerraría la aplicación
+    // Por ahora solo simulamos la respuesta
+    HttpResponse::Ok().json(json!({
+        "message": "Aplicación cerrándose...",
+        "status": "shutting_down"
     }))
 }

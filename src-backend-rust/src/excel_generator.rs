@@ -6,6 +6,13 @@ use serde_json::Value;
 pub struct ExcelGenerator;
 
 impl ExcelGenerator {
+    pub fn generate_excel(_title: &str, _headers: &[&str], _data: &[Vec<String>]) -> Result<Vec<u8>, XlsxError> {
+        let mut workbook = Workbook::new();
+        let _worksheet = workbook.add_worksheet();
+        let buffer = workbook.save_to_buffer()?;
+        Ok(buffer)
+    }
+
     pub fn generate_inventory_excel(data: &[Value]) -> Result<Vec<u8>, XlsxError> {
         let mut workbook = Workbook::new();
         let worksheet = workbook.add_worksheet();

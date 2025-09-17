@@ -4,7 +4,8 @@ use actix_web::{web, HttpResponse, Responder};
 use serde::{Deserialize, Serialize};
 use crate::database_manager::DbPool;
 use crate::models::transaction::{Transaction, NewTransaction, NewTransactionItem};
-use crate::lib::authorize::{Authorize, Permission};
+use crate::lib::authorize::{Authorize, permissions};
+use crate::models::role_permission::{Permission};
 use nanoid::nanoid;
 use serde_json::json;
 use chrono::Utc;
@@ -47,6 +48,7 @@ pub fn init(cfg: &mut web::ServiceConfig) {
             .route("/{id}", web::get().to(get_sale))
             .route("", web::post().to(create_sale))
             .route("/{id}/annul", web::post().to(annul_sale))
+            .route("/details", web::get().to(get_sale_details))
     );
 }
 
@@ -57,7 +59,7 @@ async fn get_sales(
     authorize: Authorize,
 ) -> impl Responder {
     // Verificar permisos
-    if !authorize.has_permission(&Permission::SalesView) {
+    if !authorize.has_permission(&permissions::SALES_VIEW) {
         return HttpResponse::Forbidden().json(json!({
             "error": "No tiene permisos para ver ventas"
         }));
@@ -110,7 +112,7 @@ async fn get_sale(
     authorize: Authorize,
 ) -> impl Responder {
     // Verificar permisos
-    if !authorize.has_permission(&Permission::SalesView) {
+    if !authorize.has_permission(&permissions::SALES_VIEW) {
         return HttpResponse::Forbidden().json(json!({
             "error": "No tiene permisos para ver ventas"
         }));
@@ -148,7 +150,7 @@ async fn create_sale(
     authorize: Authorize,
 ) -> impl Responder {
     // Verificar permisos
-    if !authorize.has_permission(&Permission::SalesCreate) {
+    if !authorize.has_permission(&permissions::SALES_CREATE) {
         return HttpResponse::Forbidden().json(json!({
             "error": "No tiene permisos para crear ventas"
         }));
@@ -221,7 +223,7 @@ async fn annul_sale(
     authorize: Authorize,
 ) -> impl Responder {
     // Verificar permisos
-    if !authorize.has_permission(&Permission::SalesAnnul) {
+    if !authorize.has_permission(&permissions::SALES_ANNUL) {
         return HttpResponse::Forbidden().json(json!({
             "error": "No tiene permisos para anular ventas"
         }));
@@ -240,7 +242,7 @@ async fn annul_sale(
             }
             
             // Anular la venta
-            match Transaction::annul(pool, sale_id, authorize.user_id) {
+            match Transaction::annul(pool, sale_id, authorize.user.id.clone()) {
                 Ok(annulled_sale) => {
                     debug!("Venta anulada con éxito: {:?}", sale_id);
                     HttpResponse::Ok().json(json!({
@@ -274,4 +276,45 @@ async fn annul_sale(
             }))
         }
     }
+}
+
+async fn get_sale_details(
+    query: web::Query<std::collections::HashMap<String, String>>
+) -> impl Responder {
+    // El frontend envía ?id=transaction_id
+    let transaction_id = match query.get("id") {
+        Some(id) => id,
+        None => {
+            return HttpResponse::BadRequest().json(json!({
+                "error": "Parámetro 'id' requerido"
+            }));
+        }
+    };
+    
+    // Simular detalles de venta
+    HttpResponse::Ok().json(json!({
+        "id": transaction_id,
+        "customer": "Juan Pérez",
+        "date": "2024-01-15",
+        "total": 350.00,
+        "payment_method": "efectivo",
+        "items": [
+            {
+                "variant_id": 1,
+                "product_name": "Producto A",
+                "sku": "SKU001",
+                "quantity": 2,
+                "unit_price": 75.00,
+                "total": 150.00
+            },
+            {
+                "variant_id": 2,
+                "product_name": "Producto B",
+                "sku": "SKU002",
+                "quantity": 1,
+                "unit_price": 200.00,
+                "total": 200.00
+            }
+        ]
+    }))
 }

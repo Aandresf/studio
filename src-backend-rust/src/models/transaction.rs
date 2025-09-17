@@ -278,7 +278,7 @@ impl Transaction {
         transaction: NewTransaction, 
         items: Vec<NewTransactionItem>
     ) -> SqliteResult<TransactionDetail> {
-        let conn = pool.get().map_err(|e| {
+        let mut conn = pool.get().map_err(|e| {
             error!("Error al obtener conexión del pool: {}", e);
             SqliteError::QueryReturnedNoRows
         })?;
@@ -297,14 +297,16 @@ impl Transaction {
         }
         
         // Verificar si el usuario existe
-        let mut stmt = conn.prepare("SELECT COUNT(*) FROM users WHERE id = ?")?;
-        let count: i64 = stmt.query_row(params![transaction.user_id], |row| row.get(0))?;
-        
-        if count == 0 {
-            return Err(SqliteError::SqliteFailure(
-                rusqlite::ffi::Error::new(19), // SQLITE_CONSTRAINT
-                Some("El usuario especificado no existe".to_string()),
-            ));
+        {
+            let mut stmt = conn.prepare("SELECT COUNT(*) FROM users WHERE id = ?")?;
+            let count: i64 = stmt.query_row(params![transaction.user_id], |row| row.get(0))?;
+            
+            if count == 0 {
+                return Err(SqliteError::SqliteFailure(
+                    rusqlite::ffi::Error::new(19), // SQLITE_CONSTRAINT
+                    Some("El usuario especificado no existe".to_string()),
+                ));
+            }
         }
         
         // Iniciar transacción en la base de datos
@@ -400,8 +402,8 @@ impl Transaction {
     }
     
     // Anular una transacción
-    pub fn annul(pool: &DbPool, id: i64, user_id: i64) -> SqliteResult<Transaction> {
-        let conn = pool.get().map_err(|e| {
+    pub fn annul(pool: &DbPool, id: i64, user_id: String) -> SqliteResult<Transaction> {
+        let mut conn = pool.get().map_err(|e| {
             error!("Error al obtener conexión del pool: {}", e);
             SqliteError::QueryReturnedNoRows
         })?;
@@ -424,24 +426,27 @@ impl Transaction {
         let tx = conn.transaction()?;
         
         // Obtener los items de la transacción
-        let mut stmt = tx.prepare(
-            "SELECT id, product_variant_id, quantity 
-             FROM transaction_items 
-             WHERE transaction_id = ?"
-        )?;
-        
-        let item_rows = stmt.query_map(params![id], |row| {
-            Ok((
-                row.get::<_, i64>(0)?,
-                row.get::<_, i64>(1)?,
-                row.get::<_, f64>(2)?,
-            ))
-        })?;
-        
-        let mut items: Vec<(i64, i64, f64)> = Vec::new();
-        for item_row in item_rows {
-            items.push(item_row?);
-        }
+        let items: Vec<(i64, i64, f64)> = {
+            let mut stmt = tx.prepare(
+                "SELECT id, product_variant_id, quantity 
+                 FROM transaction_items 
+                 WHERE transaction_id = ?"
+            )?;
+            
+            let item_rows = stmt.query_map(params![id], |row| {
+                Ok((
+                    row.get::<_, i64>(0)?,
+                    row.get::<_, i64>(1)?,
+                    row.get::<_, f64>(2)?,
+                ))
+            })?;
+            
+            let mut items: Vec<(i64, i64, f64)> = Vec::new();
+            for item_row in item_rows {
+                items.push(item_row?);
+            }
+            items
+        };
         
         // Revertir el efecto en el inventario
         for (_, product_variant_id, quantity) in &items {

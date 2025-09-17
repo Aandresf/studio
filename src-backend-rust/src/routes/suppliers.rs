@@ -1,47 +1,70 @@
-// src-backend-rust/src/routes/suppliers.rs
+// src-backend-rust/src/routes/provider.rs
+// COPIA DE suppliers.rs para testing como provider - auto-reload test
 
 use actix_web::{web, HttpResponse, Responder, http::StatusCode};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use std::sync::Arc;
 use log::{debug, error};
-use crate::database_manager::DbPool;
-use crate::models::customer_supplier::{Supplier, NewSupplier, UpdateSupplier};
+use crate::database_manager::DatabaseManager;
+use crate::models::customer_supplier::{Customer, NewCustomer, UpdateCustomer, Supplier, NewSupplier, UpdateSupplier};
 
-// Configuración de rutas para proveedores
+// Configuración de rutas para clientes (EXACTAMENTE IGUAL)
 pub fn init(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::scope("/api/suppliers")
-            .route("", web::get().to(get_suppliers))
-            .route("/{id}", web::get().to(get_supplier))
-            .route("", web::post().to(create_supplier))
-            .route("/{id}", web::put().to(update_supplier))
-            .route("/{id}", web::delete().to(delete_supplier))
-            .route("/search/{name}", web::get().to(search_suppliers))
+            .route("", web::get().to(get_customers))
+            .route("/{id}", web::get().to(get_customer))
+            .route("", web::post().to(create_customer))
+            .route("/{id}", web::put().to(update_customer))
+            .route("/{id}", web::delete().to(delete_customer))
+            .route("/search/{name}", web::get().to(search_customers))
     );
 }
 
 // Controladores
 
-async fn get_suppliers(web::Query(params): web::Query<serde_json::Value>, pool: web::Data<DbPool>) -> impl Responder {
+async fn get_customers(web::Query(params): web::Query<serde_json::Value>, db_manager: web::Data<Arc<DatabaseManager>>) -> impl Responder {
+    let pool = match db_manager.get_pool() {
+        Ok(pool) => pool,
+        Err(e) => {
+            error!("Error al obtener pool de conexiones: {}", e);
+            return HttpResponse::InternalServerError().json(json!({
+                "error": "Error interno del servidor"
+            }));
+        }
+    };
+    
     // Extraer parámetros de paginación
     let limit = params["limit"].as_i64();
     let offset = params["offset"].as_i64();
     
     match Supplier::find_all(&pool, limit, offset) {
         Ok(suppliers) => {
+            debug!("Suppliers obtenidos exitosamente: {} registros", suppliers.len());
             HttpResponse::Ok().json(suppliers)
         },
         Err(e) => {
-            error!("Error al obtener proveedores: {}", e);
+            error!("Error al obtener suppliers: {}", e);
             HttpResponse::InternalServerError().json(json!({
-                "error": "Error al obtener proveedores",
+                "error": "Error al obtener suppliers",
                 "details": e.to_string()
             }))
         }
     }
 }
 
-async fn get_supplier(path: web::Path<i64>, pool: web::Data<DbPool>) -> impl Responder {
+async fn get_customer(path: web::Path<i64>, db_manager: web::Data<Arc<DatabaseManager>>) -> impl Responder {
+    let pool = match db_manager.get_pool() {
+        Ok(pool) => pool,
+        Err(e) => {
+            error!("Error al obtener pool de conexiones: {}", e);
+            return HttpResponse::InternalServerError().json(json!({
+                "error": "Error interno del servidor"
+            }));
+        }
+    };
+    
     let supplier_id = path.into_inner();
     
     match Supplier::find_by_id(&pool, supplier_id) {
@@ -63,7 +86,17 @@ async fn get_supplier(path: web::Path<i64>, pool: web::Data<DbPool>) -> impl Res
     }
 }
 
-async fn create_supplier(supplier: web::Json<NewSupplier>, pool: web::Data<DbPool>) -> impl Responder {
+async fn create_customer(supplier: web::Json<NewSupplier>, db_manager: web::Data<Arc<DatabaseManager>>) -> impl Responder {
+    let pool = match db_manager.get_pool() {
+        Ok(pool) => pool,
+        Err(e) => {
+            error!("Error al obtener pool de conexiones: {}", e);
+            return HttpResponse::InternalServerError().json(json!({
+                "error": "Error interno del servidor"
+            }));
+        }
+    };
+    
     match Supplier::create(&pool, supplier.into_inner()) {
         Ok(created_supplier) => {
             HttpResponse::Created().json(created_supplier)
@@ -87,7 +120,17 @@ async fn create_supplier(supplier: web::Json<NewSupplier>, pool: web::Data<DbPoo
     }
 }
 
-async fn update_supplier(path: web::Path<i64>, supplier: web::Json<UpdateSupplier>, pool: web::Data<DbPool>) -> impl Responder {
+async fn update_customer(path: web::Path<i64>, supplier: web::Json<UpdateSupplier>, db_manager: web::Data<Arc<DatabaseManager>>) -> impl Responder {
+    let pool = match db_manager.get_pool() {
+        Ok(pool) => pool,
+        Err(e) => {
+            error!("Error al obtener pool de conexiones: {}", e);
+            return HttpResponse::InternalServerError().json(json!({
+                "error": "Error interno del servidor"
+            }));
+        }
+    };
+    
     let supplier_id = path.into_inner();
     
     match Supplier::update(&pool, supplier_id, supplier.into_inner()) {
@@ -120,7 +163,17 @@ async fn update_supplier(path: web::Path<i64>, supplier: web::Json<UpdateSupplie
     }
 }
 
-async fn delete_supplier(path: web::Path<i64>, pool: web::Data<DbPool>) -> impl Responder {
+async fn delete_customer(path: web::Path<i64>, db_manager: web::Data<Arc<DatabaseManager>>) -> impl Responder {
+    let pool = match db_manager.get_pool() {
+        Ok(pool) => pool,
+        Err(e) => {
+            error!("Error al obtener pool de conexiones: {}", e);
+            return HttpResponse::InternalServerError().json(json!({
+                "error": "Error interno del servidor"
+            }));
+        }
+    };
+    
     let supplier_id = path.into_inner();
     
     // En un caso real, necesitaríamos obtener el ID del usuario que realiza la acción
@@ -157,7 +210,17 @@ async fn delete_supplier(path: web::Path<i64>, pool: web::Data<DbPool>) -> impl 
     }
 }
 
-async fn search_suppliers(path: web::Path<String>, pool: web::Data<DbPool>) -> impl Responder {
+async fn search_customers(path: web::Path<String>, db_manager: web::Data<Arc<DatabaseManager>>) -> impl Responder {
+    let pool = match db_manager.get_pool() {
+        Ok(pool) => pool,
+        Err(e) => {
+            error!("Error al obtener pool de conexiones: {}", e);
+            return HttpResponse::InternalServerError().json(json!({
+                "error": "Error interno del servidor"
+            }));
+        }
+    };
+    
     let name = path.into_inner();
     
     match Supplier::search_by_name(&pool, &name) {

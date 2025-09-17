@@ -12,7 +12,7 @@ pub struct Customer {
     pub email: Option<String>,
     pub phone: Option<String>,
     pub address: Option<String>,
-    pub rfc: Option<String>,
+    pub document: Option<String>,
     pub notes: Option<String>,
     pub status: String,
     pub deleted_at: Option<String>,
@@ -27,7 +27,7 @@ pub struct NewCustomer {
     pub email: Option<String>,
     pub phone: Option<String>,
     pub address: Option<String>,
-    pub rfc: Option<String>,
+    pub document: Option<String>,
     pub notes: Option<String>,
 }
 
@@ -37,7 +37,7 @@ pub struct UpdateCustomer {
     pub email: Option<String>,
     pub phone: Option<String>,
     pub address: Option<String>,
-    pub rfc: Option<String>,
+    pub document: Option<String>,
     pub notes: Option<String>,
     pub status: Option<String>,
 }
@@ -51,7 +51,7 @@ impl Customer {
         })?;
         
         let mut stmt = conn.prepare(
-            "SELECT id, name, email, phone, address, rfc, notes, status, deleted_at, deleted_by, created_at, updated_at 
+            "SELECT id, name, email, phone, address, document, notes, status, deleted_at, deleted_by, created_at, updated_at 
             FROM customers 
             WHERE id = ? AND (status IS NULL OR status <> 'deleted')"
         )?;
@@ -63,7 +63,7 @@ impl Customer {
                 email: row.get(2)?,
                 phone: row.get(3)?,
                 address: row.get(4)?,
-                rfc: row.get(5)?,
+                document: row.get(5)?,
                 notes: row.get(6)?,
                 status: row.get(7)?,
                 deleted_at: row.get(8)?,
@@ -93,7 +93,7 @@ impl Customer {
         })?;
         
         let mut query = String::from(
-            "SELECT id, name, email, phone, address, rfc, notes, status, deleted_at, deleted_by, created_at, updated_at 
+            "SELECT id, name, email, phone, address, document, notes, status, deleted_at, deleted_by, created_at, updated_at 
             FROM customers 
             WHERE (status IS NULL OR status <> 'deleted')
             ORDER BY name ASC"
@@ -116,7 +116,7 @@ impl Customer {
                 email: row.get(2)?,
                 phone: row.get(3)?,
                 address: row.get(4)?,
-                rfc: row.get(5)?,
+                document: row.get(5)?,
                 notes: row.get(6)?,
                 status: row.get(7)?,
                 deleted_at: row.get(8)?,
@@ -158,14 +158,14 @@ impl Customer {
         })?;
         
         conn.execute(
-            "INSERT INTO customers (name, email, phone, address, rfc, notes, status, created_at, updated_at) 
+            "INSERT INTO customers (name, email, phone, address, document, notes, status, created_at, updated_at) 
             VALUES (?, ?, ?, ?, ?, ?, 'Activo', strftime('%Y-%m-%d %H:%M:%S', 'now'), strftime('%Y-%m-%d %H:%M:%S', 'now'))",
             params![
                 customer.name, 
                 customer.email, 
                 customer.phone, 
                 customer.address, 
-                customer.rfc, 
+                customer.document, 
                 customer.notes
             ],
         )?;
@@ -219,9 +219,9 @@ impl Customer {
             params_values.push(Box::new(address));
         }
         
-        if let Some(rfc) = update.rfc {
-            query.push_str("rfc = ?, ");
-            params_values.push(Box::new(rfc));
+        if let Some(document) = update.document {
+            query.push_str("document = ?, ");
+            params_values.push(Box::new(document));
         }
         
         if let Some(notes) = update.notes {
@@ -285,7 +285,7 @@ impl Customer {
         let search_pattern = format!("%{}%", name);
         
         let mut stmt = conn.prepare(
-            "SELECT id, name, email, phone, address, rfc, notes, status, deleted_at, deleted_by, created_at, updated_at 
+            "SELECT id, name, email, phone, address, document, notes, status, deleted_at, deleted_by, created_at, updated_at 
             FROM customers 
             WHERE (status IS NULL OR status <> 'deleted') AND name LIKE ?
             ORDER BY name ASC"
@@ -298,7 +298,7 @@ impl Customer {
                 email: row.get(2)?,
                 phone: row.get(3)?,
                 address: row.get(4)?,
-                rfc: row.get(5)?,
+                document: row.get(5)?,
                 notes: row.get(6)?,
                 status: row.get(7)?,
                 deleted_at: row.get(8)?,
@@ -322,11 +322,10 @@ impl Customer {
 pub struct Supplier {
     pub id: i64,
     pub name: String,
-    pub contact_name: Option<String>,
     pub email: Option<String>,
     pub phone: Option<String>,
     pub address: Option<String>,
-    pub rfc: Option<String>,
+    pub document: Option<String>,
     pub notes: Option<String>,
     pub status: String,
     pub deleted_at: Option<String>,
@@ -338,22 +337,20 @@ pub struct Supplier {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct NewSupplier {
     pub name: String,
-    pub contact_name: Option<String>,
     pub email: Option<String>,
     pub phone: Option<String>,
     pub address: Option<String>,
-    pub rfc: Option<String>,
+    pub document: Option<String>,
     pub notes: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UpdateSupplier {
     pub name: Option<String>,
-    pub contact_name: Option<String>,
     pub email: Option<String>,
     pub phone: Option<String>,
     pub address: Option<String>,
-    pub rfc: Option<String>,
+    pub document: Option<String>,
     pub notes: Option<String>,
     pub status: Option<String>,
 }
@@ -367,7 +364,7 @@ impl Supplier {
         })?;
         
         let mut stmt = conn.prepare(
-            "SELECT id, name, contact_name, email, phone, address, rfc, notes, status, deleted_at, deleted_by, created_at, updated_at 
+            "SELECT id, name, email, phone, address, document, notes, status, deleted_at, deleted_by, created_at, updated_at 
             FROM suppliers 
             WHERE id = ? AND (status IS NULL OR status <> 'deleted')"
         )?;
@@ -376,17 +373,16 @@ impl Supplier {
             Ok(Supplier {
                 id: row.get(0)?,
                 name: row.get(1)?,
-                contact_name: row.get(2)?,
-                email: row.get(3)?,
-                phone: row.get(4)?,
-                address: row.get(5)?,
-                rfc: row.get(6)?,
-                notes: row.get(7)?,
-                status: row.get(8)?,
-                deleted_at: row.get(9)?,
-                deleted_by: row.get(10)?,
-                created_at: row.get(11)?,
-                updated_at: row.get(12)?,
+                email: row.get(2)?,
+                phone: row.get(3)?,
+                address: row.get(4)?,
+                document: row.get(5)?,
+                notes: row.get(6)?,
+                status: row.get(7)?,
+                deleted_at: row.get(8)?,
+                deleted_by: row.get(9)?,
+                created_at: row.get(10)?,
+                updated_at: row.get(11)?,
             })
         })?;
         
@@ -410,7 +406,7 @@ impl Supplier {
         })?;
         
         let mut query = String::from(
-            "SELECT id, name, contact_name, email, phone, address, rfc, notes, status, deleted_at, deleted_by, created_at, updated_at 
+            "SELECT id, name, email, phone, address, document, notes, status, deleted_at, deleted_by, created_at, updated_at 
             FROM suppliers 
             WHERE (status IS NULL OR status <> 'deleted')
             ORDER BY name ASC"
@@ -430,17 +426,16 @@ impl Supplier {
             Ok(Supplier {
                 id: row.get(0)?,
                 name: row.get(1)?,
-                contact_name: row.get(2)?,
-                email: row.get(3)?,
-                phone: row.get(4)?,
-                address: row.get(5)?,
-                rfc: row.get(6)?,
-                notes: row.get(7)?,
-                status: row.get(8)?,
-                deleted_at: row.get(9)?,
-                deleted_by: row.get(10)?,
-                created_at: row.get(11)?,
-                updated_at: row.get(12)?,
+                email: row.get(2)?,
+                phone: row.get(3)?,
+                address: row.get(4)?,
+                document: row.get(5)?,
+                notes: row.get(6)?,
+                status: row.get(7)?,
+                deleted_at: row.get(8)?,
+                deleted_by: row.get(9)?,
+                created_at: row.get(10)?,
+                updated_at: row.get(11)?,
             })
         })?;
         
@@ -476,15 +471,14 @@ impl Supplier {
         })?;
         
         conn.execute(
-            "INSERT INTO suppliers (name, contact_name, email, phone, address, rfc, notes, status, created_at, updated_at) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, 'Activo', strftime('%Y-%m-%d %H:%M:%S', 'now'), strftime('%Y-%m-%d %H:%M:%S', 'now'))",
+            "INSERT INTO suppliers (name, email, phone, address, document, notes, status, created_at, updated_at) 
+            VALUES (?, ?, ?, ?, ?, ?, 'Activo', strftime('%Y-%m-%d %H:%M:%S', 'now'), strftime('%Y-%m-%d %H:%M:%S', 'now'))",
             params![
                 supplier.name, 
-                supplier.contact_name, 
                 supplier.email, 
                 supplier.phone, 
                 supplier.address, 
-                supplier.rfc, 
+                supplier.document, 
                 supplier.notes
             ],
         )?;
@@ -523,11 +517,6 @@ impl Supplier {
             params_values.push(Box::new(name));
         }
         
-        if let Some(contact_name) = update.contact_name {
-            query.push_str("contact_name = ?, ");
-            params_values.push(Box::new(contact_name));
-        }
-        
         if let Some(email) = update.email {
             query.push_str("email = ?, ");
             params_values.push(Box::new(email));
@@ -543,9 +532,9 @@ impl Supplier {
             params_values.push(Box::new(address));
         }
         
-        if let Some(rfc) = update.rfc {
-            query.push_str("rfc = ?, ");
-            params_values.push(Box::new(rfc));
+        if let Some(document) = update.document {
+            query.push_str("document = ?, ");
+            params_values.push(Box::new(document));
         }
         
         if let Some(notes) = update.notes {
@@ -609,7 +598,7 @@ impl Supplier {
         let search_pattern = format!("%{}%", name);
         
         let mut stmt = conn.prepare(
-            "SELECT id, name, contact_name, email, phone, address, rfc, notes, status, deleted_at, deleted_by, created_at, updated_at 
+            "SELECT id, name, email, phone, address, document, notes, status, deleted_at, deleted_by, created_at, updated_at 
             FROM suppliers 
             WHERE (status IS NULL OR status <> 'deleted') AND name LIKE ?
             ORDER BY name ASC"
@@ -619,17 +608,16 @@ impl Supplier {
             Ok(Supplier {
                 id: row.get(0)?,
                 name: row.get(1)?,
-                contact_name: row.get(2)?,
-                email: row.get(3)?,
-                phone: row.get(4)?,
-                address: row.get(5)?,
-                rfc: row.get(6)?,
-                notes: row.get(7)?,
-                status: row.get(8)?,
-                deleted_at: row.get(9)?,
-                deleted_by: row.get(10)?,
-                created_at: row.get(11)?,
-                updated_at: row.get(12)?,
+                email: row.get(2)?,
+                phone: row.get(3)?,
+                address: row.get(4)?,
+                document: row.get(5)?,
+                notes: row.get(6)?,
+                status: row.get(7)?,
+                deleted_at: row.get(8)?,
+                deleted_by: row.get(9)?,
+                created_at: row.get(10)?,
+                updated_at: row.get(11)?,
             })
         })?;
         

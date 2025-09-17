@@ -30,6 +30,8 @@ use actix_web::web;
 
 // Función para configurar todas las rutas
 pub fn init(cfg: &mut web::ServiceConfig) {
+    users::init(cfg);
+    suppliers::init(cfg);
     admin::init(cfg);
     attributes::init(cfg);
     auth::init(cfg);
@@ -50,8 +52,6 @@ pub fn init(cfg: &mut web::ServiceConfig) {
     snapshots::init(cfg);
     stats::init(cfg);
     stores::init(cfg);
-    suppliers::init(cfg);
     transactions::init(cfg);
-    users::init(cfg);
     variants::init(cfg);
 }

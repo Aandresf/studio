@@ -15,6 +15,8 @@ pub fn init(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::scope("/api/dashboard")
             .route("", web::get().to(get_dashboard_data))
+            .route("/summary", web::get().to(get_dashboard_data)) // Alias para frontend
+            .route("/recent-sales", web::get().to(get_recent_sales))
             .route("/sales-summary", web::get().to(get_sales_summary))
             .route("/top-products", web::get().to(get_top_products))
             .route("/stock-alerts", web::get().to(get_stock_alerts))
@@ -205,4 +207,45 @@ async fn get_revenue_chart(query: web::Query<DashboardQuery>) -> impl Responder 
     };
     
     HttpResponse::Ok().json(chart_data)
+}
+
+async fn get_recent_sales() -> impl Responder {
+    // Simular ventas recientes
+    HttpResponse::Ok().json(json!([
+        {
+            "id": "S001",
+            "date": "2024-01-15",
+            "customer": "Juan Pérez",
+            "total": 150.00,
+            "items": 3
+        },
+        {
+            "id": "S002", 
+            "date": "2024-01-15",
+            "customer": "María González",
+            "total": 89.50,
+            "items": 2
+        },
+        {
+            "id": "S003",
+            "date": "2024-01-15", 
+            "customer": "Carlos López",
+            "total": 245.00,
+            "items": 1
+        },
+        {
+            "id": "S004",
+            "date": "2024-01-14",
+            "customer": "Ana Rodríguez",
+            "total": 320.00,
+            "items": 4
+        },
+        {
+            "id": "S005",
+            "date": "2024-01-14",
+            "customer": "Miguel Torres",
+            "total": 125.75,
+            "items": 2
+        }
+    ]))
 }

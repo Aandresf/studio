@@ -6,7 +6,8 @@ use serde_json::json;
 use log::{error, debug};
 use rusqlite::params;
 use crate::database_manager::DbPool;
-use crate::lib::authorize::{Authorize, Permission};
+use crate::lib::authorize::{Authorize, permissions};
+use crate::models::role_permission::{Permission};
 
 // Configuración de rutas para transacciones
 pub fn init(cfg: &mut web::ServiceConfig) {
@@ -24,7 +25,7 @@ async fn annul_sale(
     authorize: Authorize
 ) -> impl Responder {
     // Verificar permisos
-    if !authorize.has_permission(&Permission::SalesDelete) {
+    if !authorize.has_permission(&permissions::SALES_DELETE) {
         return HttpResponse::Forbidden().json(json!({
             "error": "No tiene permisos para anular ventas"
         }));
@@ -152,7 +153,7 @@ async fn annul_purchase(
     authorize: Authorize
 ) -> impl Responder {
     // Verificar permisos
-    if !authorize.has_permission(&Permission::PurchasesDelete) {
+    if !authorize.has_permission(&permissions::PURCHASES_DELETE) {
         return HttpResponse::Forbidden().json(json!({
             "error": "No tiene permisos para anular compras"
         }));

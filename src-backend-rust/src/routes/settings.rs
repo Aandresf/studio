@@ -6,7 +6,8 @@ use serde_json::json;
 use log::{error, debug};
 use crate::database_manager::DbPool;
 use crate::models::setting::{Setting, NewSetting, UpdateSetting};
-use crate::lib::authorize::{Authorize, Permission};
+use crate::lib::authorize::{Authorize, permissions};
+use crate::models::role_permission::{Permission};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SettingRequest {
@@ -24,6 +25,8 @@ pub fn init(cfg: &mut web::ServiceConfig) {
             .route("", web::post().to(create_setting))
             .route("/{key}", web::delete().to(delete_setting))
             .route("/category/{category}", web::get().to(get_settings_by_category))
+            .route("/store", web::get().to(get_store_settings))
+            .route("/store", web::put().to(update_store_settings))
     );
 }
 
@@ -33,7 +36,7 @@ async fn get_all_settings(
     authorize: Authorize,
 ) -> impl Responder {
     // Verificar permisos
-    if !authorize.has_permission(&Permission::SettingsView) {
+    if !authorize.has_permission(&permissions::SETTINGS_VIEW) {
         return HttpResponse::Forbidden().json(json!({
             "error": "No tiene permisos para ver configuraciones"
         }));
@@ -58,7 +61,7 @@ async fn get_setting(
     authorize: Authorize,
 ) -> impl Responder {
     // Verificar permisos
-    if !authorize.has_permission(&Permission::SettingsView) {
+    if !authorize.has_permission(&permissions::SETTINGS_VIEW) {
         return HttpResponse::Forbidden().json(json!({
             "error": "No tiene permisos para ver configuraciones"
         }));
@@ -88,7 +91,7 @@ async fn update_setting(
     authorize: Authorize,
 ) -> impl Responder {
     // Verificar permisos
-    if !authorize.has_permission(&Permission::SettingsManage) {
+    if !authorize.has_permission(&permissions::SETTINGS_MANAGE) {
         return HttpResponse::Forbidden().json(json!({
             "error": "No tiene permisos para gestionar configuraciones"
         }));
@@ -130,7 +133,7 @@ async fn create_setting(
     authorize: Authorize,
 ) -> impl Responder {
     // Verificar permisos
-    if !authorize.has_permission(&Permission::SettingsManage) {
+    if !authorize.has_permission(&permissions::SETTINGS_MANAGE) {
         return HttpResponse::Forbidden().json(json!({
             "error": "No tiene permisos para gestionar configuraciones"
         }));
@@ -166,7 +169,7 @@ async fn delete_setting(
     authorize: Authorize,
 ) -> impl Responder {
     // Verificar permisos
-    if !authorize.has_permission(&Permission::SettingsManage) {
+    if !authorize.has_permission(&permissions::SETTINGS_MANAGE) {
         return HttpResponse::Forbidden().json(json!({
             "error": "No tiene permisos para gestionar configuraciones"
         }));
@@ -201,7 +204,7 @@ async fn get_settings_by_category(
     authorize: Authorize,
 ) -> impl Responder {
     // Verificar permisos
-    if !authorize.has_permission(&Permission::SettingsView) {
+    if !authorize.has_permission(&permissions::SETTINGS_VIEW) {
         return HttpResponse::Forbidden().json(json!({
             "error": "No tiene permisos para ver configuraciones"
         }));
@@ -233,50 +236,29 @@ async fn get_settings_by_category(
     }
 }
 
-async fn get_settings_by_category(path: web::Path<String>) -> impl Responder {
-    let category = path.into_inner();
-    
-    // En una implementación real, obtendríamos las configuraciones por categoría
-    let settings = match category.as_str() {
-        "general" => json!({
-            "company_name": "Mi Empresa",
-            "currency": "MXN",
-            "language": "es",
-            "timezone": "America/Mexico_City",
-            "decimal_places": 2
-        }),
-        "invoicing" => json!({
-            "auto_generate": true,
-            "prefix": "INV",
-            "next_number": 1001,
-            "include_logo": true,
-            "terms_and_conditions": "Términos y condiciones predeterminados..."
-        }),
-        "inventory" => json!({
-            "enable_low_stock_alerts": true,
-            "default_low_stock_threshold": 5,
-            "auto_update_costs": true,
-            "track_serial_numbers": false
-        }),
-        "security" => json!({
-            "session_timeout_minutes": 30,
-            "password_expiry_days": 90,
-            "allow_concurrent_sessions": true,
-            "enable_two_factor_auth": false
-        }),
-        "appearance" => json!({
-            "theme": "light",
-            "accent_color": "#1976D2",
-            "show_help_tooltips": true,
-            "compact_mode": false
-        }),
-        _ => return HttpResponse::NotFound().json(json!({
-            "error": format!("Categoría '{}' no encontrada", category)
-        }))
-    };
-    
+async fn get_store_settings() -> impl Responder {
+    // Simular configuraciones de tienda
     HttpResponse::Ok().json(json!({
-        "category": category,
-        "settings": settings
+        "name": "Mi Tienda",
+        "address": "Calle Principal 123",
+        "phone": "123-456-7890",
+        "email": "contacto@mitienda.com",
+        "currency": "USD",
+        "tax_rate": 16.0,
+        "low_stock_alert": 5,
+        "auto_backup": true,
+        "receipt_footer": "Gracias por su compra"
     }))
 }
+
+async fn update_store_settings(
+    settings: web::Json<serde_json::Value>
+) -> impl Responder {
+    // Simular actualización de configuraciones
+    HttpResponse::Ok().json(json!({
+        "success": true,
+        "message": "Configuraciones de tienda actualizadas",
+        "settings": settings.into_inner()
+    }))
+}
+

@@ -22,10 +22,13 @@ pub fn init(cfg: &mut web::ServiceConfig) {
             .route("", web::get().to(get_stores))
             .route("/active", web::get().to(get_active_store))
             .route("/active", web::put().to(set_active_store))
+            .route("/active", web::post().to(set_active_store)) // Alias para frontend
             .route("/{id}", web::get().to(get_store))
             .route("", web::post().to(create_store))
             .route("/{id}", web::put().to(update_store))
             .route("/{id}", web::delete().to(delete_store))
+            .route("/{id}/details", web::get().to(get_store_details))
+            .route("/{id}/details", web::put().to(update_store_details))
     );
 }
 
@@ -125,5 +128,42 @@ async fn delete_store(path: web::Path<String>) -> impl Responder {
     HttpResponse::Ok().json(json!({
         "id": store_id,
         "deleted": true
+    }))
+}
+
+async fn get_store_details(path: web::Path<String>) -> impl Responder {
+    let store_id = path.into_inner();
+    
+    HttpResponse::Ok().json(json!({
+        "id": store_id,
+        "name": "Mi Tienda Principal",
+        "address": "Calle Principal 123, Ciudad",
+        "phone": "+1 234-567-8900",
+        "email": "contacto@mitienda.com",
+        "tax_id": "123456789",
+        "currency": "USD",
+        "timezone": "America/Mexico_City",
+        "business_hours": {
+            "monday": "09:00-18:00",
+            "tuesday": "09:00-18:00", 
+            "wednesday": "09:00-18:00",
+            "thursday": "09:00-18:00",
+            "friday": "09:00-18:00",
+            "saturday": "10:00-14:00",
+            "sunday": "closed"
+        }
+    }))
+}
+
+async fn update_store_details(
+    path: web::Path<String>,
+    details: web::Json<serde_json::Value>
+) -> impl Responder {
+    let store_id = path.into_inner();
+    
+    HttpResponse::Ok().json(json!({
+        "message": "Detalles de tienda actualizados exitosamente",
+        "store_id": store_id,
+        "updated_details": details.into_inner()
     }))
 }

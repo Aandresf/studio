@@ -8,7 +8,8 @@ use std::fs;
 use std::path::Path;
 use std::io::ErrorKind;
 use std::collections::HashMap;
-use crate::lib::authorize::{Authorize, Permission};
+use crate::lib::authorize::{Authorize, permissions};
+use crate::models::role_permission::{Permission};
 use crate::config;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -108,7 +109,7 @@ async fn get_pending_transactions(
     authorize: Authorize
 ) -> impl Responder {
     // Verificar permisos
-    if !authorize.has_permission(&Permission::PendingRead) {
+    if !authorize.has_permission(&permissions::PENDING_READ) {
         return HttpResponse::Forbidden().json(json!({
             "error": "No tiene permisos para ver transacciones pendientes"
         }));
@@ -131,7 +132,7 @@ async fn create_pending_transaction(
     authorize: Authorize
 ) -> impl Responder {
     // Verificar permisos
-    if !authorize.has_permission(&Permission::PendingCreate) {
+    if !authorize.has_permission(&permissions::PENDING_CREATE) {
         return HttpResponse::Forbidden().json(json!({
             "error": "No tiene permisos para crear transacciones pendientes"
         }));
@@ -208,7 +209,7 @@ async fn delete_pending_transaction(
     authorize: Authorize
 ) -> impl Responder {
     // Verificar permisos
-    if !authorize.has_permission(&Permission::PendingDelete) {
+    if !authorize.has_permission(&permissions::PENDING_DELETE) {
         return HttpResponse::Forbidden().json(json!({
             "error": "No tiene permisos para eliminar transacciones pendientes"
         }));

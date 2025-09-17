@@ -3,8 +3,9 @@
 use actix_web::{web, HttpResponse, Responder, http::StatusCode};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use std::sync::Arc;
 use log::{debug, error};
-use crate::database_manager::DbPool;
+use crate::database_manager::DatabaseManager;
 use crate::models::customer_supplier::{Customer, NewCustomer, UpdateCustomer};
 
 // Configuración de rutas para clientes
@@ -22,15 +23,19 @@ pub fn init(cfg: &mut web::ServiceConfig) {
 
 // Controladores
 
-async fn get_customers(web::Query(params): web::Query<serde_json::Value>, pool: web::Data<DbPool>) -> impl Responder {
-    // Extraer parámetros de paginación
-    let limit = params["limit"].as_i64();
-    let offset = params["offset"].as_i64();
-    
-    match Customer::find_all(&pool, limit, offset) {
-        Ok(customers) => {
-            HttpResponse::Ok().json(customers)
-        },
+async fn get_customers(web::Query(params): web::Query<serde_json::Value>, db_manager: web::Data<Arc<DatabaseManager>>) -> impl Responder {
+    let pool = match db_manager.get_pool() {
+        Ok(pool) => pool,
+        Err(e) => {
+            error!("Error al obtener pool de conexiones: {}", e);
+            return HttpResponse::InternalServerError().json(json!({
+                "error": "Error de conexión a base de datos"
+            }));
+        }
+    };
+
+    match Customer::find_all(&pool, None, None) {
+        Ok(customers) => HttpResponse::Ok().json(customers),
         Err(e) => {
             error!("Error al obtener clientes: {}", e);
             HttpResponse::InternalServerError().json(json!({
@@ -41,8 +46,18 @@ async fn get_customers(web::Query(params): web::Query<serde_json::Value>, pool: 
     }
 }
 
-async fn get_customer(path: web::Path<i64>, pool: web::Data<DbPool>) -> impl Responder {
+async fn get_customer(path: web::Path<i64>, pool: web::Data<Arc<DatabaseManager>>) -> impl Responder {
     let customer_id = path.into_inner();
+    
+    let pool = match pool.get_pool() {
+        Ok(pool) => pool,
+        Err(e) => {
+            error!("Error al obtener pool de conexiones: {}", e);
+            return HttpResponse::InternalServerError().json(json!({
+                "error": "Error de conexión a base de datos"
+            }));
+        }
+    };
     
     match Customer::find_by_id(&pool, customer_id) {
         Ok(customer_opt) => {
@@ -63,7 +78,17 @@ async fn get_customer(path: web::Path<i64>, pool: web::Data<DbPool>) -> impl Res
     }
 }
 
-async fn create_customer(customer: web::Json<NewCustomer>, pool: web::Data<DbPool>) -> impl Responder {
+async fn create_customer(customer: web::Json<NewCustomer>, pool: web::Data<Arc<DatabaseManager>>) -> impl Responder {
+    let pool = match pool.get_pool() {
+        Ok(pool) => pool,
+        Err(e) => {
+            error!("Error al obtener pool de conexiones: {}", e);
+            return HttpResponse::InternalServerError().json(json!({
+                "error": "Error de conexión a base de datos"
+            }));
+        }
+    };
+    
     match Customer::create(&pool, customer.into_inner()) {
         Ok(created_customer) => {
             HttpResponse::Created().json(created_customer)
@@ -87,8 +112,18 @@ async fn create_customer(customer: web::Json<NewCustomer>, pool: web::Data<DbPoo
     }
 }
 
-async fn update_customer(path: web::Path<i64>, customer: web::Json<UpdateCustomer>, pool: web::Data<DbPool>) -> impl Responder {
+async fn update_customer(path: web::Path<i64>, customer: web::Json<UpdateCustomer>, pool: web::Data<Arc<DatabaseManager>>) -> impl Responder {
     let customer_id = path.into_inner();
+    
+    let pool = match pool.get_pool() {
+        Ok(pool) => pool,
+        Err(e) => {
+            error!("Error al obtener pool de conexiones: {}", e);
+            return HttpResponse::InternalServerError().json(json!({
+                "error": "Error de conexión a base de datos"
+            }));
+        }
+    };
     
     match Customer::update(&pool, customer_id, customer.into_inner()) {
         Ok(updated_customer) => {
@@ -120,8 +155,18 @@ async fn update_customer(path: web::Path<i64>, customer: web::Json<UpdateCustome
     }
 }
 
-async fn delete_customer(path: web::Path<i64>, pool: web::Data<DbPool>) -> impl Responder {
+async fn delete_customer(path: web::Path<i64>, pool: web::Data<Arc<DatabaseManager>>) -> impl Responder {
     let customer_id = path.into_inner();
+    
+    let pool = match pool.get_pool() {
+        Ok(pool) => pool,
+        Err(e) => {
+            error!("Error al obtener pool de conexiones: {}", e);
+            return HttpResponse::InternalServerError().json(json!({
+                "error": "Error de conexión a base de datos"
+            }));
+        }
+    };
     
     // En un caso real, necesitaríamos obtener el ID del usuario que realiza la acción
     match Customer::delete(&pool, customer_id, Some("system".to_string())) {
@@ -157,8 +202,18 @@ async fn delete_customer(path: web::Path<i64>, pool: web::Data<DbPool>) -> impl 
     }
 }
 
-async fn search_customers(path: web::Path<String>, pool: web::Data<DbPool>) -> impl Responder {
+async fn search_customers(path: web::Path<String>, pool: web::Data<Arc<DatabaseManager>>) -> impl Responder {
     let name = path.into_inner();
+    
+    let pool = match pool.get_pool() {
+        Ok(pool) => pool,
+        Err(e) => {
+            error!("Error al obtener pool de conexiones: {}", e);
+            return HttpResponse::InternalServerError().json(json!({
+                "error": "Error de conexión a base de datos"
+            }));
+        }
+    };
     
     match Customer::search_by_name(&pool, &name) {
         Ok(customers) => {

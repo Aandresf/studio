@@ -1,7 +1,7 @@
 //src-backend-rust/src/models/role_permission.rs
 
 use serde::{Deserialize, Serialize};
-use rusqlite::{Connection, Result as SQLiteResult, Row};
+use rusqlite::{Connection, Result as SQLiteResult, Row, params};
 use std::collections::HashMap;
 use crate::database_manager::{query_row, query_rows, execute_update, execute_insert};
 
@@ -226,7 +226,7 @@ pub fn assign_permission_to_role(conn: &Connection, role_id: &str, permission_ke
     // Verificar si ya existe la asignación
     let exists: bool = conn.query_row(
         "SELECT 1 FROM role_permissions WHERE role_id = ? AND permission_id = ?",
-        &[&role_id, &permission.id],
+        params![role_id, permission.id],
         |_| Ok(true)
     ).unwrap_or(false);
     
@@ -234,7 +234,7 @@ pub fn assign_permission_to_role(conn: &Connection, role_id: &str, permission_ke
         // Insertar la relación
         conn.execute(
             "INSERT INTO role_permissions (role_id, permission_id) VALUES (?, ?)",
-            &[&role_id, &permission.id],
+            params![role_id, permission.id],
         )?;
     }
     
@@ -248,7 +248,7 @@ pub fn remove_permission_from_role(conn: &Connection, role_id: &str, permission_
     // Eliminar la relación
     conn.execute(
         "DELETE FROM role_permissions WHERE role_id = ? AND permission_id = ?",
-        &[&role_id, &permission.id],
+        params![role_id, permission.id],
     )?;
     
     Ok(())
@@ -313,7 +313,7 @@ pub fn get_user_permissions(conn: &Connection, user_id: &str) -> SQLiteResult<Ve
     Ok(permissions)
 }
 
-pub fn update_user_permissions(conn: &Connection, user_id: &str, permissions: &[String]) -> SQLiteResult<()> {
+pub fn update_user_permissions(conn: &mut Connection, user_id: &str, permissions: &[String]) -> SQLiteResult<()> {
     // Iniciar transacción
     let tx = conn.transaction()?;
     
@@ -347,7 +347,7 @@ pub fn update_user_permissions(conn: &Connection, user_id: &str, permissions: &[
         // Asignar permiso al usuario
         tx.execute(
             "INSERT INTO user_permissions (user_id, permission_id, granted) VALUES (?, ?, 1)",
-            &[&user_id, &permission.id],
+            params![user_id, permission.id],
         )?;
     }
     
@@ -369,7 +369,7 @@ pub fn get_role_permissions(conn: &Connection, role_id: &str) -> SQLiteResult<Ve
     Ok(perms)
 }
 
-pub fn update_role_permissions(conn: &Connection, role_id: &str, permissions: &[String]) -> SQLiteResult<()> {
+pub fn update_role_permissions(conn: &mut Connection, role_id: &str, permissions: &[String]) -> SQLiteResult<()> {
     // Iniciar transacción
     let tx = conn.transaction()?;
     
@@ -403,7 +403,7 @@ pub fn update_role_permissions(conn: &Connection, role_id: &str, permissions: &[
         // Asignar permiso al rol
         tx.execute(
             "INSERT INTO role_permissions (role_id, permission_id) VALUES (?, ?)",
-            &[&role_id, &permission.id],
+            params![role_id, permission.id],
         )?;
     }
     

@@ -286,31 +286,35 @@ impl InventoryMovement {
     
     // Crear un nuevo movimiento de inventario
     pub fn create(pool: &DbPool, movement: NewInventoryMovement) -> SqliteResult<InventoryMovement> {
-        let conn = pool.get().map_err(|e| {
+        let mut conn = pool.get().map_err(|e| {
             error!("Error al obtener conexión del pool: {}", e);
             SqliteError::QueryReturnedNoRows
         })?;
         
         // Verificar si la variante de producto existe
-        let mut stmt = conn.prepare("SELECT COUNT(*) FROM product_variants WHERE id = ? AND (status IS NULL OR status <> 'deleted')")?;
-        let count: i64 = stmt.query_row(params![movement.product_variant_id], |row| row.get(0))?;
-        
-        if count == 0 {
-            return Err(SqliteError::SqliteFailure(
-                rusqlite::ffi::Error::new(19), // SQLITE_CONSTRAINT
-                Some("La variante de producto especificada no existe".to_string()),
-            ));
+        {
+            let mut stmt = conn.prepare("SELECT COUNT(*) FROM product_variants WHERE id = ? AND (status IS NULL OR status <> 'deleted')")?;
+            let count: i64 = stmt.query_row(params![movement.product_variant_id], |row| row.get(0))?;
+            
+            if count == 0 {
+                return Err(SqliteError::SqliteFailure(
+                    rusqlite::ffi::Error::new(19), // SQLITE_CONSTRAINT
+                    Some("La variante de producto especificada no existe".to_string()),
+                ));
+            }
         }
         
         // Verificar si el usuario existe
-        let mut stmt = conn.prepare("SELECT COUNT(*) FROM users WHERE id = ?")?;
-        let count: i64 = stmt.query_row(params![movement.user_id], |row| row.get(0))?;
-        
-        if count == 0 {
-            return Err(SqliteError::SqliteFailure(
-                rusqlite::ffi::Error::new(19), // SQLITE_CONSTRAINT
-                Some("El usuario especificado no existe".to_string()),
-            ));
+        {
+            let mut stmt = conn.prepare("SELECT COUNT(*) FROM users WHERE id = ?")?;
+            let count: i64 = stmt.query_row(params![movement.user_id], |row| row.get(0))?;
+            
+            if count == 0 {
+                return Err(SqliteError::SqliteFailure(
+                    rusqlite::ffi::Error::new(19), // SQLITE_CONSTRAINT
+                    Some("El usuario especificado no existe".to_string()),
+                ));
+            }
         }
         
         // Iniciar transacción

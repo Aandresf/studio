@@ -373,6 +373,11 @@ impl Subdepartment {
         }
     }
     
+    // Obtener subdepartamentos por department_id específico
+    pub fn find_by_department(pool: &DbPool, department_id: i64) -> SqliteResult<Vec<Subdepartment>> {
+        Self::find_all(pool, Some(department_id))
+    }
+    
     // Obtener todos los subdepartamentos o filtrar por departamento_id
     pub fn find_all(pool: &DbPool, department_id: Option<i64>) -> SqliteResult<Vec<Subdepartment>> {
         let conn = pool.get().map_err(|e| {
@@ -380,55 +385,59 @@ impl Subdepartment {
             SqliteError::QueryReturnedNoRows
         })?;
         
-        let query = match department_id {
-            Some(_) => {
-                "SELECT id, name, abbreviation, department_id, status, deleted_at, deleted_by, created_at, updated_at 
-                FROM subdepartments 
-                WHERE (status IS NULL OR status <> 'deleted') AND department_id = ?
-                ORDER BY name ASC"
+        let mut subdepartments: Vec<Subdepartment> = Vec::new();
+        
+        match department_id {
+            Some(dept_id) => {
+                let mut stmt = conn.prepare(
+                    "SELECT id, name, abbreviation, department_id, status, deleted_at, deleted_by, created_at, updated_at 
+                    FROM subdepartments 
+                    WHERE (status IS NULL OR status <> 'deleted') AND department_id = ?
+                    ORDER BY name ASC"
+                )?;
+                let rows = stmt.query_map(params![dept_id], |row| {
+                    Ok(Subdepartment {
+                        id: row.get(0)?,
+                        name: row.get(1)?,
+                        abbreviation: row.get(2)?,
+                        department_id: row.get(3)?,
+                        status: row.get(4)?,
+                        deleted_at: row.get(5)?,
+                        deleted_by: row.get(6)?,
+                        created_at: row.get(7)?,
+                        updated_at: row.get(8)?,
+                    })
+                })?;
+                
+                for row in rows {
+                    subdepartments.push(row?);
+                }
             },
             None => {
-                "SELECT id, name, abbreviation, department_id, status, deleted_at, deleted_by, created_at, updated_at 
-                FROM subdepartments 
-                WHERE (status IS NULL OR status <> 'deleted')
-                ORDER BY name ASC"
+                let mut stmt = conn.prepare(
+                    "SELECT id, name, abbreviation, department_id, status, deleted_at, deleted_by, created_at, updated_at 
+                    FROM subdepartments 
+                    WHERE (status IS NULL OR status <> 'deleted')
+                    ORDER BY name ASC"
+                )?;
+                let rows = stmt.query_map([], |row| {
+                    Ok(Subdepartment {
+                        id: row.get(0)?,
+                        name: row.get(1)?,
+                        abbreviation: row.get(2)?,
+                        department_id: row.get(3)?,
+                        status: row.get(4)?,
+                        deleted_at: row.get(5)?,
+                        deleted_by: row.get(6)?,
+                        created_at: row.get(7)?,
+                        updated_at: row.get(8)?,
+                    })
+                })?;
+                
+                for row in rows {
+                    subdepartments.push(row?);
+                }
             }
-        };
-        
-        let mut stmt = conn.prepare(query)?;
-        
-        let rows = match department_id {
-            Some(dept_id) => stmt.query_map(params![dept_id], |row| {
-                Ok(Subdepartment {
-                    id: row.get(0)?,
-                    name: row.get(1)?,
-                    abbreviation: row.get(2)?,
-                    department_id: row.get(3)?,
-                    status: row.get(4)?,
-                    deleted_at: row.get(5)?,
-                    deleted_by: row.get(6)?,
-                    created_at: row.get(7)?,
-                    updated_at: row.get(8)?,
-                })
-            })?,
-            None => stmt.query_map(params![], |row| {
-                Ok(Subdepartment {
-                    id: row.get(0)?,
-                    name: row.get(1)?,
-                    abbreviation: row.get(2)?,
-                    department_id: row.get(3)?,
-                    status: row.get(4)?,
-                    deleted_at: row.get(5)?,
-                    deleted_by: row.get(6)?,
-                    created_at: row.get(7)?,
-                    updated_at: row.get(8)?,
-                })
-            })?
-        };
-        
-        let mut subdepartments: Vec<Subdepartment> = Vec::new();
-        for row in rows {
-            subdepartments.push(row?);
         }
         
         Ok(subdepartments)
@@ -506,8 +515,9 @@ impl Subdepartment {
                 SqliteError::QueryReturnedNoRows
             })?;
         
-        // Si se está actualizando el department_id, verificar que exista
+        // Si se está actualizando el department_id Y es diferente al actual, verificar que exista
         if let Some(department_id) = update.department_id {
+            if department_id != subdepartment.department_id {
             let mut stmt = conn.prepare("SELECT COUNT(*) FROM departments WHERE id = ? AND (status IS NULL OR status <> 'deleted')")?;
             let count: i64 = stmt.query_row(params![department_id], |row| row.get(0))?;
             
@@ -563,8 +573,9 @@ impl Subdepartment {
                     ));
                 }
             }
+            } // Cierre del bloque "if department_id != subdepartment.department_id"
         } else {
-            // Verificar unicidad del nombre en el departamento actual
+            // Verificar unicidad del nombre en el departamento actual (o si department_id es igual al actual)
             if let Some(name) = &update.name {
                 if name != &subdepartment.name {
                     let mut stmt = conn.prepare("SELECT COUNT(*) FROM subdepartments WHERE name = ? AND department_id = ? AND id <> ?")?;
@@ -679,56 +690,59 @@ impl Subdepartment {
         })?;
         
         let search_pattern = format!("%{}%", name);
+        let mut subdepartments: Vec<Subdepartment> = Vec::new();
         
-        let query = match department_id {
-            Some(_) => {
-                "SELECT id, name, abbreviation, department_id, status, deleted_at, deleted_by, created_at, updated_at 
-                FROM subdepartments 
-                WHERE (status IS NULL OR status <> 'deleted') AND name LIKE ? AND department_id = ?
-                ORDER BY name ASC"
+        match department_id {
+            Some(dept_id) => {
+                let mut stmt = conn.prepare(
+                    "SELECT id, name, abbreviation, department_id, status, deleted_at, deleted_by, created_at, updated_at 
+                    FROM subdepartments 
+                    WHERE (status IS NULL OR status <> 'deleted') AND name LIKE ? AND department_id = ?
+                    ORDER BY name ASC"
+                )?;
+                let rows = stmt.query_map(params![search_pattern, dept_id], |row| {
+                    Ok(Subdepartment {
+                        id: row.get(0)?,
+                        name: row.get(1)?,
+                        abbreviation: row.get(2)?,
+                        department_id: row.get(3)?,
+                        status: row.get(4)?,
+                        deleted_at: row.get(5)?,
+                        deleted_by: row.get(6)?,
+                        created_at: row.get(7)?,
+                        updated_at: row.get(8)?,
+                    })
+                })?;
+                
+                for row in rows {
+                    subdepartments.push(row?);
+                }
             },
             None => {
-                "SELECT id, name, abbreviation, department_id, status, deleted_at, deleted_by, created_at, updated_at 
-                FROM subdepartments 
-                WHERE (status IS NULL OR status <> 'deleted') AND name LIKE ?
-                ORDER BY name ASC"
+                let mut stmt = conn.prepare(
+                    "SELECT id, name, abbreviation, department_id, status, deleted_at, deleted_by, created_at, updated_at 
+                    FROM subdepartments 
+                    WHERE (status IS NULL OR status <> 'deleted') AND name LIKE ?
+                    ORDER BY name ASC"
+                )?;
+                let rows = stmt.query_map(params![search_pattern], |row| {
+                    Ok(Subdepartment {
+                        id: row.get(0)?,
+                        name: row.get(1)?,
+                        abbreviation: row.get(2)?,
+                        department_id: row.get(3)?,
+                        status: row.get(4)?,
+                        deleted_at: row.get(5)?,
+                        deleted_by: row.get(6)?,
+                        created_at: row.get(7)?,
+                        updated_at: row.get(8)?,
+                    })
+                })?;
+                
+                for row in rows {
+                    subdepartments.push(row?);
+                }
             }
-        };
-        
-        let mut stmt = conn.prepare(query)?;
-        
-        let rows = match department_id {
-            Some(dept_id) => stmt.query_map(params![search_pattern, dept_id], |row| {
-                Ok(Subdepartment {
-                    id: row.get(0)?,
-                    name: row.get(1)?,
-                    abbreviation: row.get(2)?,
-                    department_id: row.get(3)?,
-                    status: row.get(4)?,
-                    deleted_at: row.get(5)?,
-                    deleted_by: row.get(6)?,
-                    created_at: row.get(7)?,
-                    updated_at: row.get(8)?,
-                })
-            })?,
-            None => stmt.query_map(params![search_pattern], |row| {
-                Ok(Subdepartment {
-                    id: row.get(0)?,
-                    name: row.get(1)?,
-                    abbreviation: row.get(2)?,
-                    department_id: row.get(3)?,
-                    status: row.get(4)?,
-                    deleted_at: row.get(5)?,
-                    deleted_by: row.get(6)?,
-                    created_at: row.get(7)?,
-                    updated_at: row.get(8)?,
-                })
-            })?
-        };
-        
-        let mut subdepartments: Vec<Subdepartment> = Vec::new();
-        for row in rows {
-            subdepartments.push(row?);
         }
         
         Ok(subdepartments)

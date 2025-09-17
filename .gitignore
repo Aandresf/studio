@@ -60,6 +60,9 @@ MicrosoftEdgeWebView2RuntimeInstallerX64.exe
 src-tauri/target/
 src-tauri/resources/*.exe
 
+# Rust backend target directory
+src-backend-rust/target/
+
 # Firebase
 firebase-debug.log
 firestore-debug.log

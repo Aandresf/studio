@@ -9,7 +9,6 @@ use log::{debug, error};
 pub struct Brand {
     pub id: i64,
     pub name: String,
-    pub description: Option<String>,
     pub subdepartment_id: Option<i64>,
     pub status: String,
     pub deleted_at: Option<String>,
@@ -21,14 +20,12 @@ pub struct Brand {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct NewBrand {
     pub name: String,
-    pub description: Option<String>,
     pub subdepartment_id: Option<i64>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UpdateBrand {
     pub name: Option<String>,
-    pub description: Option<String>,
     pub subdepartment_id: Option<i64>,
     pub status: Option<String>,
 }
@@ -42,7 +39,7 @@ impl Brand {
         })?;
         
         let mut stmt = conn.prepare(
-            "SELECT id, name, description, subdepartment_id, status, deleted_at, deleted_by, created_at, updated_at 
+            "SELECT id, name, subdepartment_id, status, deleted_at, deleted_by, created_at, updated_at 
             FROM brands 
             WHERE id = ? AND (status IS NULL OR status <> 'deleted')"
         )?;
@@ -51,13 +48,12 @@ impl Brand {
             Ok(Brand {
                 id: row.get(0)?,
                 name: row.get(1)?,
-                description: row.get(2)?,
-                subdepartment_id: row.get(3)?,
-                status: row.get(4)?,
-                deleted_at: row.get(5)?,
-                deleted_by: row.get(6)?,
-                created_at: row.get(7)?,
-                updated_at: row.get(8)?,
+                subdepartment_id: row.get(2)?,
+                status: row.get(3)?,
+                deleted_at: row.get(4)?,
+                deleted_by: row.get(5)?,
+                created_at: row.get(6)?,
+                updated_at: row.get(7)?,
             })
         })?;
         
@@ -81,7 +77,7 @@ impl Brand {
         })?;
         
         let mut stmt = conn.prepare(
-            "SELECT id, name, description, subdepartment_id, status, deleted_at, deleted_by, created_at, updated_at 
+            "SELECT id, name, subdepartment_id, status, deleted_at, deleted_by, created_at, updated_at 
             FROM brands 
             WHERE (status IS NULL OR status <> 'deleted')
             ORDER BY name ASC"
@@ -91,13 +87,12 @@ impl Brand {
             Ok(Brand {
                 id: row.get(0)?,
                 name: row.get(1)?,
-                description: row.get(2)?,
-                subdepartment_id: row.get(3)?,
-                status: row.get(4)?,
-                deleted_at: row.get(5)?,
-                deleted_by: row.get(6)?,
-                created_at: row.get(7)?,
-                updated_at: row.get(8)?,
+                subdepartment_id: row.get(2)?,
+                status: row.get(3)?,
+                deleted_at: row.get(4)?,
+                deleted_by: row.get(5)?,
+                created_at: row.get(6)?,
+                updated_at: row.get(7)?,
             })
         })?;
         
@@ -117,7 +112,7 @@ impl Brand {
         })?;
         
         let mut stmt = conn.prepare(
-            "SELECT id, name, description, subdepartment_id, status, deleted_at, deleted_by, created_at, updated_at 
+            "SELECT id, name, subdepartment_id, status, deleted_at, deleted_by, created_at, updated_at 
             FROM brands 
             WHERE (status IS NULL OR status <> 'deleted') AND subdepartment_id = ?
             ORDER BY name ASC"
@@ -127,13 +122,12 @@ impl Brand {
             Ok(Brand {
                 id: row.get(0)?,
                 name: row.get(1)?,
-                description: row.get(2)?,
-                subdepartment_id: row.get(3)?,
-                status: row.get(4)?,
-                deleted_at: row.get(5)?,
-                deleted_by: row.get(6)?,
-                created_at: row.get(7)?,
-                updated_at: row.get(8)?,
+                subdepartment_id: row.get(2)?,
+                status: row.get(3)?,
+                deleted_at: row.get(4)?,
+                deleted_by: row.get(5)?,
+                created_at: row.get(6)?,
+                updated_at: row.get(7)?,
             })
         })?;
         
@@ -178,9 +172,9 @@ impl Brand {
         
         // Insertar la nueva marca
         conn.execute(
-            "INSERT INTO brands (name, description, subdepartment_id, status, created_at, updated_at) 
-            VALUES (?, ?, ?, 'Activo', strftime('%Y-%m-%d %H:%M:%S', 'now'), strftime('%Y-%m-%d %H:%M:%S', 'now'))",
-            params![brand.name, brand.description, brand.subdepartment_id],
+            "INSERT INTO brands (name, subdepartment_id, status, created_at, updated_at) 
+            VALUES (?, ?, 'Activo', strftime('%Y-%m-%d %H:%M:%S', 'now'), strftime('%Y-%m-%d %H:%M:%S', 'now'))",
+            params![brand.name, brand.subdepartment_id],
         )?;
         
         let id = conn.last_insert_rowid();
@@ -243,11 +237,6 @@ impl Brand {
         if let Some(name) = update.name {
             query.push_str("name = ?, ");
             params_values.push(Box::new(name));
-        }
-        
-        if let Some(description) = update.description {
-            query.push_str("description = ?, ");
-            params_values.push(Box::new(description));
         }
         
         if let Some(subdepartment_id) = update.subdepartment_id {
@@ -322,7 +311,7 @@ impl Brand {
         let search_pattern = format!("%{}%", name);
         
         let mut stmt = conn.prepare(
-            "SELECT id, name, description, subdepartment_id, status, deleted_at, deleted_by, created_at, updated_at 
+            "SELECT id, name, subdepartment_id, status, deleted_at, deleted_by, created_at, updated_at 
             FROM brands 
             WHERE (status IS NULL OR status <> 'deleted') AND name LIKE ?
             ORDER BY name ASC"
@@ -332,13 +321,12 @@ impl Brand {
             Ok(Brand {
                 id: row.get(0)?,
                 name: row.get(1)?,
-                description: row.get(2)?,
-                subdepartment_id: row.get(3)?,
-                status: row.get(4)?,
-                deleted_at: row.get(5)?,
-                deleted_by: row.get(6)?,
-                created_at: row.get(7)?,
-                updated_at: row.get(8)?,
+                subdepartment_id: row.get(2)?,
+                status: row.get(3)?,
+                deleted_at: row.get(4)?,
+                deleted_by: row.get(5)?,
+                created_at: row.get(6)?,
+                updated_at: row.get(7)?,
             })
         })?;
         

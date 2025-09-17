@@ -146,7 +146,7 @@ impl SalesReport {
                 }
                 
                 // Generar Excel
-                match excel_generator::generate_excel("Reporte de Ventas", &headers, &data) {
+                match excel_generator::ExcelGenerator::generate_excel("Reporte de Ventas", &headers, &data) {
                     Ok(excel_data) => Ok(excel_data),
                     Err(e) => {
                         error!("Error al generar Excel: {}", e);
@@ -256,7 +256,7 @@ impl ProductReport {
                 }
                 
                 // Generar Excel
-                match excel_generator::generate_excel("Reporte de Productos", &headers, &data) {
+                match excel_generator::ExcelGenerator::generate_excel("Reporte de Productos", &headers, &data) {
                     Ok(excel_data) => Ok(excel_data),
                     Err(e) => {
                         error!("Error al generar Excel: {}", e);
@@ -387,7 +387,7 @@ impl InventoryReport {
                 }
                 
                 // Generar Excel
-                match excel_generator::generate_excel("Reporte de Inventario", &headers, &data) {
+                match excel_generator::ExcelGenerator::generate_excel("Reporte de Inventario", &headers, &data) {
                     Ok(excel_data) => Ok(excel_data),
                     Err(e) => {
                         error!("Error al generar Excel: {}", e);
@@ -489,7 +489,7 @@ impl CustomerReport {
                 }
                 
                 // Generar Excel
-                match excel_generator::generate_excel("Reporte de Clientes", &headers, &data) {
+                match excel_generator::ExcelGenerator::generate_excel("Reporte de Clientes", &headers, &data) {
                     Ok(excel_data) => Ok(excel_data),
                     Err(e) => {
                         error!("Error al generar Excel: {}", e);

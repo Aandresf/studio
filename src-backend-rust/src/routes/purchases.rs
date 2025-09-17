@@ -4,7 +4,8 @@ use actix_web::{web, HttpResponse, Responder};
 use serde::{Deserialize, Serialize};
 use crate::database_manager::DbPool;
 use crate::models::transaction::{Transaction, NewTransaction, NewTransactionItem};
-use crate::lib::authorize::{Authorize, Permission};
+use crate::lib::authorize::{Authorize, permissions};
+use crate::models::role_permission::{Permission};
 use nanoid::nanoid;
 use serde_json::json;
 use chrono::Utc;
@@ -48,6 +49,7 @@ pub fn init(cfg: &mut web::ServiceConfig) {
             .route("/{id}", web::get().to(get_purchase))
             .route("", web::post().to(create_purchase))
             .route("/{id}/annul", web::post().to(annul_purchase))
+            .route("/details", web::get().to(get_purchase_details))
     );
 }
 
@@ -58,7 +60,7 @@ async fn get_purchases(
     authorize: Authorize,
 ) -> impl Responder {
     // Verificar permisos
-    if !authorize.has_permission(&Permission::PurchasesView) {
+    if !authorize.has_permission(&permissions::PURCHASES_VIEW) {
         return HttpResponse::Forbidden().json(json!({
             "error": "No tiene permisos para ver compras"
         }));
@@ -111,7 +113,7 @@ async fn get_purchase(
     authorize: Authorize,
 ) -> impl Responder {
     // Verificar permisos
-    if !authorize.has_permission(&Permission::PurchasesView) {
+    if !authorize.has_permission(&permissions::PURCHASES_VIEW) {
         return HttpResponse::Forbidden().json(json!({
             "error": "No tiene permisos para ver compras"
         }));
@@ -149,7 +151,7 @@ async fn create_purchase(
     authorize: Authorize,
 ) -> impl Responder {
     // Verificar permisos
-    if !authorize.has_permission(&Permission::PurchasesCreate) {
+    if !authorize.has_permission(&permissions::PURCHASES_CREATE) {
         return HttpResponse::Forbidden().json(json!({
             "error": "No tiene permisos para crear compras"
         }));
@@ -222,7 +224,7 @@ async fn annul_purchase(
     authorize: Authorize,
 ) -> impl Responder {
     // Verificar permisos
-    if !authorize.has_permission(&Permission::PurchasesAnnul) {
+    if !authorize.has_permission(&permissions::PURCHASES_ANNUL) {
         return HttpResponse::Forbidden().json(json!({
             "error": "No tiene permisos para anular compras"
         }));
@@ -241,7 +243,7 @@ async fn annul_purchase(
             }
             
             // Anular la compra
-            match Transaction::annul(pool, purchase_id, authorize.user_id) {
+            match Transaction::annul(pool, purchase_id, authorize.user.id.clone()) {
                 Ok(annulled_purchase) => {
                     debug!("Compra anulada con éxito: {:?}", purchase_id);
                     HttpResponse::Ok().json(json!({
@@ -275,4 +277,44 @@ async fn annul_purchase(
             }))
         }
     }
+}
+
+async fn get_purchase_details(
+    query: web::Query<std::collections::HashMap<String, String>>
+) -> impl Responder {
+    // El frontend envía ?id=transaction_id
+    let transaction_id = match query.get("id") {
+        Some(id) => id,
+        None => {
+            return HttpResponse::BadRequest().json(json!({
+                "error": "Parámetro 'id' requerido"
+            }));
+        }
+    };
+    
+    // Simular detalles de compra
+    HttpResponse::Ok().json(json!({
+        "id": transaction_id,
+        "supplier": "Proveedor ABC",
+        "date": "2024-01-15",
+        "total": 1250.00,
+        "items": [
+            {
+                "variant_id": 1,
+                "product_name": "Producto A",
+                "sku": "SKU001",
+                "quantity": 10,
+                "unit_cost": 50.00,
+                "total": 500.00
+            },
+            {
+                "variant_id": 2,
+                "product_name": "Producto B",
+                "sku": "SKU002", 
+                "quantity": 15,
+                "unit_cost": 50.00,
+                "total": 750.00
+            }
+        ]
+    }))
 }

@@ -9,16 +9,12 @@ use std::collections::HashMap;
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Product {
     pub id: i64,
-    pub code: String,
     pub name: String,
+    pub base_sku: Option<String>,
     pub description: Option<String>,
-    pub brand_id: i64,
-    pub subdepartment_id: i64,
-    pub price: f64,
-    pub cost: f64,
-    pub min_stock: Option<i64>,
-    pub max_stock: Option<i64>,
-    pub reorder_point: Option<i64>,
+    pub department_id: Option<i64>,
+    pub subdepartment_id: Option<i64>,
+    pub brand_id: Option<i64>,
     pub status: String,
     pub deleted_at: Option<String>,
     pub deleted_by: Option<String>,
@@ -28,30 +24,22 @@ pub struct Product {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct NewProduct {
-    pub code: String,
     pub name: String,
+    pub base_sku: Option<String>,
     pub description: Option<String>,
-    pub brand_id: i64,
-    pub subdepartment_id: i64,
-    pub price: f64,
-    pub cost: f64,
-    pub min_stock: Option<i64>,
-    pub max_stock: Option<i64>,
-    pub reorder_point: Option<i64>,
+    pub department_id: Option<i64>,
+    pub subdepartment_id: Option<i64>,
+    pub brand_id: Option<i64>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UpdateProduct {
-    pub code: Option<String>,
     pub name: Option<String>,
+    pub base_sku: Option<String>,
     pub description: Option<String>,
-    pub brand_id: Option<i64>,
+    pub department_id: Option<i64>,
     pub subdepartment_id: Option<i64>,
-    pub price: Option<f64>,
-    pub cost: Option<f64>,
-    pub min_stock: Option<i64>,
-    pub max_stock: Option<i64>,
-    pub reorder_point: Option<i64>,
+    pub brand_id: Option<i64>,
     pub status: Option<String>,
 }
 
@@ -74,7 +62,7 @@ impl Product {
         })?;
         
         let mut stmt = conn.prepare(
-            "SELECT id, code, name, description, brand_id, subdepartment_id, price, cost, min_stock, max_stock, reorder_point, status, deleted_at, deleted_by, created_at, updated_at 
+            "SELECT id, name, base_sku, description, department_id, subdepartment_id, brand_id, status, deleted_at, deleted_by, created_at, updated_at 
             FROM products 
             WHERE id = ? AND (status IS NULL OR status <> 'deleted')"
         )?;
@@ -82,21 +70,17 @@ impl Product {
         let rows = stmt.query_map(params![id], |row| {
             Ok(Product {
                 id: row.get(0)?,
-                code: row.get(1)?,
-                name: row.get(2)?,
+                name: row.get(1)?,
+                base_sku: row.get(2)?,
                 description: row.get(3)?,
-                brand_id: row.get(4)?,
+                department_id: row.get(4)?,
                 subdepartment_id: row.get(5)?,
-                price: row.get(6)?,
-                cost: row.get(7)?,
-                min_stock: row.get(8)?,
-                max_stock: row.get(9)?,
-                reorder_point: row.get(10)?,
-                status: row.get(11)?,
-                deleted_at: row.get(12)?,
-                deleted_by: row.get(13)?,
-                created_at: row.get(14)?,
-                updated_at: row.get(15)?,
+                brand_id: row.get(6)?,
+                status: row.get(7)?,
+                deleted_at: row.get(8)?,
+                deleted_by: row.get(9)?,
+                created_at: row.get(10)?,
+                updated_at: row.get(11)?,
             })
         })?;
         
@@ -113,36 +97,32 @@ impl Product {
     }
     
     // Buscar un producto por código
-    pub fn find_by_code(pool: &DbPool, code: &str) -> SqliteResult<Option<Product>> {
+    pub fn find_by_code(pool: &DbPool, base_sku: &str) -> SqliteResult<Option<Product>> {
         let conn = pool.get().map_err(|e| {
             error!("Error al obtener conexión del pool: {}", e);
             SqliteError::QueryReturnedNoRows
         })?;
         
         let mut stmt = conn.prepare(
-            "SELECT id, code, name, description, brand_id, subdepartment_id, price, cost, min_stock, max_stock, reorder_point, status, deleted_at, deleted_by, created_at, updated_at 
+            "SELECT id, name, base_sku, description, department_id, subdepartment_id, brand_id, status, deleted_at, deleted_by, created_at, updated_at 
             FROM products 
-            WHERE code = ? AND (status IS NULL OR status <> 'deleted')"
+            WHERE base_sku = ? AND (status IS NULL OR status <> 'deleted')"
         )?;
         
-        let rows = stmt.query_map(params![code], |row| {
+        let rows = stmt.query_map(params![base_sku], |row| {
             Ok(Product {
                 id: row.get(0)?,
-                code: row.get(1)?,
-                name: row.get(2)?,
+                name: row.get(1)?,
+                base_sku: row.get(2)?,
                 description: row.get(3)?,
-                brand_id: row.get(4)?,
+                department_id: row.get(4)?,
                 subdepartment_id: row.get(5)?,
-                price: row.get(6)?,
-                cost: row.get(7)?,
-                min_stock: row.get(8)?,
-                max_stock: row.get(9)?,
-                reorder_point: row.get(10)?,
-                status: row.get(11)?,
-                deleted_at: row.get(12)?,
-                deleted_by: row.get(13)?,
-                created_at: row.get(14)?,
-                updated_at: row.get(15)?,
+                brand_id: row.get(6)?,
+                status: row.get(7)?,
+                deleted_at: row.get(8)?,
+                deleted_by: row.get(9)?,
+                created_at: row.get(10)?,
+                updated_at: row.get(11)?,
             })
         })?;
         
@@ -166,7 +146,7 @@ impl Product {
         })?;
         
         let mut query = String::from(
-            "SELECT id, code, name, description, brand_id, subdepartment_id, price, cost, min_stock, max_stock, reorder_point, status, deleted_at, deleted_by, created_at, updated_at 
+            "SELECT id, name, base_sku, description, department_id, subdepartment_id, brand_id, status, deleted_at, deleted_by, created_at, updated_at 
             FROM products 
             WHERE (status IS NULL OR status <> 'deleted')
             ORDER BY name ASC"
@@ -185,21 +165,17 @@ impl Product {
         let rows = stmt.query_map(params![], |row| {
             Ok(Product {
                 id: row.get(0)?,
-                code: row.get(1)?,
-                name: row.get(2)?,
+                name: row.get(1)?,
+                base_sku: row.get(2)?,
                 description: row.get(3)?,
-                brand_id: row.get(4)?,
+                department_id: row.get(4)?,
                 subdepartment_id: row.get(5)?,
-                price: row.get(6)?,
-                cost: row.get(7)?,
-                min_stock: row.get(8)?,
-                max_stock: row.get(9)?,
-                reorder_point: row.get(10)?,
-                status: row.get(11)?,
-                deleted_at: row.get(12)?,
-                deleted_by: row.get(13)?,
-                created_at: row.get(14)?,
-                updated_at: row.get(15)?,
+                brand_id: row.get(6)?,
+                status: row.get(7)?,
+                deleted_at: row.get(8)?,
+                deleted_by: row.get(9)?,
+                created_at: row.get(10)?,
+                updated_at: row.get(11)?,
             })
         })?;
         
@@ -235,7 +211,7 @@ impl Product {
         })?;
         
         let mut stmt = conn.prepare(
-            "SELECT id, code, name, description, brand_id, subdepartment_id, price, cost, min_stock, max_stock, reorder_point, status, deleted_at, deleted_by, created_at, updated_at 
+            "SELECT id, name, base_sku, description, department_id, subdepartment_id, brand_id, status, deleted_at, deleted_by, created_at, updated_at 
             FROM products 
             WHERE (status IS NULL OR status <> 'deleted') AND subdepartment_id = ?
             ORDER BY name ASC"
@@ -244,21 +220,17 @@ impl Product {
         let rows = stmt.query_map(params![subdepartment_id], |row| {
             Ok(Product {
                 id: row.get(0)?,
-                code: row.get(1)?,
-                name: row.get(2)?,
+                name: row.get(1)?,
+                base_sku: row.get(2)?,
                 description: row.get(3)?,
-                brand_id: row.get(4)?,
+                department_id: row.get(4)?,
                 subdepartment_id: row.get(5)?,
-                price: row.get(6)?,
-                cost: row.get(7)?,
-                min_stock: row.get(8)?,
-                max_stock: row.get(9)?,
-                reorder_point: row.get(10)?,
-                status: row.get(11)?,
-                deleted_at: row.get(12)?,
-                deleted_by: row.get(13)?,
-                created_at: row.get(14)?,
-                updated_at: row.get(15)?,
+                brand_id: row.get(6)?,
+                status: row.get(7)?,
+                deleted_at: row.get(8)?,
+                deleted_by: row.get(9)?,
+                created_at: row.get(10)?,
+                updated_at: row.get(11)?,
             })
         })?;
         
@@ -278,7 +250,7 @@ impl Product {
         })?;
         
         let mut stmt = conn.prepare(
-            "SELECT id, code, name, description, brand_id, subdepartment_id, price, cost, min_stock, max_stock, reorder_point, status, deleted_at, deleted_by, created_at, updated_at 
+            "SELECT id, name, base_sku, description, department_id, subdepartment_id, brand_id, status, deleted_at, deleted_by, created_at, updated_at 
             FROM products 
             WHERE (status IS NULL OR status <> 'deleted') AND brand_id = ?
             ORDER BY name ASC"
@@ -287,21 +259,17 @@ impl Product {
         let rows = stmt.query_map(params![brand_id], |row| {
             Ok(Product {
                 id: row.get(0)?,
-                code: row.get(1)?,
-                name: row.get(2)?,
+                name: row.get(1)?,
+                base_sku: row.get(2)?,
                 description: row.get(3)?,
-                brand_id: row.get(4)?,
+                department_id: row.get(4)?,
                 subdepartment_id: row.get(5)?,
-                price: row.get(6)?,
-                cost: row.get(7)?,
-                min_stock: row.get(8)?,
-                max_stock: row.get(9)?,
-                reorder_point: row.get(10)?,
-                status: row.get(11)?,
-                deleted_at: row.get(12)?,
-                deleted_by: row.get(13)?,
-                created_at: row.get(14)?,
-                updated_at: row.get(15)?,
+                brand_id: row.get(6)?,
+                status: row.get(7)?,
+                deleted_at: row.get(8)?,
+                deleted_by: row.get(9)?,
+                created_at: row.get(10)?,
+                updated_at: row.get(11)?,
             })
         })?;
         
@@ -320,54 +288,69 @@ impl Product {
             SqliteError::QueryReturnedNoRows
         })?;
         
-        // Verificar si ya existe un producto con el mismo código
-        let mut stmt = conn.prepare("SELECT COUNT(*) FROM products WHERE code = ?")?;
-        let count: i64 = stmt.query_row(params![product.code], |row| row.get(0))?;
-        
-        if count > 0 {
-            return Err(SqliteError::SqliteFailure(
-                rusqlite::ffi::Error::new(19), // SQLITE_CONSTRAINT
-                Some("Ya existe un producto con ese código".to_string()),
-            ));
+        // Verificar si ya existe un producto con el mismo base_sku (si se proporciona)
+        if let Some(ref base_sku) = product.base_sku {
+            let mut stmt = conn.prepare("SELECT COUNT(*) FROM products WHERE base_sku = ?")?;
+            let count: i64 = stmt.query_row(params![base_sku], |row| row.get(0))?;
+            
+            if count > 0 {
+                return Err(SqliteError::SqliteFailure(
+                    rusqlite::ffi::Error::new(19), // SQLITE_CONSTRAINT
+                    Some("Ya existe un producto con ese base_sku".to_string()),
+                ));
+            }
         }
         
-        // Verificar si existe la marca
-        let mut stmt = conn.prepare("SELECT COUNT(*) FROM brands WHERE id = ? AND (status IS NULL OR status <> 'deleted')")?;
-        let count: i64 = stmt.query_row(params![product.brand_id], |row| row.get(0))?;
-        
-        if count == 0 {
-            return Err(SqliteError::SqliteFailure(
-                rusqlite::ffi::Error::new(19), // SQLITE_CONSTRAINT
-                Some("La marca especificada no existe".to_string()),
-            ));
+        // Verificar si existe la marca (si se proporciona)
+        if let Some(brand_id) = product.brand_id {
+            let mut stmt = conn.prepare("SELECT COUNT(*) FROM brands WHERE id = ? AND (status IS NULL OR status <> 'deleted')")?;
+            let count: i64 = stmt.query_row(params![brand_id], |row| row.get(0))?;
+            
+            if count == 0 {
+                return Err(SqliteError::SqliteFailure(
+                    rusqlite::ffi::Error::new(19), // SQLITE_CONSTRAINT
+                    Some("La marca especificada no existe".to_string()),
+                ));
+            }
         }
         
-        // Verificar si existe el subdepartamento
-        let mut stmt = conn.prepare("SELECT COUNT(*) FROM subdepartments WHERE id = ? AND (status IS NULL OR status <> 'deleted')")?;
-        let count: i64 = stmt.query_row(params![product.subdepartment_id], |row| row.get(0))?;
+        // Verificar si existe el subdepartamento (si se proporciona)
+        if let Some(subdepartment_id) = product.subdepartment_id {
+            let mut stmt = conn.prepare("SELECT COUNT(*) FROM subdepartments WHERE id = ? AND (status IS NULL OR status <> 'deleted')")?;
+            let count: i64 = stmt.query_row(params![subdepartment_id], |row| row.get(0))?;
+            
+            if count == 0 {
+                return Err(SqliteError::SqliteFailure(
+                    rusqlite::ffi::Error::new(19), // SQLITE_CONSTRAINT
+                    Some("El subdepartamento especificado no existe".to_string()),
+                ));
+            }
+        }
         
-        if count == 0 {
-            return Err(SqliteError::SqliteFailure(
-                rusqlite::ffi::Error::new(19), // SQLITE_CONSTRAINT
-                Some("El subdepartamento especificado no existe".to_string()),
-            ));
+        // Verificar si existe el departamento (si se proporciona)
+        if let Some(department_id) = product.department_id {
+            let mut stmt = conn.prepare("SELECT COUNT(*) FROM departments WHERE id = ? AND (status IS NULL OR status <> 'deleted')")?;
+            let count: i64 = stmt.query_row(params![department_id], |row| row.get(0))?;
+            
+            if count == 0 {
+                return Err(SqliteError::SqliteFailure(
+                    rusqlite::ffi::Error::new(19), // SQLITE_CONSTRAINT
+                    Some("El departamento especificado no existe".to_string()),
+                ));
+            }
         }
         
         // Insertar el nuevo producto
         conn.execute(
-            "INSERT INTO products (code, name, description, brand_id, subdepartment_id, price, cost, min_stock, max_stock, reorder_point, status, created_at, updated_at) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Activo', strftime('%Y-%m-%d %H:%M:%S', 'now'), strftime('%Y-%m-%d %H:%M:%S', 'now'))",
+            "INSERT INTO products (name, base_sku, description, department_id, subdepartment_id, brand_id, status, created_at, updated_at) 
+            VALUES (?, ?, ?, ?, ?, ?, 'Activo', strftime('%Y-%m-%d %H:%M:%S', 'now'), strftime('%Y-%m-%d %H:%M:%S', 'now'))",
             params![
-                product.code, 
                 product.name, 
+                product.base_sku, 
                 product.description, 
-                product.brand_id, 
+                product.department_id, 
                 product.subdepartment_id, 
-                product.price, 
-                product.cost, 
-                product.min_stock, 
-                product.max_stock, 
-                product.reorder_point
+                product.brand_id
             ],
         )?;
         
@@ -397,15 +380,15 @@ impl Product {
             })?;
         
         // Verificar unicidad del código si se está actualizando
-        if let Some(code) = &update.code {
-            if code != &product.code {
-                let mut stmt = conn.prepare("SELECT COUNT(*) FROM products WHERE code = ? AND id <> ?")?;
-                let count: i64 = stmt.query_row(params![code, id], |row| row.get(0))?;
+        if let Some(base_sku) = &update.base_sku {
+            if Some(base_sku) != product.base_sku.as_ref() {
+                let mut stmt = conn.prepare("SELECT COUNT(*) FROM products WHERE base_sku = ? AND id <> ?")?;
+                let count: i64 = stmt.query_row(params![base_sku, id], |row| row.get(0))?;
                 
                 if count > 0 {
                     return Err(SqliteError::SqliteFailure(
                         rusqlite::ffi::Error::new(19), // SQLITE_CONSTRAINT
-                        Some("Ya existe un producto con ese código".to_string()),
+                        Some("Ya existe un producto con ese SKU base".to_string()),
                     ));
                 }
             }
@@ -441,9 +424,9 @@ impl Product {
         let mut query = String::from("UPDATE products SET ");
         let mut params_values: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
         
-        if let Some(code) = update.code {
-            query.push_str("code = ?, ");
-            params_values.push(Box::new(code));
+        if let Some(base_sku) = update.base_sku {
+            query.push_str("base_sku = ?, ");
+            params_values.push(Box::new(base_sku));
         }
         
         if let Some(name) = update.name {
@@ -456,9 +439,9 @@ impl Product {
             params_values.push(Box::new(description));
         }
         
-        if let Some(brand_id) = update.brand_id {
-            query.push_str("brand_id = ?, ");
-            params_values.push(Box::new(brand_id));
+        if let Some(department_id) = update.department_id {
+            query.push_str("department_id = ?, ");
+            params_values.push(Box::new(department_id));
         }
         
         if let Some(subdepartment_id) = update.subdepartment_id {
@@ -466,29 +449,9 @@ impl Product {
             params_values.push(Box::new(subdepartment_id));
         }
         
-        if let Some(price) = update.price {
-            query.push_str("price = ?, ");
-            params_values.push(Box::new(price));
-        }
-        
-        if let Some(cost) = update.cost {
-            query.push_str("cost = ?, ");
-            params_values.push(Box::new(cost));
-        }
-        
-        if let Some(min_stock) = update.min_stock {
-            query.push_str("min_stock = ?, ");
-            params_values.push(Box::new(min_stock));
-        }
-        
-        if let Some(max_stock) = update.max_stock {
-            query.push_str("max_stock = ?, ");
-            params_values.push(Box::new(max_stock));
-        }
-        
-        if let Some(reorder_point) = update.reorder_point {
-            query.push_str("reorder_point = ?, ");
-            params_values.push(Box::new(reorder_point));
+        if let Some(brand_id) = update.brand_id {
+            query.push_str("brand_id = ?, ");
+            params_values.push(Box::new(brand_id));
         }
         
         if let Some(status) = update.status {
@@ -558,7 +521,7 @@ impl Product {
         let search_pattern = format!("%{}%", name);
         
         let mut stmt = conn.prepare(
-            "SELECT id, code, name, description, brand_id, subdepartment_id, price, cost, min_stock, max_stock, reorder_point, status, deleted_at, deleted_by, created_at, updated_at 
+            "SELECT id, name, base_sku, description, department_id, subdepartment_id, brand_id, status, deleted_at, deleted_by, created_at, updated_at 
             FROM products 
             WHERE (status IS NULL OR status <> 'deleted') AND name LIKE ?
             ORDER BY name ASC"
@@ -567,21 +530,17 @@ impl Product {
         let rows = stmt.query_map(params![search_pattern], |row| {
             Ok(Product {
                 id: row.get(0)?,
-                code: row.get(1)?,
-                name: row.get(2)?,
+                name: row.get(1)?,
+                base_sku: row.get(2)?,
                 description: row.get(3)?,
-                brand_id: row.get(4)?,
+                department_id: row.get(4)?,
                 subdepartment_id: row.get(5)?,
-                price: row.get(6)?,
-                cost: row.get(7)?,
-                min_stock: row.get(8)?,
-                max_stock: row.get(9)?,
-                reorder_point: row.get(10)?,
-                status: row.get(11)?,
-                deleted_at: row.get(12)?,
-                deleted_by: row.get(13)?,
-                created_at: row.get(14)?,
-                updated_at: row.get(15)?,
+                brand_id: row.get(6)?,
+                status: row.get(7)?,
+                deleted_at: row.get(8)?,
+                deleted_by: row.get(9)?,
+                created_at: row.get(10)?,
+                updated_at: row.get(11)?,
             })
         })?;
         
@@ -621,7 +580,7 @@ impl Product {
         let department_name: String = stmt.query_row(params![department_id], |row| row.get(0))?;
         
         // Obtener total de stock sumando todas las variantes
-        let mut stmt = conn.prepare("SELECT COALESCE(SUM(stock), 0) FROM product_variants WHERE product_id = ? AND (status IS NULL OR status <> 'deleted')")?;
+        let mut stmt = conn.prepare("SELECT COALESCE(SUM(current_stock), 0) FROM product_variants WHERE product_id = ? AND (status IS NULL OR status <> 'deleted')")?;
         let total_stock: i64 = stmt.query_row(params![id], |row| row.get(0))?;
         
         // Obtener las variantes del producto
@@ -644,9 +603,9 @@ pub struct ProductVariant {
     pub id: i64,
     pub product_id: i64,
     pub sku: String,
-    pub price: Option<f64>,
-    pub cost: Option<f64>,
-    pub stock: i64,
+    pub sale_price: f64,        // Coincide con schema: sale_price REAL NOT NULL DEFAULT 0
+    pub cost_price: f64,        // Coincide con schema: cost_price REAL NOT NULL DEFAULT 0
+    pub current_stock: f64,     // Coincide con schema: current_stock REAL NOT NULL DEFAULT 0
     pub status: String,
     pub deleted_at: Option<String>,
     pub deleted_by: Option<String>,
@@ -658,18 +617,18 @@ pub struct ProductVariant {
 pub struct NewProductVariant {
     pub product_id: i64,
     pub sku: String,
-    pub price: Option<f64>,
-    pub cost: Option<f64>,
-    pub stock: i64,
+    pub sale_price: Option<f64>,     // Opcional en creación, default 0 en DB
+    pub cost_price: Option<f64>,     // Opcional en creación, default 0 en DB
+    pub current_stock: Option<f64>,  // Opcional en creación, default 0 en DB
     pub attribute_values: Vec<i64>, // IDs de los valores de atributos para esta variante
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UpdateProductVariant {
     pub sku: Option<String>,
-    pub price: Option<f64>,
-    pub cost: Option<f64>,
-    pub stock: Option<i64>,
+    pub sale_price: Option<f64>,
+    pub cost_price: Option<f64>,
+    pub current_stock: Option<f64>,
     pub status: Option<String>,
     pub attribute_values: Option<Vec<i64>>, // IDs de los valores de atributos para actualizar
 }
@@ -696,7 +655,7 @@ impl ProductVariant {
         })?;
         
         let mut stmt = conn.prepare(
-            "SELECT pv.id, pv.product_id, pv.sku, pv.price, pv.cost, pv.stock, pv.status, pv.deleted_at, pv.deleted_by, pv.created_at, pv.updated_at 
+            "SELECT pv.id, pv.product_id, pv.sku, pv.sale_price, pv.cost_price, pv.current_stock, pv.status, pv.deleted_at, pv.deleted_by, pv.created_at, pv.updated_at 
             FROM product_variants pv 
             JOIN products p ON pv.product_id = p.id 
             WHERE (pv.status IS NULL OR pv.status <> 'deleted') 
@@ -708,9 +667,9 @@ impl ProductVariant {
                 id: row.get(0)?,
                 product_id: row.get(1)?,
                 sku: row.get(2)?,
-                price: row.get(3)?,
-                cost: row.get(4)?,
-                stock: row.get(5)?,
+                sale_price: row.get(3)?,
+                cost_price: row.get(4)?,
+                current_stock: row.get(5)?,
                 status: row.get(6)?,
                 deleted_at: row.get(7)?,
                 deleted_by: row.get(8)?,
@@ -735,7 +694,7 @@ impl ProductVariant {
         })?;
         
         let mut stmt = conn.prepare(
-            "SELECT id, product_id, sku, price, cost, stock, status, deleted_at, deleted_by, created_at, updated_at 
+            "SELECT id, product_id, sku, sale_price, cost_price, current_stock, status, deleted_at, deleted_by, created_at, updated_at 
             FROM product_variants 
             WHERE id = ? AND (status IS NULL OR status <> 'deleted')"
         )?;
@@ -745,9 +704,9 @@ impl ProductVariant {
                 id: row.get(0)?,
                 product_id: row.get(1)?,
                 sku: row.get(2)?,
-                price: row.get(3)?,
-                cost: row.get(4)?,
-                stock: row.get(5)?,
+                sale_price: row.get(3)?,
+                cost_price: row.get(4)?,
+                current_stock: row.get(5)?,
                 status: row.get(6)?,
                 deleted_at: row.get(7)?,
                 deleted_by: row.get(8)?,
@@ -776,7 +735,7 @@ impl ProductVariant {
         })?;
         
         let mut stmt = conn.prepare(
-            "SELECT id, product_id, sku, price, cost, stock, status, deleted_at, deleted_by, created_at, updated_at 
+            "SELECT id, product_id, sku, sale_price, cost_price, current_stock, status, deleted_at, deleted_by, created_at, updated_at 
             FROM product_variants 
             WHERE sku = ? AND (status IS NULL OR status <> 'deleted')"
         )?;
@@ -786,9 +745,9 @@ impl ProductVariant {
                 id: row.get(0)?,
                 product_id: row.get(1)?,
                 sku: row.get(2)?,
-                price: row.get(3)?,
-                cost: row.get(4)?,
-                stock: row.get(5)?,
+                sale_price: row.get(3)?,
+                cost_price: row.get(4)?,
+                current_stock: row.get(5)?,
                 status: row.get(6)?,
                 deleted_at: row.get(7)?,
                 deleted_by: row.get(8)?,
@@ -817,7 +776,7 @@ impl ProductVariant {
         })?;
         
         let mut stmt = conn.prepare(
-            "SELECT id, product_id, sku, price, cost, stock, status, deleted_at, deleted_by, created_at, updated_at 
+            "SELECT id, product_id, sku, sale_price, cost_price, current_stock, status, deleted_at, deleted_by, created_at, updated_at 
             FROM product_variants 
             WHERE product_id = ? AND (status IS NULL OR status <> 'deleted')
             ORDER BY sku ASC"
@@ -828,9 +787,9 @@ impl ProductVariant {
                 id: row.get(0)?,
                 product_id: row.get(1)?,
                 sku: row.get(2)?,
-                price: row.get(3)?,
-                cost: row.get(4)?,
-                stock: row.get(5)?,
+                sale_price: row.get(3)?,
+                cost_price: row.get(4)?,
+                current_stock: row.get(5)?,
                 status: row.get(6)?,
                 deleted_at: row.get(7)?,
                 deleted_by: row.get(8)?,
@@ -863,7 +822,7 @@ impl ProductVariant {
             // Para cada variante, obtener sus atributos
             let mut stmt = conn.prepare(
                 "SELECT a.name, av.value 
-                FROM product_variant_attributes pva
+                FROM variant_attribute_values pva
                 JOIN attribute_values av ON pva.attribute_value_id = av.id
                 JOIN attributes a ON av.attribute_id = a.id
                 WHERE pva.product_variant_id = ?"
@@ -890,31 +849,35 @@ impl ProductVariant {
     
     // Crear una nueva variante de producto
     pub fn create(pool: &DbPool, variant: NewProductVariant) -> SqliteResult<ProductVariant> {
-        let conn = pool.get().map_err(|e| {
+        let mut conn = pool.get().map_err(|e| {
             error!("Error al obtener conexión del pool: {}", e);
             SqliteError::QueryReturnedNoRows
         })?;
         
         // Verificar si el producto existe
-        let mut stmt = conn.prepare("SELECT COUNT(*) FROM products WHERE id = ? AND (status IS NULL OR status <> 'deleted')")?;
-        let count: i64 = stmt.query_row(params![variant.product_id], |row| row.get(0))?;
-        
-        if count == 0 {
-            return Err(SqliteError::SqliteFailure(
-                rusqlite::ffi::Error::new(19), // SQLITE_CONSTRAINT
-                Some("El producto especificado no existe".to_string()),
-            ));
+        {
+            let mut stmt = conn.prepare("SELECT COUNT(*) FROM products WHERE id = ? AND (status IS NULL OR status <> 'deleted')")?;
+            let count: i64 = stmt.query_row(params![variant.product_id], |row| row.get(0))?;
+            
+            if count == 0 {
+                return Err(SqliteError::SqliteFailure(
+                    rusqlite::ffi::Error::new(19), // SQLITE_CONSTRAINT
+                    Some("El producto especificado no existe".to_string()),
+                ));
+            }
         }
         
         // Verificar si ya existe una variante con el mismo SKU
-        let mut stmt = conn.prepare("SELECT COUNT(*) FROM product_variants WHERE sku = ?")?;
-        let count: i64 = stmt.query_row(params![variant.sku], |row| row.get(0))?;
-        
-        if count > 0 {
-            return Err(SqliteError::SqliteFailure(
-                rusqlite::ffi::Error::new(19), // SQLITE_CONSTRAINT
-                Some("Ya existe una variante con ese SKU".to_string()),
-            ));
+        {
+            let mut stmt = conn.prepare("SELECT COUNT(*) FROM product_variants WHERE sku = ?")?;
+            let count: i64 = stmt.query_row(params![variant.sku], |row| row.get(0))?;
+            
+            if count > 0 {
+                return Err(SqliteError::SqliteFailure(
+                    rusqlite::ffi::Error::new(19), // SQLITE_CONSTRAINT
+                    Some("Ya existe una variante con ese SKU".to_string()),
+                ));
+            }
         }
         
         // Verificar que los valores de atributos existan
@@ -935,14 +898,14 @@ impl ProductVariant {
         
         // Insertar la nueva variante de producto
         tx.execute(
-            "INSERT INTO product_variants (product_id, sku, price, cost, stock, status, created_at, updated_at) 
+            "INSERT INTO product_variants (product_id, sku, sale_price, cost_price, current_stock, status, created_at, updated_at) 
             VALUES (?, ?, ?, ?, ?, 'Activo', strftime('%Y-%m-%d %H:%M:%S', 'now'), strftime('%Y-%m-%d %H:%M:%S', 'now'))",
             params![
                 variant.product_id, 
                 variant.sku, 
-                variant.price, 
-                variant.cost, 
-                variant.stock
+                variant.sale_price.unwrap_or(0.0), 
+                variant.cost_price.unwrap_or(0.0), 
+                variant.current_stock.unwrap_or(0.0)
             ],
         )?;
         
@@ -951,7 +914,7 @@ impl ProductVariant {
         // Insertar relaciones con valores de atributos
         for attribute_value_id in variant.attribute_values {
             tx.execute(
-                "INSERT INTO product_variant_attributes (product_variant_id, attribute_value_id) VALUES (?, ?)",
+                "INSERT INTO variant_attribute_values (variant_id, attribute_value_id) VALUES (?, ?)",
                 params![variant_id, attribute_value_id],
             )?;
         }
@@ -971,7 +934,7 @@ impl ProductVariant {
     
     // Actualizar una variante de producto existente
     pub fn update(pool: &DbPool, id: i64, update: UpdateProductVariant) -> SqliteResult<ProductVariant> {
-        let conn = pool.get().map_err(|e| {
+        let mut conn = pool.get().map_err(|e| {
             error!("Error al obtener conexión del pool: {}", e);
             SqliteError::QueryReturnedNoRows
         })?;
@@ -1025,19 +988,19 @@ impl ProductVariant {
             params_values.push(Box::new(sku));
         }
         
-        if let Some(price) = update.price {
-            query.push_str("price = ?, ");
-            params_values.push(Box::new(price));
+        if let Some(sale_price) = update.sale_price {
+            query.push_str("sale_price = ?, ");
+            params_values.push(Box::new(sale_price));
         }
         
-        if let Some(cost) = update.cost {
-            query.push_str("cost = ?, ");
-            params_values.push(Box::new(cost));
+        if let Some(cost_price) = update.cost_price {
+            query.push_str("cost_price = ?, ");
+            params_values.push(Box::new(cost_price));
         }
         
-        if let Some(stock) = update.stock {
-            query.push_str("stock = ?, ");
-            params_values.push(Box::new(stock));
+        if let Some(current_stock) = update.current_stock {
+            query.push_str("current_stock = ?, ");
+            params_values.push(Box::new(current_stock));
         }
         
         if let Some(status) = update.status {
@@ -1059,14 +1022,14 @@ impl ProductVariant {
         if let Some(attribute_values) = update.attribute_values {
             // Eliminar relaciones existentes
             tx.execute(
-                "DELETE FROM product_variant_attributes WHERE product_variant_id = ?",
+                "DELETE FROM variant_attribute_values WHERE variant_id = ?",
                 params![id],
             )?;
             
             // Insertar nuevas relaciones
             for attribute_value_id in attribute_values {
                 tx.execute(
-                    "INSERT INTO product_variant_attributes (product_variant_id, attribute_value_id) VALUES (?, ?)",
+                    "INSERT INTO variant_attribute_values (variant_id, attribute_value_id) VALUES (?, ?)",
                     params![id, attribute_value_id],
                 )?;
             }
@@ -1085,7 +1048,7 @@ impl ProductVariant {
     
     // Eliminar una variante de producto (borrado lógico)
     pub fn delete(pool: &DbPool, id: i64, deleted_by: Option<String>) -> SqliteResult<()> {
-        let conn = pool.get().map_err(|e| {
+        let mut conn = pool.get().map_err(|e| {
             error!("Error al obtener conexión del pool: {}", e);
             SqliteError::QueryReturnedNoRows
         })?;
@@ -1098,14 +1061,16 @@ impl ProductVariant {
             })?;
         
         // Verificar si tiene movimientos de inventario asociados
-        let mut stmt = conn.prepare("SELECT COUNT(*) FROM inventory_movements WHERE product_variant_id = ?")?;
-        let count: i64 = stmt.query_row(params![id], |row| row.get(0))?;
-        
-        if count > 0 {
-            return Err(SqliteError::SqliteFailure(
-                rusqlite::ffi::Error::new(19), // SQLITE_CONSTRAINT
-                Some("No se puede eliminar la variante porque tiene movimientos de inventario asociados".to_string()),
-            ));
+        {
+            let mut stmt = conn.prepare("SELECT COUNT(*) FROM inventory_movements WHERE product_variant_id = ?")?;
+            let count: i64 = stmt.query_row(params![id], |row| row.get(0))?;
+            
+            if count > 0 {
+                return Err(SqliteError::SqliteFailure(
+                    rusqlite::ffi::Error::new(19), // SQLITE_CONSTRAINT
+                    Some("No se puede eliminar la variante porque tiene movimientos de inventario asociados".to_string()),
+                ));
+            }
         }
         
         // Iniciar transacción
@@ -1113,7 +1078,7 @@ impl ProductVariant {
         
         // Eliminar relaciones con valores de atributos
         tx.execute(
-            "DELETE FROM product_variant_attributes WHERE product_variant_id = ?",
+            "DELETE FROM variant_attribute_values WHERE variant_id = ?",
             params![id],
         )?;
         
@@ -1145,7 +1110,7 @@ impl ProductVariant {
         
         // Actualizar el stock
         conn.execute(
-            "UPDATE product_variants SET stock = stock + ?, updated_at = strftime('%Y-%m-%d %H:%M:%S', 'now') WHERE id = ?",
+            "UPDATE product_variants SET current_stock = current_stock + ?, updated_at = strftime('%Y-%m-%d %H:%M:%S', 'now') WHERE id = ?",
             params![quantity, id],
         )?;
         
@@ -1166,10 +1131,10 @@ impl ProductVariant {
         
         let mut stmt = conn.prepare(
             "SELECT a.name, av.value 
-            FROM product_variant_attributes pva
+            FROM variant_attribute_values pva
             JOIN attribute_values av ON pva.attribute_value_id = av.id
             JOIN attributes a ON av.attribute_id = a.id
-            WHERE pva.product_variant_id = ?"
+            WHERE pva.variant_id = ?"
         )?;
         
         let rows = stmt.query_map(params![id], |row| {

@@ -3,8 +3,9 @@
 use actix_web::{web, HttpResponse, Responder, http::StatusCode};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use std::sync::Arc;
 use log::{debug, error};
-use crate::database_manager::DbPool;
+use crate::database_manager::DatabaseManager;
 use crate::models::brand::{Brand, NewBrand, UpdateBrand};
 
 // Configuración de rutas para marcas
@@ -23,19 +24,19 @@ pub fn init(cfg: &mut web::ServiceConfig) {
 
 // Controladores
 
-async fn get_brands(pool: web::Data<DbPool>) -> impl Responder {
-    let conn_result = pool.get();
-    if let Err(e) = conn_result {
-        error!("Error al obtener conexión del pool: {}", e);
-        return HttpResponse::InternalServerError().json(json!({
-            "error": "Error de conexión a la base de datos"
-        }));
-    }
-    
+async fn get_brands(db_manager: web::Data<Arc<DatabaseManager>>) -> impl Responder {
+    let pool = match db_manager.get_pool() {
+        Ok(pool) => pool,
+        Err(e) => {
+            error!("Error al obtener pool de conexiones: {}", e);
+            return HttpResponse::InternalServerError().json(json!({
+                "error": "Error de conexión a base de datos"
+            }));
+        }
+    };
+
     match Brand::find_all(&pool) {
-        Ok(brands) => {
-            HttpResponse::Ok().json(brands)
-        },
+        Ok(brands) => HttpResponse::Ok().json(brands),
         Err(e) => {
             error!("Error al obtener marcas: {}", e);
             HttpResponse::InternalServerError().json(json!({
@@ -46,8 +47,18 @@ async fn get_brands(pool: web::Data<DbPool>) -> impl Responder {
     }
 }
 
-async fn get_brand(path: web::Path<i64>, pool: web::Data<DbPool>) -> impl Responder {
+async fn get_brand(path: web::Path<i64>, pool: web::Data<Arc<DatabaseManager>>) -> impl Responder {
     let brand_id = path.into_inner();
+    
+    let pool = match pool.get_pool() {
+        Ok(pool) => pool,
+        Err(e) => {
+            error!("Error al obtener pool de conexiones: {}", e);
+            return HttpResponse::InternalServerError().json(json!({
+                "error": "Error de conexión a base de datos"
+            }));
+        }
+    };
     
     match Brand::find_by_id(&pool, brand_id) {
         Ok(brand_opt) => {
@@ -68,7 +79,17 @@ async fn get_brand(path: web::Path<i64>, pool: web::Data<DbPool>) -> impl Respon
     }
 }
 
-async fn create_brand(brand: web::Json<NewBrand>, pool: web::Data<DbPool>) -> impl Responder {
+async fn create_brand(brand: web::Json<NewBrand>, pool: web::Data<Arc<DatabaseManager>>) -> impl Responder {
+    let pool = match pool.get_pool() {
+        Ok(pool) => pool,
+        Err(e) => {
+            error!("Error al obtener pool de conexiones: {}", e);
+            return HttpResponse::InternalServerError().json(json!({
+                "error": "Error de conexión a base de datos"
+            }));
+        }
+    };
+    
     match Brand::create(&pool, brand.into_inner()) {
         Ok(created_brand) => {
             HttpResponse::Created().json(created_brand)
@@ -96,8 +117,18 @@ async fn create_brand(brand: web::Json<NewBrand>, pool: web::Data<DbPool>) -> im
     }
 }
 
-async fn update_brand(path: web::Path<i64>, brand: web::Json<UpdateBrand>, pool: web::Data<DbPool>) -> impl Responder {
+async fn update_brand(path: web::Path<i64>, brand: web::Json<UpdateBrand>, pool: web::Data<Arc<DatabaseManager>>) -> impl Responder {
     let brand_id = path.into_inner();
+    
+    let pool = match pool.get_pool() {
+        Ok(pool) => pool,
+        Err(e) => {
+            error!("Error al obtener pool de conexiones: {}", e);
+            return HttpResponse::InternalServerError().json(json!({
+                "error": "Error de conexión a base de datos"
+            }));
+        }
+    };
     
     match Brand::update(&pool, brand_id, brand.into_inner()) {
         Ok(updated_brand) => {
@@ -133,8 +164,18 @@ async fn update_brand(path: web::Path<i64>, brand: web::Json<UpdateBrand>, pool:
     }
 }
 
-async fn delete_brand(path: web::Path<i64>, pool: web::Data<DbPool>) -> impl Responder {
+async fn delete_brand(path: web::Path<i64>, pool: web::Data<Arc<DatabaseManager>>) -> impl Responder {
     let brand_id = path.into_inner();
+    
+    let pool = match pool.get_pool() {
+        Ok(pool) => pool,
+        Err(e) => {
+            error!("Error al obtener pool de conexiones: {}", e);
+            return HttpResponse::InternalServerError().json(json!({
+                "error": "Error de conexión a base de datos"
+            }));
+        }
+    };
     
     // En un caso real, necesitaríamos obtener el ID del usuario que realiza la acción
     // Aquí usamos "system" como ejemplo
@@ -171,8 +212,18 @@ async fn delete_brand(path: web::Path<i64>, pool: web::Data<DbPool>) -> impl Res
     }
 }
 
-async fn search_brands(path: web::Path<String>, pool: web::Data<DbPool>) -> impl Responder {
+async fn search_brands(path: web::Path<String>, pool: web::Data<Arc<DatabaseManager>>) -> impl Responder {
     let name = path.into_inner();
+    
+    let pool = match pool.get_pool() {
+        Ok(pool) => pool,
+        Err(e) => {
+            error!("Error al obtener pool de conexiones: {}", e);
+            return HttpResponse::InternalServerError().json(json!({
+                "error": "Error de conexión a base de datos"
+            }));
+        }
+    };
     
     match Brand::search_by_name(&pool, &name) {
         Ok(brands) => {
@@ -188,8 +239,18 @@ async fn search_brands(path: web::Path<String>, pool: web::Data<DbPool>) -> impl
     }
 }
 
-async fn get_brands_by_subdepartment(path: web::Path<i64>, pool: web::Data<DbPool>) -> impl Responder {
+async fn get_brands_by_subdepartment(path: web::Path<i64>, pool: web::Data<Arc<DatabaseManager>>) -> impl Responder {
     let subdepartment_id = path.into_inner();
+    
+    let pool = match pool.get_pool() {
+        Ok(pool) => pool,
+        Err(e) => {
+            error!("Error al obtener pool de conexiones: {}", e);
+            return HttpResponse::InternalServerError().json(json!({
+                "error": "Error de conexión a base de datos"
+            }));
+        }
+    };
     
     match Brand::find_by_subdepartment(&pool, subdepartment_id) {
         Ok(brands) => {
